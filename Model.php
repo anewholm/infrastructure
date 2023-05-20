@@ -32,8 +32,8 @@ class Model extends BaseModel
     {
         // Object locking
         if (!isset($options['UNLOCK']) || $options['UNLOCK'] == TRUE) {
-            $user = BackendAuth::user();
-            $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
+            if ($user = BackendAuth::user())
+                $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
         }
 
         // Dirty Writing checks in fill() include a passed original updated_at field
