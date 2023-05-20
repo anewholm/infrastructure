@@ -1,6 +1,8 @@
 <?php namespace AcornAssociated;
 
 use \AcornAssociated\WebSocketClient;
+use WebSocket\ConnectionException;
+use Flash;
 
 trait WebSocketInform
 {
@@ -15,13 +17,20 @@ trait WebSocketInform
         );
         $context   = (isset($options['context']) ? $options['context'] : NULL);
 
-        WebSocketClient::send($channel, array(
-            'class'   => $class,
-            'ID'      => $object->id,
-            'context' => $context,
-            'object'  => $object,
-            'options' => $options,
-        ));
+        try {
+            WebSocketClient::send($channel, array(
+                'class'   => $class,
+                'ID'      => $object->id,
+                'context' => $context,
+                'object'  => $object,
+                'options' => $options,
+            ));
+        } catch (ConnectionException $ex) {
+            // TODO: What to do if websockets:run not running?
+            // proc_open('artisan websockets:run');
+            // throw new ConnectionException
+            Flash::error('WebSocket not found. Did you ./artisan websockets:run?');
+        }
     }
 }
 
