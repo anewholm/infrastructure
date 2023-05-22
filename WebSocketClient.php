@@ -6,7 +6,7 @@ class WebSocketClient
 {
     static $clients = array();
 
-    public static function send(string $name, ?array $payload = array(), ?string $route = '', ?string $host = 'localhost', ?int $port = 8080)
+    public static function send(string $name, ?array $payload = array(), ?string $route = '', ?string $host = 'localhost', ?int $port = 8081)
     {
         // Require name
         $payload['name'] = $name;

@@ -41,7 +41,7 @@ function wsConnect() {
     var connections = {};
     $('[websocket-listen]').each(function(){
         var self      = this;
-        var location  = $(this).attr('websocket-listen') || 'localhost:8080';
+        var location  = $(this).attr('websocket-listen') || 'localhost:8081';
         if (!connections[location]) {
             connections[location] = new WebSocket("ws://" + location);
             connections[location].onmessage = function(){onMessage.apply(self, arguments);};
