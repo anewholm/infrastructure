@@ -9,21 +9,28 @@ trait WebSocketInform
     public function informClients(?array $options = [])
     {
         $object    = (isset($options['object']) ? $options['object'] : $this);
-        $class     = get_class($object);
+        $class     = (isset($options['class'])  ? $options['class']  : get_class($object));
         $className = preg_replace('#.*\\\#', '', $class);
+        $id        = (isset($options['id'])     
+            ? $options['id']     
+            : (property_exists($object, 'id') ? $object->id : NULL)
+        );
         $channel   = (isset($options['channel'])
             ? $options['channel']
             : (property_exists($object, 'channel') ? $object->channel : strtolower($className))
         );
-        $context   = (isset($options['context']) ? $options['context'] : NULL);
+        $contexts  = (isset($options['contexts']) 
+            ? $options['contexts'] 
+            : (method_exists($object, 'contexts') ? $object->contexts() : NULL)
+        );
 
         try {
             WebSocketClient::send($channel, array(
-                'class'   => $class,
-                'ID'      => $object->id,
-                'context' => $context,
-                'object'  => $object,
-                'options' => $options,
+                'class'    => $class,
+                'ID'       => $id,
+                'contexts' => $contexts,
+                'object'   => $object,
+                'options'  => $options,
             ));
         } catch (ConnectionException $ex) {
             // TODO: What to do if websockets:run not running?
