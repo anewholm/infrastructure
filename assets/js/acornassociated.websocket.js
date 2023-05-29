@@ -43,7 +43,9 @@ function acornassociated_onMessage(message) {
                                 var jUpdate = JSON.parse('{' + update.replace(/'/g, '"') + '}');
                                 for (var partial in jUpdate) {
                                     var path    = jUpdate[partial];
-                                    var content = response[partial];
+                                    // TODO: Should work off the path, not the partial
+                                    // The onSearch() & updateList() works off getId()
+                                    var content = response[partial] || response[path];
                                     if (content) $(path).html(content);
                                 }
                             }
