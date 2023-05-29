@@ -25,18 +25,28 @@ function acornassociated_onMessage(message) {
                     update  = $(this).attr(updateAttrC),
                     success = $(this).attr(successAttrC),
                     sound   = $(this).attr(soundAttrC);
-                if (update) {
+                if (request) {
                     // Let us indicate which context we are using exactly
                     var eventContext = JSON.parse(JSON.stringify(event));
                     eventContext.contexts = [context];
-                    update = '{' + update.replace(/'/g, '"') + '}';
 
                     // Send the whole event through, with context
                     // for the AJAX handler to consider 
                     $(this).request(request, {
                         data:    eventContext,
-                        update:  JSON.parse(update),
-                        beforeUpdate: function(){
+                        //update:  JSON.parse(update), // See below
+                        success: function(response, result, jXHR){
+                            if (window.console) console.log(response);
+                            if (update) {
+                                // We do this update manually
+                                // for efficiency, and to work off same backend Object 
+                                var jUpdate = JSON.parse('{' + update.replace(/'/g, '"') + '}');
+                                for (var partial in jUpdate) {
+                                    var path    = jUpdate[partial];
+                                    var content = response[partial];
+                                    if (content) $(path).html(content);
+                                }
+                            }
                             if (sound) {
                                 var audio = new Audio(sound);
                                 audio.play();
