@@ -18,3 +18,7 @@ function acornassociated_hashbangCommands() {
 }
 
 $(document).ready(acornassociated_hashbangCommands);
+
+String.prototype.toUCFirst = function(){
+    return this.charAt(0).toUpperCase() + this.replace(/[^a-z]+/gi, '').slice(1);
+}
