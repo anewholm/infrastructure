@@ -8,6 +8,8 @@ window.Echo   = new Echo({
     cluster: 'intranet', // import.meta.env.VITE_PUSHER_APP_CLUSTER,
     wsHost: window.location.hostname,
     wsPort: 8081,
+    wssHost: window.location.hostname,
+    wssPort: 8081,
     forceTLS: false, // TODO: Enable TLS
     disableStats: true,
 });
