@@ -30,6 +30,14 @@ class Model extends BaseModel
     ];
     */
 
+    public function delete()
+    {
+        if ($user = BackendAuth::user())
+            $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
+
+        return parent::delete();
+    }
+
     public function save(?array $options = [], $sessionKey = null)
     {
         // Object locking
