@@ -10,7 +10,7 @@ window.Echo   = new Echo({
     wsPort: 8081,
     wssHost: window.location.hostname,
     wssPort: 8081,
-    forceTLS: false, // TODO: Enable TLS
+    forceTLS: false, // Echo will copy the Page protocol
     disableStats: true,
 });
 
@@ -57,10 +57,9 @@ function acornassociated_onEvent(channel, event, eventMessage) {
     let attributeBases = [],
         eventCum       = '',
         eventSplit     = event.split(/[^a-zA-Z0-9]+/g), // [event, updated]
-        contexts       = (eventObject.contexts ? eventObject.contexts : []),
+        contexts       = (eventMessage.contexts ? eventMessage.contexts : []),
         websocketBase  = 'websocket-on',          // websocket-on
         channelBase    = websocketBase + channel; // websocket-oncalendar
-    if (window.console) console.log(arguments);
     
     // @attributes are hierarchical
     attributeBases.push(websocketBase + 'any'); // websocket-onany
@@ -129,7 +128,6 @@ function acornassociated_onEvent(channel, event, eventMessage) {
     }
 
     // Dirty write protection
-    // TODO: We need the class name for Dirty write protection
     // editing-eventpart-id-130
     if (eventObject && eventObject.className && eventObject.id) {
         let cssClassClass = eventObject.className.replace(/.*\\/, '').toLowerCase();
