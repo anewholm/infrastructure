@@ -21,6 +21,36 @@ class ServiceProvider extends ModuleServiceProvider
 {
     public function boot()
     {
+        // We do not want our artisan commands below to also do this!
+        // continuous loop would it be
+        $isWebRequest = isset($_SERVER['HTTP_HOST']);
+        if ($isWebRequest) {
+            $processes = array(
+                'messaging:run'    => '',
+                'websockets:serve' => '--port 8081',
+                //'calendar:run' => FALSE,
+            );
+
+            // Check for existing processes
+            $output = array();
+            $ps     = exec('ps ax | grep -v grep | grep artisan', $output);
+            foreach ($output as $line) {
+                $details = preg_split('/\s+/', trim($line));
+                if (isset($details[6])) {
+                    //$id      = $details[0];
+                    //$artisan = $details[5];
+                    $comm    = $details[6];
+                    $options = implode(' ', array_slice($details, 7));
+                    if (isset($processes[$comm])) unset($processes[$comm]);
+                }
+            }
+
+            // Run any missing processes
+            foreach ($processes as $process => $options) {
+                exec("nohup php artisan $process $options > /dev/null &");
+            }
+        }        
+
         if (self::isDebug()) {
             print('<style>');
             print('.debug {');
