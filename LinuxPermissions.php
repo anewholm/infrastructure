@@ -20,8 +20,9 @@ trait LinuxPermissions
 
         $isOwner = (property_exists($this, 'owner_user') && $user->id == $this->owner_user->id);
         $inGroup = ($this->owner_user_group && $groups->get($this->owner_user_group->id));
+        $isSuperUser = $user->is_superuser;
 
-        return $user->is_superuser
+        return $isSuperUser
             || ($isOwner && $this->permissions & $accessType * self::$USER)
             || ($inGroup && $this->permissions & $accessType * self::$GROUP)
             ||              $this->permissions & $accessType * self::$OTHER;
