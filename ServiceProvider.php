@@ -17,36 +17,43 @@ use System\Classes\SettingsManager;
 
 use Winter\Storm\Support\ModuleServiceProvider;
 
+use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
+use AcornAssociated\Messaging\Console\RunCommand;
+
 class ServiceProvider extends ModuleServiceProvider
 {
     public function boot()
     {
+        // Run all of our daemons
         // We do not want our artisan commands below to also do this!
         // continuous loop would it be
+        // TODO: Allow plugins to register there own persistent commands
+        // using an interface and a call in their Plugin.php
+        // Maybe inherit from AA Command that can run itself
         $isWebRequest = isset($_SERVER['HTTP_HOST']);
         if ($isWebRequest) {
-            $processes = array(
+            $commands = array(
                 'messaging:run'    => '',
                 'websockets:serve' => '--port 8081',
                 //'calendar:run' => FALSE,
             );
 
-            // Check for existing processes
-            $output = array();
-            $ps     = exec('ps ax | grep -v grep | grep artisan', $output);
-            foreach ($output as $line) {
-                $details = preg_split('/\s+/', trim($line));
-                if (isset($details[6])) {
-                    //$id      = $details[0];
-                    //$artisan = $details[5];
-                    $comm    = $details[6];
-                    $options = implode(' ', array_slice($details, 7));
-                    if (isset($processes[$comm])) unset($processes[$comm]);
+            // Check for running commands
+            $running = array();
+            $ps      = exec('ps ax | grep -v grep | grep artisan', $running);
+            foreach ($running as $line) {
+                $pdetails = preg_split('/\s+/', trim($line));
+                if (isset($pdetails[6])) {
+                    //$id      = $pdetails[0];
+                    //$artisan = $pdetails[5];
+                    $command = $pdetails[6];
+                    $options = implode(' ', array_slice($pdetails, 7));
+                    if (isset($commands[$command])) unset($commands[$command]);
                 }
             }
 
-            // Run any missing processes
-            foreach ($processes as $process => $options) {
+            // Run any missing commands
+            foreach ($commands as $process => $options) {
                 exec("nohup php artisan $process $options > /dev/null &");
             }
         }        
