@@ -1,5 +1,6 @@
 <?php namespace AcornAssociated;
 
+use DB;
 use App;
 use Url;
 use Lang;
@@ -9,6 +10,7 @@ use Config;
 use Backend;
 use BackendMenu;
 use BackendAuth;
+use Backend\Models\User;
 use Backend\Models\UserRole;
 use System\Classes\CombineAssets;
 use Backend\Classes\WidgetManager;
@@ -24,12 +26,12 @@ class ServiceProvider extends ModuleServiceProvider
 {
     public function boot()
     {
-        // Run all of our daemons
-        // We do not want our artisan commands below to also do this!
+        // -------------------------------------- Daemons manager
+        // We do not want our artisan commands below to also run this!
         // continuous loop would it be
         // TODO: Allow plugins to register there own persistent commands
         // using an interface and a call in their Plugin.php
-        // Maybe inherit from AA Command that can run itself
+        // maybe inheriting from AA Command that can run itself
         $isWebRequest = isset($_SERVER['HTTP_HOST']);
         if ($isWebRequest) {
             $commands = array(
@@ -58,6 +60,7 @@ class ServiceProvider extends ModuleServiceProvider
             }
         }        
 
+        // -------------------------------------- Debugging
         if (self::isDebug()) {
             print('<style>');
             print('.debug {');
@@ -98,7 +101,7 @@ class ServiceProvider extends ModuleServiceProvider
             $backtrace = debug_backtrace();
             for ($i = 0; $i < count($backtrace) && $i < 8; $i++) {
                 $entry = &$backtrace[$i];
-                $file  = str_replace($_SERVER['DOCUMENT_ROOT'], '~/', $entry['file']);
+                $file  = str_replace(app()->basePath(), '~', $entry['file']);
                 print("$file <span>line</span> $entry[line] $entry[function]()</br>");
             }
             print("</p></div>");

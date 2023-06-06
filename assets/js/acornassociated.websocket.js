@@ -105,6 +105,7 @@ function acornassociated_onEvent(channel, event, eventMessage) {
                 success: function(response, result, jXHR){
                     if (window.console) console.log(response);
                     if (update) {
+                        // TODO: Do this AJAX update properly!
                         // We do this update manually
                         // for efficiency, and to work off same backend Object 
                         let jUpdate = JSON.parse('{' + update.replace(/'/g, '"') + '}');
@@ -114,6 +115,9 @@ function acornassociated_onEvent(channel, event, eventMessage) {
                             // The onSearch() & updateList() works off getId()
                             let content = response[partial] || response[path];
                             if (content) $(path).html(content);
+                            
+                            $(path).trigger(jQuery.Event('ajaxUpdate'));
+                            $(path).trigger(jQuery.Event('ajaxSuccess'));
                         }
                     }
                     if (sound) {
