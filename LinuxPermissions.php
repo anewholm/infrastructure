@@ -18,8 +18,8 @@ trait LinuxPermissions
         $user   = BackendAuth::user();
         $groups = $user->groups->keyBy('id');
 
-        $isOwner = (property_exists($this, 'owner_user') && $user->id == $this->owner_user->id);
-        $inGroup = ($this->owner_user_group && $groups->get($this->owner_user_group->id));
+        $isOwner = ($user->id == $this->owner_user?->id);
+        $inGroup = ($groups->get($this->owner_user_group?->id));
         $isSuperUser = $user->is_superuser;
 
         return $isSuperUser
@@ -60,14 +60,18 @@ trait LinuxPermissions
     public function fill(array $attributes)
     {
         // This works on the original values, before fill()
-        if ($this->attributes && !$this->canWrite()) throw new AuthorizationException('Cannot write this object');
+        if ($this->attributes && !$this->canWrite()) {
+            throw new AuthorizationException('Cannot write this object');
+        }
         return parent::fill($attributes);
     }
 
     public function save(?array $options = [], $sessionKey = null)
     {
         // This works on the new values, because after fill()
-        if (!$this->canWrite()) throw new AuthorizationException('Cannot write this object');
+        if (!$this->canWrite()) {
+            throw new AuthorizationException('Cannot write this object');
+        }
         return parent::save($options, $sessionKey);
     }
 }
