@@ -24,6 +24,16 @@ use AcornAssociated\Messaging\Console\RunCommand;
 
 class ServiceProvider extends ModuleServiceProvider
 {
+    protected static function isCommandLine()
+    {
+        return !self::isHTTPCall();
+    }
+
+    protected static function isHTTPCall()
+    {
+        return isset($_SERVER['HTTP_HOST']);
+    }
+
     public function boot()
     {
         // -------------------------------------- Daemons manager
@@ -32,8 +42,7 @@ class ServiceProvider extends ModuleServiceProvider
         // TODO: Allow plugins to register there own persistent commands
         // using an interface and a call in their Plugin.php
         // maybe inheriting from AA Command that can run itself
-        $isWebRequest = isset($_SERVER['HTTP_HOST']);
-        if ($isWebRequest) {
+        if (self::isHTTPCall()) {
             $commands = array(
                 'messaging:run'    => '',
                 'websockets:serve' => '--port 8081',
