@@ -5,7 +5,20 @@ use BackendAuth;
 use \Backend\Models\User;
 use \Backend\Models\UserGroup;
 use ApplicationException;
+use Winter\Storm\Support\Facades\Schema;
 
+use Illuminate\Support\Str;
+use AcornAssociated\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Winter\Storm\Database\QueryBuilder;
+
+use BadMethodCallException;
+use Illuminate\Database\Eloquent\RelationNotFoundException;
+use InvalidArgumentException;
 /*
 class Saving {
     public function __construct(Model $eventPart)
@@ -53,4 +66,43 @@ class Model extends BaseModel
 
         return parent::save($options, $sessionKey);
     }
+
+    // AcornAssociated Builder extensions
+    public function newEloquentBuilder($query): Builder
+    {
+        // Ensure we remain in the family
+        // causes chained queries to always work with our Builder
+        return new Builder($query);
+    }
+
+    protected static function getQualifiedColumnListing()
+    {
+        $model   = self::getModel();
+        $table   = $model->getTable();
+        $columns = Schema::getColumnListing($table);
+        return $model->qualifyColumns($columns);
+    }
+
+    public static function whereBelongsToAny(Array $relatedArray, ?string $boolean = 'or', ?bool $throwOnEmpty = FALSE): Builder
+    {
+        // Here we set all columns explicitly
+        // because all queries in a union must have the same number of columns
+        // * is not acceptable
+        $allFields = self::getQualifiedColumnListing();
+        return self::select($allFields)->whereBelongsToAny($relatedArray, $boolean, $throwOnEmpty);
+    }
+
+    public static function whereBelongsToAnyThrough(string|Array $through, Array $relatedArray, ?string $boolean = 'or', ?bool $throwOnEmpty = FALSE): Builder
+    {
+        // Here we set columns to id
+        // because all queries in a union must have the same number of columns
+        // * is not acceptable
+        $allFields = self::getQualifiedColumnListing();
+        return self::select($allFields)->whereBelongsToAnyThrough($through, $relatedArray, $boolean, $throwOnEmpty);
+    }
+
+    public static function whereBelongsToMany(Collection|BaseModel $related, ?string $relationshipName = NULL, ?string $boolean = 'or', ?bool $throwOnEmpty = FALSE): Builder
+    {
+        return self::select()->whereBelongsToMany($related, $relationshipName, $boolean, $throwOnEmpty);
+    }    
 }

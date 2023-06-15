@@ -5,8 +5,6 @@ use DB;
 
 class Migration extends StormMigration
 {
-    // TODO: Move this class in to a common tools module and create dependencies
-
     public function dropCascade($table)
     {
         DB::unprepared("drop table if exists $table cascade");
