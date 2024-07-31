@@ -7,9 +7,9 @@ window.Echo   = new Echo({
     key:     'intranet', // import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: 'intranet', // import.meta.env.VITE_PUSHER_APP_CLUSTER,
     wsHost: window.location.hostname,
-    wsPort: 8081,
+    wsPort: 6001,
     wssHost: window.location.hostname,
-    wssPort: 8081,
+    wssPort: 6001,
     forceTLS: false, // Echo will copy the Page protocol
     disableStats: true,
 });
@@ -23,7 +23,7 @@ $('[websocket-listen]').each(function(){
         if (channelEvent.length == 1) {
             channel = channelEvent[0];
             window.Echo
-                .channel(channel)
+                .private(channel)
                 .listenToAll(function(channelEvent, eventMessage) {
                     acornassociated_onEvent(channel, channelEvent.substring(1), eventMessage);
                 });
@@ -34,13 +34,27 @@ $('[websocket-listen]').each(function(){
 
             window.Echo
                 .channel(channel)
-                .listen(event, function(eventMessage) {
+                .private(event, function(eventMessage) {
                     acornassociated_onEvent(channel, event.substring(1), eventMessage, eventObject);
                 });
         }
         acornassociated_wsConnections[location] = true;
     }
 });
+
+function removeUserId(attrBase){
+    let dotIdx = attrBase.indexOf(".");
+    if (dotIdx != -1){
+        let suffixIdx = attrBase.slice(dotIdx).indexOf("-");
+        if (suffixIdx != -1){
+            attrBase = attrBase.slice(0, dotIdx) + attrBase.slice(dotIdx + suffixIdx);
+        }
+        else {
+            attrBase = attrBase.slice(0, dotIdx);
+        }
+    }
+    return attrBase;
+}
 
 function acornassociated_onEvent(channel, event, eventMessage) {
     let eventObject = {};
@@ -62,22 +76,23 @@ function acornassociated_onEvent(channel, event, eventMessage) {
         channelBase    = websocketBase + channel; // websocket-oncalendar
     
     // @attributes are hierarchical
-    attributeBases.push(websocketBase + 'any'); // websocket-onany
-    attributeBases.push(channelBase);           // websocket-oncalendar
+    attributeBases.push(removeUserId(websocketBase + 'any')); // websocket-onany
+    attributeBases.push(removeUserId(channelBase));           // websocket-oncalendar
     // websocket-oncalendar-event
     // websocket-oncalendar-event-updated
     for (let eventPart of eventSplit) {
         if (eventPart) {
             eventCum += '-' + eventPart;
-            attributeBases.push(channelBase + eventCum);
+            attributeBases.push(removeUserId(channelBase + eventCum));
             // Add context to the cumulated event specs
             // websocket-oncalendar-event-1-12
             // websocket-oncalendar-event-updated-1-12
             // NOTE: contexts might unserialize as an object, not an array
             for (let i in contexts) {
                 let context = contexts[i];
-                if (context)
-                    attributeBases.push(channelBase + eventCum + '-' + context);
+                if (context) {
+                    attributeBases.push(removeUserId(channelBase + eventCum + '-' + context));
+                }
             }
         }
     }

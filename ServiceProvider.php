@@ -85,6 +85,8 @@ class ServiceProvider extends ModuleServiceProvider
             print('.debug-configpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double red}');
             print('</style>');
         }
+        
+        parent::boot('acornassociated');
     }
 
     static protected function isDebug()
