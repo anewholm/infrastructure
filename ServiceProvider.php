@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use DB;
 use App;
@@ -20,7 +20,7 @@ use System\Classes\SettingsManager;
 use Winter\Storm\Support\ModuleServiceProvider;
 
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
-use AcornAssociated\Messaging\Console\RunCommand;
+use Acorn\Messaging\Console\RunCommand;
 
 class ServiceProvider extends ModuleServiceProvider
 {
@@ -86,7 +86,7 @@ class ServiceProvider extends ModuleServiceProvider
             print('</style>');
         }
         
-        parent::boot('acornassociated');
+        parent::boot('acorn');
     }
 
     static protected function isDebug()

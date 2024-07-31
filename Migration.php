@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use Winter\Storm\Database\Updates\Migration as StormMigration;
 use DB;

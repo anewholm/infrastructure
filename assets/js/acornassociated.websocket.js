@@ -14,9 +14,9 @@ window.Echo   = new Echo({
     disableStats: true,
 });
 
-let acornassociated_wsConnections = {};
+let acorn_wsConnections = {};
 $('[websocket-listen]').each(function(){
-    if (!acornassociated_wsConnections[location]) {
+    if (!acorn_wsConnections[location]) {
         let channel, event,
             channelEvent = $(this).attr('websocket-listen').split(':');
 
@@ -25,7 +25,7 @@ $('[websocket-listen]').each(function(){
             window.Echo
                 .private(channel)
                 .listenToAll(function(channelEvent, eventMessage) {
-                    acornassociated_onEvent(channel, channelEvent.substring(1), eventMessage);
+                    acorn_onEvent(channel, channelEvent.substring(1), eventMessage);
                 });
         } else {
             channel = channelEvent[0];
@@ -35,10 +35,10 @@ $('[websocket-listen]').each(function(){
             window.Echo
                 .channel(channel)
                 .private(event, function(eventMessage) {
-                    acornassociated_onEvent(channel, event.substring(1), eventMessage, eventObject);
+                    acorn_onEvent(channel, event.substring(1), eventMessage, eventObject);
                 });
         }
-        acornassociated_wsConnections[location] = true;
+        acorn_wsConnections[location] = true;
     }
 });
 
@@ -56,7 +56,7 @@ function removeUserId(attrBase){
     return attrBase;
 }
 
-function acornassociated_onEvent(channel, event, eventMessage) {
+function acorn_onEvent(channel, event, eventMessage) {
     let eventObject = {};
     if (eventMessage instanceof Object) {
         // Extract the first and only object and its class name

@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use Model;
 use BackendAuth;
@@ -97,14 +97,14 @@ class Builder extends BaseBuilder
             //
             // class BelongsToMany extends Relation:
             //   $table pivot table, 
-            //     acornassociated_calendar_event_user_group
+            //     acorn_calendar_event_user_group
             // 
             //   getQualifiedParentKeyName()
-            //     acornassociated_calendar_event_part.id
+            //     acorn_calendar_event_part.id
             //   getQualifiedForeignPivotKeyName()
-            //     acornassociated_calendar_event_user_group.event_part_id
+            //     acorn_calendar_event_user_group.event_part_id
             //   getQualifiedRelatedPivotKeyName()
-            //     acornassociated_calendar_event_user_group.user_group_id
+            //     acorn_calendar_event_user_group.user_group_id
             //   getQualifiedRelatedKeyName()
             //     backend_user_groups.id
 
