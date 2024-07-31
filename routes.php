@@ -17,7 +17,7 @@ class AuthWrapper
 }
 
 
-Event::fire('acornassociated.beforeRoute');
+Event::fire('acorn.beforeRoute');
 
 Route::match(
     ['get', 'post'], '/broadcasting/auth',
@@ -25,4 +25,4 @@ Route::match(
 )->middleware('web');
 
 
-Event::fire('acornassociated.route');
+Event::fire('acorn.route');

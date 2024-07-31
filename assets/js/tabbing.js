@@ -1,5 +1,5 @@
 // ---------------------------------------------- Tab key navigation
-function acornassociated_tabbing(){
+function acorn_tabbing(){
   $(':input[tab-preshow],.form-group[tab-preshow],.radio-field[tab-preshow]').keydown(function(event){
     if (event.keyCode == 9 && !event.shiftKey) {
       var tabPreShow = $(this).attr('tab-preshow');
@@ -87,11 +87,11 @@ function acornassociated_tabbing(){
 
   if (window.console) console.info('Tabbing setup');
 }
-$(document).ready(acornassociated_tabbing);
-$(window).on('ajaxUpdateComplete', acornassociated_tabbing);
+$(document).ready(acorn_tabbing);
+$(window).on('ajaxUpdateComplete', acorn_tabbing);
 
 // ---------------------------------------------- Initial Focus
-function acornassociated_initialFocus() {
+function acorn_initialFocus() {
   // Initial focusing
   $('*[tabindex=1]').focus();
   $('.initial-focus').focus();
@@ -99,10 +99,10 @@ function acornassociated_initialFocus() {
 
   if (window.console) console.info('Initial focus');
 };
-$(document).ready(acornassociated_initialFocus);
+$(document).ready(acorn_initialFocus);
 
 // ---------------------------------------------- Page load tab select
-function acornassociated_public_tabselect(tabHash, fieldHashClick, fieldHashFocus) {
+function acorn_public_tabselect(tabHash, fieldHashClick, fieldHashFocus) {
   // hash bang direct multi-function:
   // #!<tab select>/<field click>/<field highlight>
   // e.g. http://university-acceptance.laptop/backend/university/mofadala/controllerstudent/create#!tabselect/primarytab-universitymofadalalangmofadalacandidacy-intent/Form-field-ModelStudent-attending_the_nomination_examination/Form-field-ModelStudent-candidacy_examination_score

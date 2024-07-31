@@ -1,12 +1,12 @@
 <?php
 
-namespace AcornAssociated;
+namespace Acorn;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 
 /**
- * @package acornassociated\builder
+ * @package acorn\builder
  * @author Jaber Rasul , Sanchez 
  */
 class Collection extends EloquentCollection
@@ -21,7 +21,7 @@ class Collection extends EloquentCollection
      *        return new Collection($models);
      *   }
      * 
-     * this method its change model proparty $model from Illuminate\Database\Eloquent\Collection to AcornAssociated/Colleciton
+     * this method its change model proparty $model from Illuminate\Database\Eloquent\Collection to Acorn/Colleciton
      */
 
 

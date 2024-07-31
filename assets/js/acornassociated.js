@@ -1,10 +1,10 @@
-function acornassociated_hashbangCommands() {
+function acorn_hashbangCommands() {
     var path, parts, command, hashbang = document.location.hash;
     if (hashbang && hashbang.substr(0,2) == '#!') {
         if (path = hashbang.substr(2)) {
             parts   = path.replace(/^\/+|\/+$/g, '').split('/');
             // SECURITY: we are allowing running of functions based on URL input
-            command = 'acornassociated_public_' + parts[0];
+            command = 'acorn_public_' + parts[0];
             if (window[command] instanceof Function) {
                 // We timeout in case handlers need to be attached
                 setTimeout(function(){
@@ -17,7 +17,7 @@ function acornassociated_hashbangCommands() {
     }
 }
 
-$(document).ready(acornassociated_hashbangCommands);
+$(document).ready(acorn_hashbangCommands);
 
 String.prototype.toUCFirst = function(){
     return this.charAt(0).toUpperCase() + this.replace(/[^a-z]+/gi, '').slice(1);

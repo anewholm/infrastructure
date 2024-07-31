@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use Winter\Storm\Database\Model as BaseModel;
 use BackendAuth;
@@ -8,8 +8,8 @@ use ApplicationException;
 use Winter\Storm\Support\Facades\Schema;
 
 use Illuminate\Support\Str;
-use AcornAssociated\Builder;
-use AcornAssociated\Collection;
+use Acorn\Builder;
+use Acorn\Collection;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -133,7 +133,7 @@ class Model extends BaseModel
         return parent::save($options, $sessionKey);
     }
 
-    // AcornAssociated Builder extensions
+    // Acorn Builder extensions
     public function newEloquentBuilder($query): Builder
     {
         // Ensure we remain in the family

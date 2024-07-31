@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use BackendMenu;
 use Backend\Classes\Controller as BackEndController;
