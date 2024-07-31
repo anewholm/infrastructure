@@ -1,0 +1,14 @@
+.select2-container--focus {
+  border:2px solid black;
+  border-radius:4px;
+}
+
+.switch-container--focus > .custom-switch > span,
+button:focus,
+a.btn:focus {
+  border:2px solid black;
+}
+
+.switch-field:has(input[readonly]) {
+  opacity:0.4;
+}

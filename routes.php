@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Broadcasting\BroadcastController;
+use Illuminate\Http\Request;
+
+class AuthWrapper
+{
+
+    public function authenticate(Request $request){
+        $request->setUserResolver(function($guard){
+            return \BackendAuth::user();
+        });
+        $bc = new BroadcastController();
+        return $bc->authenticate($request);
+    }
+
+}
+
+
+Event::fire('acornassociated.beforeRoute');
+
+Route::match(
+    ['get', 'post'], '/broadcasting/auth',
+    '\\'.AuthWrapper::class.'@authenticate'
+)->middleware('web');
+
+
+Event::fire('acornassociated.route');
