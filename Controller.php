@@ -26,4 +26,11 @@ class Controller extends BackEndController
         if (file_exists("$absolutePluginPath/$relativeAssetPath"))
             $this->addJs("$relativePluginPath/$relativeAssetPath");
     }
+
+    public function formGetRedirectUrl($context = NULL, $model = NULL)
+    {
+        $action = post('action');
+        $id     = ($model && method_exists($model, 'id') ? $model->id() : NULL);
+        return ($action && !is_null($id) ? "$action/$id" : parent::formGetRedirectUrl($context, $model));
+    }
 }

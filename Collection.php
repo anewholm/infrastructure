@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 /**
  * @package acorn\builder
- * @author Jaber Rasul , Sanchez 
+ * @author Jaber Rasul , sz 
  */
 class Collection extends EloquentCollection
 {
