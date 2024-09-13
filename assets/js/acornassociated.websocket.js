@@ -13,31 +13,42 @@ window.Echo   = new Echo({
     forceTLS: false, // Echo will copy the Page protocol
     disableStats: true,
 });
+if (window.console) console.log(window.Echo);
+
+window.Echo
+    .channel('acorn')
+    .listen('.user.navigation', function(eventObject) {
+        let url        = eventObject.url;
+        let pathname   = url.replace(/^[a-z]+:\/\/[^/]+|\?.*/g, '');
+        if (document.location.pathname != pathname) document.location.pathname = pathname;
+    });
+
 
 let acorn_wsConnections = {};
 $('[websocket-listen]').each(function(){
     if (!acorn_wsConnections[location]) {
-        let channel, event,
+        let channel, eventName,
             channelEvent = $(this).attr('websocket-listen').split(':');
 
         if (channelEvent.length == 1) {
             channel = channelEvent[0];
             window.Echo
-                .private(channel)
-                .listenToAll(function(channelEvent, eventMessage) {
-                    acorn_onEvent(channel, channelEvent.substring(1), eventMessage);
+                .channel(channel)
+                .listenToAll(function(_eventName, eventObject) {
+                    acorn_onEvent(channel, _eventName.substring(1), eventObject);
                 });
         } else {
-            channel = channelEvent[0];
-            event   = channelEvent[1];
-            event   = '.' + event; // TODO: Why?
+            channel   = channelEvent[0];
+            eventName = channelEvent[1];
+            eventName = '.' + eventName; // TODO: Why .event?
 
             window.Echo
                 .channel(channel)
-                .private(event, function(eventMessage) {
-                    acorn_onEvent(channel, event.substring(1), eventMessage, eventObject);
+                .listen(eventName, function(eventObject) {
+                    acorn_onEvent(channel, eventName.substring(1), eventObject);
                 });
         }
+        if (window.console) console.info('Listening to websocket channel [' + channel + ']');
         acorn_wsConnections[location] = true;
     }
 });
@@ -56,22 +67,15 @@ function removeUserId(attrBase){
     return attrBase;
 }
 
-function acorn_onEvent(channel, event, eventMessage) {
-    let eventObject = {};
-    if (eventMessage instanceof Object) {
-        // Extract the first and only object and its class name
-        let keys = Object.keys(eventMessage);
-        if (keys.length) {
-            let className = keys[0];
-            eventObject = eventMessage[className];
-            eventObject.className = className;
-        }
-    }
+function acorn_onEvent(channel, eventName, eventObject) {
+    if (window.console) console.log(eventObject); // e.g. DataChange
     
+    // TODO: This recently changed, so probably broken the Calendar system
+    // the eventObject contained the eventObject before. Now it is the eventObject
     let attributeBases = [],
         eventCum       = '',
-        eventSplit     = event.split(/[^a-zA-Z0-9]+/g), // [event, updated]
-        contexts       = (eventMessage.contexts ? eventMessage.contexts : []),
+        eventSplit     = eventName.split(/[^a-zA-Z0-9]+/g), // [event, updated]
+        contexts       = (eventObject.contexts ? eventObject.contexts : []),
         websocketBase  = 'websocket-on',          // websocket-on
         channelBase    = websocketBase + channel; // websocket-oncalendar
     
@@ -100,7 +104,12 @@ function acorn_onEvent(channel, event, eventMessage) {
 
     // Attribute processing
     // e.g. @websocket-oncalendar-*-update='conversation: #c1-2'
+    let foundHandler = false;
     for (let attrBase of attributeBases) {
+        // TODO: attrBase-restrict would limit server requests
+        // for example:
+        //   ondata-change-restrict=modelClass:~Brand
+        //   onuser-navigation-restrict=ID:12
         let context      = attrBase.replace(/^websocket-on/, '').split(/-/g),
             updateAttrC  = attrBase + '-update',  // websocket-oncalendar-*-update
             requestAttrC = attrBase + '-request', // websocket-oncalendar-*-request
@@ -110,40 +119,39 @@ function acorn_onEvent(channel, event, eventMessage) {
             let request = $(this).attr(requestAttrC) || 'onWebSocket',
                 update  = $(this).attr(updateAttrC),
                 success = $(this).attr(successAttrC),
-                sound   = $(this).attr(soundAttrC);
+                sound   = $(this).attr(soundAttrC)   || '/modules/acorn/assets/sounds/notification.mp3',
+                jUpdate = (update ? JSON.parse('{' + update.replace(/'/g, '"') + '}') : null);
 
             // Send the whole event through, with context
             // for the AJAX handler to consider 
+            if (window.console) console.info(request);
+            foundHandler = true;
             $(this).request(request, {
                 data: {event:eventObject, context:context},
-                //update:  JSON.parse(update), // See below
+                update:  jUpdate,
                 success: function(response, result, jXHR){
                     if (window.console) console.log(response);
-                    if (update) {
-                        // TODO: Do this AJAX update properly!
-                        // We do this update manually
-                        // for efficiency, and to work off same backend Object 
-                        let jUpdate = JSON.parse('{' + update.replace(/'/g, '"') + '}');
-                        for (var partial in jUpdate) {
-                            let path    = jUpdate[partial];
-                            // TODO: Should work off the path, not the partial
-                            // The onSearch() & updateList() works off getId()
-                            let content = response[partial] || response[path];
-                            if (content) $(path).html(content);
-                            
-                            $(path).trigger(jQuery.Event('ajaxUpdate'));
-                            $(path).trigger(jQuery.Event('ajaxSuccess'));
-                        }
-                    }
+
+                    // Process the update: clause
+                    // https://wintercms.com/docs/v1.2/docs/ajax/javascript-api
+                    // "If this option is supplied it overrides the default framework's functionality
+                    // However, you can still call the default framework functionality calling this.success(...) inside your function."
+                    this.success(response, result, jXHR);
+
                     if (sound) {
                         let audio = new Audio(sound);
                         audio.play();
                     }
+
                     // TODO: SECURITY: XSS possibilities
                     //if (success) eval(success);
                 },
             });
         });
+    }
+    if (!foundHandler &&  window.console) {
+        console.warn('Handler not found for [' + channel + ':' + eventName + ']');
+        console.log(attributeBases);
     }
 
     // Dirty write protection
@@ -156,6 +164,6 @@ function acorn_onEvent(channel, event, eventMessage) {
 
     // Trigger a global event
     for (let attrBase of attributeBases) {
-        $(document).trigger(jQuery.Event(attrBase), [event, eventObject]); 
+        $(document).trigger(jQuery.Event(attrBase), [eventName, eventObject]);
     }
 }

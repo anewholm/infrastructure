@@ -1,0 +1,10 @@
+/* tr.rowlink */
+.ajax-new {
+    background-color:#ffbbbb!important;
+    opacity: 1;
+    animation-name: fadeInOpacity;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in;
+    animation-duration: 2s;
+}
+

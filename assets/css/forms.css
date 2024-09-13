@@ -5,6 +5,60 @@
   background-color:#fff;
 }
 
+.form-group button.form-button {
+  margin-top: 0px;
+}
+
+.new-row {
+  clear:both;
+}
+
+.form-group.partial-field:has(button.popup-create) > label[for],
+.form-group.partial-field:has(button.add-button) > label[for] {
+  display:none;
+}
+
+.help-block a,
+.goto-form-group-selection {
+  color: #4444ff;
+}
+
+.goto-form-group-selection {
+  float:right;
+  margin-left: 5px;
+}
+
+.selected-only .field-checkboxlist .custom-checkbox {
+    display: none;
+}
+
+.selected-only .field-checkboxlist .custom-checkbox:has(input[checked]) {
+    display: block;
+}
+
+.hidden-when-disabled:has(input[disabled]),
+.hidden-when-disabled:has(select[disabled]) {
+  display:none;
+}
+
+.form-preview {
+  margin:0px auto;
+  max-width: 900px;
+}
+
+.hug-left {
+  margin-left:-10px;
+}
+
+/* ------------------------------------- Popups */
+#popup-container {
+  padding:2em;
+}
+#popup-buttons {
+  text-align:right;
+}
+
+/* ------------------------------------- debug */
 @keyframes fadeInOpacity {
   0% {opacity: 0;}
   100% {opacity: 1;}
@@ -45,11 +99,12 @@
 .debug-block .time-precise {
   color:#999;
 }
-.debug-block h2 {
+.callout > .content .debug-block h2 {
   font-weight:bold;
+  font-size:13px;
+  margin: 0px;
 }
 .debug-block .name {
-  font-weight:bold;
 }
 .debug-block > div {
   float:left;

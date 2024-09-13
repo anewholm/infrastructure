@@ -85,21 +85,42 @@ function acorn_tabbing(){
     $(this).html(' [' + firstLetter + ']' + otherLetters);
   });
 
+  // Return to submit form
+  // Careful not to override custom select functionality
+  $('input').keydown(function(event){
+    var ret = true;
+    if (event.keyCode == 13) {
+      $(this).closest('form').find('.form-buttons .btn-primary').first().trigger('click');
+      ret = false;
+    }
+    return ret;
+  });
+
   if (window.console) console.info('Tabbing setup');
 }
 $(document).ready(acorn_tabbing);
 $(window).on('ajaxUpdateComplete', acorn_tabbing);
 
 // ---------------------------------------------- Initial Focus
-function acorn_initialFocus() {
+function acorn_initialFocus(event, jFrom) {
   // Initial focusing
-  $('*[tabindex=1]').focus();
-  $('.initial-focus').focus();
-  $('.initial-focus .form-control').focus();
+  if (!jFrom || !jFrom.length) jFrom = $(document);
+  console.log(jFrom.find('form.layout :input:visible').first());
+  jFrom.find('form.layout :input:visible').first().focus();
+  jFrom.find('*[tabindex=1]').focus();
+  jFrom.find('.initial-focus').focus();
+  jFrom.find('.initial-focus .form-control').focus();
 
-  if (window.console) console.info('Initial focus');
+  // Translation helper does not show if we focus it
+  // TODO: Always show the translation helper
+  var jFocus = $(':focus');
+  if (jFocus.val()) jFocus.blur();
 };
 $(document).ready(acorn_initialFocus);
+$(document).on('popup', function(event){
+  // TODO: Initial focusing on popups does not work...
+  acorn_initialFocus(event, $(event.target));
+});
 
 // ---------------------------------------------- Page load tab select
 function acorn_public_tabselect(tabHash, fieldHashClick, fieldHashFocus) {

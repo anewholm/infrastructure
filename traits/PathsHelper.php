@@ -1,0 +1,330 @@
+<?php namespace Acorn\Traits;
+
+use Str;
+use Exception;
+use Acorn\Model;
+
+Trait PathsHelper {
+    // This Trait can be added to either Model or Controller
+    // And helps understand the other and directories
+
+    protected function paths(?Object $object = NULL): array
+    {
+        return array(
+            'fullyQualifiedClassName' => $this->fullyQualifiedClassName($object),
+            'unqualifiedClassName'    => $this->unqualifiedClassName($object),
+            'pluginPathRelative'      => $this->pluginPathRelative($object),
+            'pluginPathAbsolute'      => $this->pluginPathAbsolute($object),
+            'modelClassPathAbsolute'  => $this->modelClassPathAbsolute($object),
+            'controllerUrl'           => $this->controllerUrl($object),
+            'tablePrefix'             => $this->tablePrefix($object),
+            'tableMask'               => $this->tableMask($object),
+        );
+    }
+
+    // ----------------------------------------- Class & Plugin
+    public function fullyQualifiedClassName(?Object $object = NULL): string
+    {
+        // Short name for debugging output
+        // Acorn\Lojistiks\Model\Area => Area
+        if (is_null($object)) $object = &$this;
+        return get_class($object);
+    }
+
+    public function unqualifiedClassName(?Object $object = NULL): string
+    {
+        // Short name for debugging output
+        // Acorn\Lojistiks\Model\Area => Area
+        return last(explode('\\', $this->fullyQualifiedClassName($object)));
+    }
+
+    public function qualifyClassName(string $className): string
+    {
+        $fullyQualifiedClassName = $className;
+        $classNameParts = explode('\\', $className);
+        if (count($classNameParts) == 1) {
+            // Unqualified class name
+            $thisClassParts = explode('\\', $this->fullyQualifiedClassName());
+            array_pop($thisClassParts);
+            array_push($thisClassParts, $className);
+            $fullyQualifiedClassName = implode('\\', $thisClassParts);
+        }
+        return $fullyQualifiedClassName;
+    }
+
+    protected function pluginPathPartAuthorPlugin(?Object $object = NULL): string
+    {
+        $class       = $this->fullyQualifiedClassName();
+        $aClass      = explode('\\', $class);
+        $authorDirName = strtolower($aClass[0]);
+        $pluginDirName = strtolower($aClass[1]);
+        return "$authorDirName/$pluginDirName";
+    }
+
+    public function pluginAuthorDotPlugin(?Object $object = NULL): string
+    {
+        $class       = $this->fullyQualifiedClassName();
+        $aClass      = explode('\\', $class);
+        $authorDirName = strtolower($aClass[0]);
+        $pluginDirName = strtolower($aClass[1]);
+        return "$authorDirName.$pluginDirName";
+    }
+
+    protected function pluginPathRelative(?Object $object = NULL): string
+    {
+        $pluginPathPartAuthorPlugin = $this->pluginPathPartAuthorPlugin();
+        return "plugins/$pluginPathPartAuthorPlugin";
+    }
+
+    protected function docRoot(): string
+    {
+        return getcwd();
+    }
+
+    protected function pluginPathAbsolute(?Object $object = NULL): string
+    {
+        $docRoot            = $this->docRoot();
+        $pluginPathRelative = $this->pluginPathRelative();
+        return "$docRoot/$pluginPathRelative";
+    }
+
+    // ----------------------------------------- Translation
+    public function translationDomainModel(Model $model, string $name)
+    {
+        $modelName = $this->lowerCaseName($model);
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
+        return "$authorDotPlugin::lang.models.$modelName.$name";
+    }
+
+    public function translationDomainPlugin(string $name, ?Model $model = NULL)
+    {
+        if (is_null($model)) $model = &$this;
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
+        return "$authorDotPlugin::lang.plugin.$name";
+    }
+
+    public function translationDomainBackend(string $name)
+    {
+        return "backend::lang.form.$name";
+    }
+
+    public function transModel(string $name, ?Model $model = NULL)
+    {
+        if (is_null($model)) $model = &$this;
+        return trans($this->translationDomainModel($model, $name));
+    }
+
+    public function transBackend(string $name)
+    {
+        return trans($this->translationDomainBackend($name));
+    }
+
+    // ----------------------------------------- Case & plurality
+    public function pascalCaseName(?Object $object = NULL): string
+    {
+        return $this->unqualifiedClassName($object);
+    }
+
+    public function snakeCaseName(?Object $object = NULL): string
+    {
+        return Str::snake($this->unqualifiedClassName($object));
+    }
+
+    public function lowerCaseName(?Object $object = NULL): string
+    {
+        return strtolower($this->unqualifiedClassName($object));
+    }
+
+    public function singularClassName(?Object $object = NULL): string
+    {
+        return (property_exists($this, 'nameSingular') ? $this->nameSingular : Str::singular($this->unqualifiedClassName($object)));
+    }
+
+    public function pluralClassName(?Object $object = NULL): string
+    {
+        return (property_exists($this, 'namePlural') ? $this->namePlural : Str::plural($this->unqualifiedClassName()));
+    }
+
+    public function singularLowerCaseName(?Object $object = NULL): string
+    {
+        return strtolower($this->singularClassName());
+    }
+
+    public function pluralLowerCaseName(?Object $object = NULL): string
+    {
+        return strtolower($this->pluralClassName());
+    }
+
+    // ----------------------------------------- Models
+    public function modelClassName(?Object $object = NULL): string
+    {
+        return $this->singularClassName($object);
+    }
+
+    public function modelFullyQualifiedClass(?Object $object = NULL): string
+    {
+        $fullyQualifiedClassName = $this->fullyQualifiedClassName();
+        // Author\Plugin\<Type>\<Name>
+        $parts  = explode('\\', $fullyQualifiedClassName);
+        $author = $parts[0];
+        $plugin = $parts[1];
+        $type   = $parts[2];
+        $name   = $this->modelClassName();
+
+        return "$author\\$plugin\\Models\\$name";
+    }
+
+    public function modelDirectoryName(?Object $object = NULL): string
+    {
+        return $this->singularLowerCaseName();
+    }
+
+    public function modelDirectoryPathRelative(?Object $object = NULL): string
+    {
+        $pluginPathRelative = $this->pluginPathRelative();
+        $modelDirectoryName = $this->modelDirectoryName();
+        return "$pluginPathRelative/models/$modelDirectoryName";
+    }
+
+    public function modelClassPathRelative(?Object $object = NULL): string
+    {
+        $pluginPathRelative = $this->pluginPathRelative();
+        $modelClassName     = $this->modelClassName();
+        return "$pluginPathRelative/models/$modelClassName.php";
+    }
+
+    public function modelClassPathAbsolute(?Object $object = NULL): string
+    {
+        $modelClassPathRelative = $this->modelClassPathRelative();
+        return "$pluginPathRelative/$modelClassPathRelative";
+    }
+
+    // ----------------------------------------- Database
+    public function tableName(?Object $object = NULL): string
+    {
+        if (property_exists($this, 'table')) {
+            $tableName = $this->table;
+        } else {
+            $modelClassName = $this->modelClassName();
+            $model          = new $modelClassName;
+            $tableName      = $model->table;
+        }
+        return $tableName;
+    }
+
+    public function tablePrefix(?Object $object = NULL): string
+    {
+        $class         = $this->fullyQualifiedClassName();
+        $aClass        = explode('\\', $class);
+        $tablePrefix   = '';
+        if (count($aClass) == 2) {
+            $authorDirName = strtolower($aClass[0]);
+            $pluginDirName = strtolower($aClass[1]);
+            $tablePrefix   = "${authorDirName}_${pluginDirName}_";
+        }
+        return $tablePrefix;
+    }
+
+    public function tableMask(?Object $object = NULL): string
+    {
+        return $this->tablePrefix() . '%';
+    }
+
+    public function functionPrefix(?Object $object = NULL)
+    {
+        return 'fn_' . $this->tablePrefix();
+    }
+
+    public function hasFunctionPrefix(string $name, ?Object $object = NULL): bool
+    {
+        $functionPrefix = $this->functionPrefix();
+        return (substr($name, 0, strlen($functionPrefix)) == $functionPrefix);
+    }
+
+    public function hasAggregatePrefix(string $name, ?Object $object = NULL): bool
+    {
+        $aggregatePrefix = $this->aggregatePrefix();
+        return (substr($name, 0, strlen($aggregatePrefix)) == $aggregatePrefix);
+    }
+
+    public function aggregatePrefix(?Object $object = NULL)
+    {
+        return 'agg_' . $this->tablePrefix();
+    }
+
+    public function triggerPrefix(?Object $object = NULL)
+    {
+        return 'tr_' . $this->tablePrefix();
+    }
+
+    public function hasTriggerPrefix(string $name, ?Object $object = NULL): bool
+    {
+        $triggerPrefix = $this->triggerPrefix();
+        return (substr($name, 0, strlen($triggerPrefix)) == $triggerPrefix);
+    }
+
+    // ----------------------------------------- Controllers
+    public function controllerClassName(?Object $object = NULL): string
+    {
+        return $this->pluralClassName();
+    }
+
+    protected function controllerDirectoryPathRelative(?Object $object = NULL): string
+    {
+        $pluginPathRelative      = $this->pluginPathRelative();
+        $controllerDirectoryName = $this->controllerDirectoryName();
+        return "$pluginPathRelative/controllers/$controllerDirectoryName";
+    }
+
+    public function controllerDirectoryName(?Object $object = NULL): string
+    {
+        return $this->pluralLowerCaseName();
+    }
+
+    public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL): string
+    {
+        $pluginPathPartAuthorPlugin  = $this->pluginPathPartAuthorPlugin();
+        $controllerDirectoryName     = $this->controllerDirectoryName();
+
+        $controllerDirectoryRelative = $this->controllerDirectoryPathRelative();
+        if (!is_dir($controllerDirectoryRelative)) throw new Exception("$controllerDirectoryRelative not found");
+
+        $url = "/backend/$pluginPathPartAuthorPlugin/$controllerDirectoryName";
+        if ($action) {
+            if (is_null($id)) $id = $this->id();
+            $url .= "/$action/$id";
+        }
+        return $url;
+    }
+
+    // ----------------------------------------- Reverse lookups
+    public static function authorPascalCase(string $authorDirName): string
+    {
+        return ($authorDirName == 'acorn' ? 'Acorn' : ucfirst($authorDirName));
+    }
+
+    public static function fullyQualifiedModelClassFromTableName(string $tableName): string
+    {
+        $unqualifiedTableName = preg_replace('/^[^.]+\./', '', $tableName);
+        $tableNameParts       = explode('_', $unqualifiedTableName);
+        $authorDirName        = $tableNameParts[0];
+        $pluginDirName        = $tableNameParts[1];
+        $classSnakeCasePlural = $tableNameParts[2];
+        $unqualifiedPascalClassName = Str::singular(Str::studly($classSnakeCasePlural)); // Pascal case
+        $authorPascalCase     = self::authorPascalCase($authorDirName);
+        $pluginPascalCase     = Str::studly($pluginDirName); // Pascal case
+
+        return "$authorPascalCase\\$pluginPascalCase\\Models\\$unqualifiedPascalClassName";
+    }
+
+    public static function newModelFromTableName(string $tableName): Model
+    {
+        $class = self::fullyQualifiedModelClassFromTableName($tableName);
+        $model = new $class;
+        $fullyQualifiedClassTableName = $model->getTable();
+        $unqualifiedClassTableName    = preg_replace('/^[^.]+\./', '', $fullyQualifiedClassTableName);
+        $unqualifiedTableName         = preg_replace('/^[^.]+\./', '', $tableName);
+        if ($unqualifiedClassTableName != $unqualifiedTableName) throw new Exception("$tableName => $class => $unqualifiedClassTableName does not match");
+        return $model;
+    }
+}
