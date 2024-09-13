@@ -8,6 +8,8 @@ use Exception;
 
 class Migration extends StormMigration
 {
+    use Traits\PathsHelper;
+
     // --------------------------------------- Replication
     public function isCentralPublisher(): bool
     {
@@ -18,13 +20,13 @@ class Migration extends StormMigration
 
     public function truncateDatabase(string $tablePrefix): bool
     {
-        DB::unprepared("select fn_acorn_lojistiks_truncate_database('%', '$tablePrefix%')");
+        DB::unprepared("select fn_acorn_truncate_database('%', '$tablePrefix%')");
         return TRUE;
     }
 
     public function resetSequences(string $tablePrefix): bool
     {
-        DB::unprepared("select fn_acorn_lojistiks_reset_sequences('%', '$tablePrefix%')");
+        DB::unprepared("select fn_acorn_reset_sequences('%', '$tablePrefix%')");
         return TRUE;
     }
 
@@ -35,16 +37,15 @@ class Migration extends StormMigration
         return TRUE;
     }
 
-    public function tableCounts(?string $tablePrefix = NULL): array
+    public function tableCounts(?string $tableMask = NULL): array
     {
-        // TODO: This should be in an Acorn\DB
-        if (!$tablePrefix) $tablePrefix = $this->paths('tableMask');
-        return DB::select("select * from fn_acorn_lojistiks_table_counts('public') where \"table\" like('$tablePrefix')");
+        if (!$tableMask) $tableMask = $this->tableMask();
+        return DB::select("select * from fn_acorn_table_counts('public') where \"table\" like('$tablePrefix')");
     }
 
-    public function tableNames(?string $tablePrefix = NULL): array
+    public function tableNames(?string $tabletableMask = NULL): array
     {
-        return array_column($this->tableCounts($tablePrefix), 'table');
+        return array_column($this->tableCounts($tabletableMask), 'table');
     }
 
     public function refreshSubscriptionTo(array|string $subscriberInfo): bool
@@ -57,7 +58,8 @@ class Migration extends StormMigration
     public function subscribeTo(array|string $subscriberInfo = 'replication_publisher'): bool
     {
         // ------------------------------------------------- Config
-        $tablePrefix = $this->paths('tablePrefix');
+        $hostname    = gethostname();
+        $tablePrefix = $this->tablePrefix();
         if (is_string($subscriberInfo)) $subscriberInfo = [
             'connection'   => $subscriberInfo,
         ];
@@ -65,8 +67,9 @@ class Migration extends StormMigration
         if (!isset($subscriberInfo['table_prefix'])) $subscriberInfo['table_prefix'] = $tablePrefix; // acorn_lojistiks_
         if (!isset($subscriberInfo['publication']))  $subscriberInfo['publication']  = "pub_$subscriberInfo[table_prefix]tables"; // pub_acorn_lojistiks_tables
         if (!isset($subscriberInfo['subscription'])) $subscriberInfo['subscription'] = "sub_$subscriberInfo[table_prefix]tables";
-        if (!isset($subscriberInfo['copy_data']))    $subscriberInfo['copy_data'] = true;
-        if (!isset($subscriberInfo['streaming']))    $subscriberInfo['streaming'] = true;
+        if (!isset($subscriberInfo['slotname']))     $subscriberInfo['slotname']     = "slot_$subscriberInfo[table_prefix]tables_$hostname";
+        if (!isset($subscriberInfo['copy_data']))    $subscriberInfo['copy_data']    = true;
+        if (!isset($subscriberInfo['streaming']))    $subscriberInfo['streaming']    = true;
 
         // ------------------------------------------------- Replication publisher DB connection
         $publisherConnection = config("database.connections.$subscriberInfo[connection]");
@@ -77,7 +80,7 @@ class Migration extends StormMigration
             }
         }
         if (!isset($publisherConnection['sslmode'])) $publisherConnection['sslmode'] = 'disable';
-        print("\t\t\tChecking the connection to $publisherConnection[host]:$publisherConnection[port]");
+        print("\t\t\tChecking the connection to $publisherConnection[host]:$publisherConnection[port]\n");
         DB::connection($subscriberInfo['connection'])->select('select 1');
 
 
@@ -112,7 +115,7 @@ class Migration extends StormMigration
                 WITH (
                     streaming = '$streaming',
                     create_slot = true,
-                    slot_name = '$subscriberInfo[subscription]',
+                    slot_name = '$subscriberInfo[slotname]',
                     binary = false,
                     copy_data = $copyData,
 
@@ -164,12 +167,26 @@ SQL;
         return TRUE;
     }
 
+    public function setReplicaIdentity($table, array $fields = ['id'], string $indexType = 'btree')
+    {
+        $baseName     = str_replace('.', '_', $table);
+        $indexName    = "dr_${baseName}_replica_identity";
+        $fieldsString = implode(',', $fields);
+        DB::unprepared(<<<SQL
+            CREATE UNIQUE INDEX $indexName ON ${table} USING $indexType ($fieldsString);
+            ALTER TABLE ONLY ${table} REPLICA IDENTITY USING INDEX $indexName;
+SQL
+        );
+    }
+
     // --------------------------------------- Up & Down from SQL files
     public function up()
     {
         print("\n");
+        $fqClass = $this->fullyQualifiedClassName();
 
         // Schema
+        print("\t\t\tRunning SQL scripts for $fqClass\n");
         $this->runSQL('pre-up'); // Custom written
         $this->runSQL('up');     // Generated by update_sqls
 
@@ -187,63 +204,29 @@ SQL;
         $this->runSQL('down'); // Generated by update_sqls
     }
 
-    protected function paths(?string $key = NULL): array|string
+    public function runSQL(string $sqlFilename): string
     {
-        $docRoot     = getcwd();
-        $class       = get_class($this);
-        $aClass      = explode('\\', $class);
-        $author      = $aClass[0];
-        $plugin      = $aClass[1];
-        $shortClass  = last($aClass);
-
-        $authorDir   = strtolower($author);
-        $pluginDir   = strtolower($plugin);
-        $pluginRel   = "plugins/$authorDir/$pluginDir";
-        $tablePrefix = "${authorDir}_${pluginDir}_";
-        $tableMask   = "$tablePrefix%";
-
-        $paths = [
-            'fqClass'     => $class,
-            'class'       => $shortClass,
-            'author'      => $author,
-            'plugin'      => $plugin,
-            'authorDir'   => $authorDir,
-            'pluginDir'   => $pluginDir,
-            'docRoot'     => $docRoot,
-            'pluginRel'   => $pluginRel,
-            'pluginAbs'   => "$docRoot/$pluginRel",
-            'classPath'   => "$docRoot/$pluginRel/models/$shortClass.php",
-
-            'tablePrefix' => $tablePrefix,
-            'tableMask'   => $tableMask,
-        ];
-
-        return ($key ? $paths[$key] : $paths);
-    }
-
-    public function runSQL(string $filename)
-    {
-        $contents  = NULL;
-        $pluginRel = $this->paths('pluginRel');
-        $filepath  = "$pluginRel/updates/$filename.sql";
+        $sql                 = NULL;
+        $pluginPathRelative  = $this->pluginPathRelative();
+        $sqlFilepathRelative = "$pluginPathRelative/updates/$sqlFilename.sql";
 
         try {
-            // TODO: Make this path generic
-            // SECURITY: Sanitize $filename
-            $file     = new File($filepath, TRUE);
-            $contents = $file->getContent();
+            $file = new File($sqlFilepathRelative, TRUE);
+            $sql  = $file->getContent();
         } catch (FileNotFoundException $ex) {}
 
-        if ($contents && trim($contents)) {
-            print("\t\t\t$filename.sql ");
-            $yn = 'y'; //readline("Execute $filename.sql (y)?");
+        if ($sql && trim($sql)) {
+            print("\t\t\t$sqlFilename.sql ");
+            $yn = 'y'; // readline("Execute $sqlFilepathRelative (y)?");
             if ($yn == 'n') {
                 print(" USER CANCELLED\n");
             } else {
-                DB::unprepared($contents);
+                DB::unprepared($sql);
                 print(" DONE\n");
             }
         }
+
+        return $sqlFilepathRelative;
     }
 
     // ------------------------------------------ Extended table management
@@ -264,54 +247,94 @@ SQL;
     }
 
     // ------------------------------------------ Extended Objects
-    public function createFunction(string $name, array $parameters, string $returnType, string $body, ?string $language = 'plpgsql')
+    public function createExtension(string $name)
     {
-        // TODO: Check name starts with fn_<author>_<plugin>_
-        // TODO: Introduce DECLARE section
+        DB::unprepared("create extension if not exists $name;");
+    }
+
+    public function createFunction(string $name, array $parameters, string $returnType, array $declares, string $body, ?string $language = 'plpgsql', ?array $modifiers = [])
+    {
+        // Function name must start with fn_<author>_<plugin>_
+        if (!$this->hasFunctionPrefix($name)) throw new Exception("Function $name does not have correct prefix fn_<author>_<plugin>_");
         $BODY = '$BODY$';
         $parametersString = implode(',', $parameters);
+        $declareString    = implode(";\n", $declares);
+        $modifiersString  = implode(' ', $modifiers);
+        if ($declareString) $declareString = "declare\n$declareString;";
+        if ($language == 'plpgsql') $body = "begin\n$body\nend;";
         DB::unprepared(<<<SQL
             create or replace function $name($parametersString) returns $returnType
             as $BODY
-            begin
-                $body
-            end;
-            $BODY language $language;
+            $declareString
+            $body
+            $BODY language $language $modifiersString;
 SQL
         );
     }
 
-    public function createTrigger(string $name, string $stage, string $action, string $table, bool $forEachRow, string $function)
+    public function createTrigger(string $name, string $stage, string $action, string $table, bool $forEachRow, string $function, bool $always = FALSE)
     {
-        // TODO: Check name starts with tr_<author>_<plugin>_
+        // Trigger name must start with tr_<author>_<plugin>_
+        if (!$this->hasTriggerPrefix($name)) throw new Exception("Trigger $name does not have correct prefix tr_<author>_<plugin>_");
         $forEachRowString = ($forEachRow ? 'FOR EACH ROW' : '');
-        $parametersString = implode(',', $parameters);
         DB::unprepared(<<<SQL
             CREATE OR REPLACE TRIGGER $name
-            $stage $action
-            ON $table
-            $forEachRowString
-            EXECUTE FUNCTION $function();
+                $stage $action
+                ON $table
+                $forEachRowString
+                EXECUTE FUNCTION $function();
+SQL
+        );
+        // ALWAYS is used also for replication
+				if ($always) DB::unprepared("'ALTER TABLE IF EXISTS $table ENABLE ALWAYS TRIGGER $name");
+    }
+
+    public function createAggregate(string $name, string $function, string $parameterType = 'anyelement', string $parallel = 'safe')
+    {
+        // Trigger name must start with agg_<author>_<plugin>_
+        if (!$this->hasAggregatePrefix($name)) throw new Exception("Aggregate $name does not have correct prefix agg_<author>_<plugin>_");
+        DB::unprepared(<<<SQL
+            CREATE AGGREGATE $name($parameterType) (
+                SFUNC = $function,
+                STYPE = $parameterType,
+                PARALLEL = $parallel
+            );
 SQL
         );
     }
 
-    public function createFunctionAndTrigger(string $baseName, string $stage, string $action, string $table, bool $forEachRow, string $body, ?string $language = 'plpgsql')
+    public function createFunctionAndTrigger(string $baseName, string $stage, string $action, string $table, bool $forEachRow, array $declares, string $body, ?string $language = 'plpgsql', bool $always = FALSE)
     {
+        // Base name must be in the form <author>_<plugin>_*
         $functionName = "fn_$baseName";
-        $this->createFunction($functionName, [], 'trigger', $body, $language);
-        $this->createTrigger("tr_$baseName", $stage, $action, $table, $forEachRow, $functionName);
+        $this->createFunction($functionName, [], 'trigger', $declares, $body, $language);
+        $this->createTrigger("tr_$baseName", $stage, $action, $table, $forEachRow, $functionName, $always);
     }
 
-    // ------------------------------------------ Standard triggers
-    // TODO: server_id field and trigger
+    public function createFunctionAndAggregate(string $baseName, array $parameters, string $body, ?array $declares = [], ?string $parameterType = 'anyelement', ?string $parallel = 'safe', ?string $language = 'sql', ?array $modifiers = ['IMMUTABLE', 'STRICT', 'PARALLEL', 'SAFE'])
+    {
+        // Base name must be in the form <author>_<plugin>_*
+        $functionName = "fn_$baseName";
+        $this->createFunction($functionName, $parameters, $parameterType, $declares, $body, $language, $modifiers);
+        $this->createAggregate("agg_$baseName", $functionName, $parameterType, $parallel);
+    }
 
-    // TODO: correction fields and trigger
+    // ------------------------------------------ Standard triggers / fields
+    public function serverField() {
+        // TODO: server_id field and trigger
+    }
 
-    // TODO: created_by_user_id field and trigger
+    public function createdByUserField() {
+        // TODO: created_by_user_id field and trigger
+    }
 
     // ------------------------------------------ Extended Fields
     // TODO: Make these methods on an Acorn Table Class
+    public function setFunctionDefault(string $table, string $column, string $function)
+    {
+        DB::unprepared("alter table \"$table\" alter column \"$column\" set default $function()");
+    }
+
     public function interval(string $table, string $column, ?bool $nullable = FALSE)
     {
         $null = ($nullable ? '' : 'NOT NULL');

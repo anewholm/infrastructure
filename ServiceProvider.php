@@ -24,16 +24,6 @@ use Acorn\Messaging\Console\RunCommand;
 
 class ServiceProvider extends ModuleServiceProvider
 {
-    protected static function isCommandLine()
-    {
-        return !self::isHTTPCall();
-    }
-
-    protected static function isHTTPCall()
-    {
-        return isset($_SERVER['HTTP_HOST']);
-    }
-
     public function boot()
     {
         // -------------------------------------- Daemons manager
@@ -87,6 +77,17 @@ class ServiceProvider extends ModuleServiceProvider
         }
         
         parent::boot('acorn');
+    }
+
+    // ---------------------------------------- Status helpers
+    protected static function isCommandLine()
+    {
+        return !self::isHTTPCall();
+    }
+
+    protected static function isHTTPCall()
+    {
+        return isset($_SERVER['HTTP_HOST']);
     }
 
     static protected function isDebug()

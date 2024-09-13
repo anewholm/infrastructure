@@ -6,6 +6,7 @@ use \Backend\Models\User;
 use \Backend\Models\UserGroup;
 use ApplicationException;
 use Winter\Storm\Support\Facades\Schema;
+use Illuminate\Support\Facades\Redirect;
 
 use Illuminate\Support\Str;
 use Acorn\Builder;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 
 use Winter\Storm\Database\QueryBuilder;
 use DB;
+use Request;
 
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\RelationNotFoundException;
@@ -32,14 +34,21 @@ use Backend\Widgets\Form;
 use Backend\Classes\FormField;
 use Backend\Behaviors\FormController;
 use Winter\Storm\Database\TreeCollection;
+use Backend\Widgets\Filter;
+use Winter\Translate\Behaviors\TranslatableModel;
+
 use Exception;
+use Flash;
+
+use Acorn\Events\UserNavigation;
+use Acorn\Events\DataChange;
 
 /*
 class Saving {
     public function __construct(Model $eventPart)
     {
-        // TODO: What shall we do with this?
-        // TODO: look at the Dispatcher::until() method
+        // TODO: What shall we do with this class Saving?
+        // Look at the Dispatcher::until() method
         //throw new ApplicationException($eventPart->name . " was here");
     }
 }
@@ -47,42 +56,35 @@ class Saving {
 
 class Model extends BaseModel
 {
-    use DeepReplicates;
-    use DirtyWriteProtection;
-    use ObjectLocking;
-    use PostGreSQLFieldTypeUtilities;
+    use Traits\PathsHelper;
+    use Traits\DeepReplicates;
+    use Traits\DirtyWriteProtection;
+    use Traits\ObjectLocking;
+    use Traits\PostGreSQLFieldTypeUtilities;
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
 
-    // --------------------------------------------- Misc
-    protected function getShortClassName($object = NULL)
-    {
-        // Short name for debugging output
-        // Acorn\Lojistiks\Model\Area => Area
-        if (is_null($object)) $object = &$this;
-        return last(explode('\\', get_class($object)));
-    }
+    // --------------------------------------------- Translation
+    use \Acorn\Backendlocalization\Class\TranslateBackend;
+    public $translatable = ['name'];
+    public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
 
     // --------------------------------------------- Star schema centre => leaf services
-    public function getTypeAttribute(?bool $throwIfNull = FALSE)
+    public function getLeafTypeAttribute(?bool $throwIfNull = FALSE)
     {
-        return $this->getLeafTypeObject($throwIfNull)?->getShortClassName();
+        return $this->getLeafTypeModel($throwIfNull)?->unqualifiedClassName();
     }
 
-    protected function getLeafTypeObject(?bool $throwIfNull = FALSE)
+    public function getLeafTypeModel(?bool $throwIfNull = FALSE)
     {
         // For base tables that have multiple possible leaf detail tables in a star schema
         // we search the hasOne relation to determine which leaf table has the 1-1
         $leafObject = NULL;
-        $thisName   = $this->getShortClassName();
-        foreach ($this->hasOneThrough as $name => &$relativeModel) {
+        $thisName   = $this->unqualifiedClassName();
+
+        $relations = array_merge($this->hasOneThrough, $this->hasOne);
+        foreach ($relations as $name => &$relativeModel) {
             $this->load($name);
             if ($leafObject = $this->$name) break;
-        }
-        if (!$leafObject) {
-            foreach ($this->hasOne as $name => &$relativeModel) {
-                $this->load($name);
-                if ($leafObject = $this->$name) break;
-            }
         }
 
         if ($throwIfNull && !$leafObject) throw new Exception("Leaf $thisName not found for id($this->id)");
@@ -92,7 +94,7 @@ class Model extends BaseModel
     // --------------------------------------------- Encapuslation and Standard Accessors
     protected function checkFrameworkCallerEncapsulation($attributeName)
     {
-        if (TRUE) { // TODO: Tie this to debug mode
+        if (env('APP_DEBUG')) {
             $bt     = debug_backtrace();
             $called = $bt[1]; // Only called from our __get/set()
             $class  = get_class($this);
@@ -118,6 +120,8 @@ class Model extends BaseModel
                 && ! is_a($callerClass, FormField::class,  TRUE)
                 && ! is_a($callerClass, FormController::class, TRUE)
                 && ! is_a($callerClass, TreeCollection::class, TRUE)
+                && ! is_a($callerClass, Filter::class, TRUE)
+                && ! is_a($callerClass, TranslatableModel::class, TRUE)
                 && ! is_a($callerClass, $class,            TRUE)
                 && ! is_a($class, $callerClass,            TRUE)
             ) {
@@ -138,17 +142,19 @@ class Model extends BaseModel
         return parent::__set($name, $value);
     }
 
+    // --------------------------------------------- Standard fields
     public function id()
     {
         // Allow id checks, override in Derived Class if necessary
         return $this->id;
     }
 
-    public function name()
-    {
-        // Often fullName() or fullyQualifiedName() are used instead
-        return $this->name;
-    }
+    public function name() {return $this->name;}
+    public function fullyQualifiedName() {return $this->name;}
+    public function fullName() {return $this->name;}
+
+    protected function getFullyQualifiedNameAttribute() {return $this->fullyQualifiedName();}
+    protected function getFullNameAttribute() {return $this->fullName();}
 
     /*
     protected $dispatchesEvents = [
@@ -182,17 +188,6 @@ class Model extends BaseModel
     }
 
     // --------------------------------------------- Querying
-    public static function fromTableName($table)
-    {
-        foreach (get_declared_classes() as $class) {
-            if (is_subclass_of($class, self::class)) {
-                $model = new $class;
-                if ($model->getTable() === $table) return $class;
-            }
-        }
-
-        return false;
-    }
     public function newEloquentBuilder($query): Builder
     {
         // Acorn Builder extensions
@@ -350,8 +345,7 @@ SQL;
             print('<h2>Publications on local</h2>');
             print('<table>');
             foreach (self::dbPublications() as $pub) {
-                $action = '';
-                print("<tr><td>$pub->pubname:</td><td class='$enabled'>$enabled</td><td>$action</td></tr>");
+                print("<tr><td>$pub->pubname:</td></tr>");
             }
             print('</table>');
         print('</div>');
@@ -375,6 +369,18 @@ SQL;
         }
         print('</table></div></div>');
 
+        // --------------------------------------------------------
+        // TODO: Websocket dashboard
+        // https://beyondco.de/docs/laravel-websockets/debugging/dashboard
+        print('<div><h2>Websockets - <a href="/laravel-dashboard">view dashboard</a></h2>');
+        print('<div id="websockets"><table>');
+        foreach (config('websockets.apps')[0] as $name => $value) {
+            print("<tr><td>$name:</td><td>$value</td></tr>");
+        }
+        print('</table></div></div>');
+
+        print('<p style="clear:both;" />');
+
         print('</div>');
     }
 
@@ -389,13 +395,217 @@ SQL;
 
     public static function dropdownOptions($form, $field)
     {
+        $optionsModel = (isset($field->config['optionsModel'])
+            ? $field->config['optionsModel']
+            : NULL
+        );
+        $models = ($optionsModel ? $optionsModel::all() : static::all());
+
         $name = (isset($field->config['nameFrom'])
             ? $field->config['nameFrom']
             : 'name'
         );
 
-        // TODO: where: clause
+        // Hierarchies
+        $hierarchical = (isset($field->config['hierarchical'])
+            ? $field->config['hierarchical']
+            : isset($models->first()?->hasMany['children'])
+        );
+        $indentationString = (isset($field->config['indentation-string'])
+            ? $field->config['indentation-string']
+            : "--&nbsp;"
+        );
 
-        return self::all()->lists($name, 'id');
+        // Simple where options
+        // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
+        //     where:
+        //       uses_quantity: false
+        if (isset($field->config['where'])) {
+            foreach ($field->config['where'] as $property => $value) {
+                // Simple fixed property
+                // array configs are dynamic, handled below in filterFields()
+                if (!is_array($value)) {
+                    $models = $models->where($property, $value);
+                }
+            }
+        }
+
+        // Hierarchies:
+        //   hierarchy: false|true|reverse
+        //   indentation_character: -
+        //   start-model: x
+        if ($hierarchical) {
+            $treeCollection = new TreeCollection($models);
+            $nested = $treeCollection->toNested(FALSE);
+            $list   = $treeCollection->listsNested($name, 'id', $indentationString);
+        } else {
+            $list = $models->lists($name, 'id');
+        }
+
+        return $list;
+    }
+
+    public function filterFields($fields, $context = NULL)
+    {
+        $is_update = ($context == 'update');
+        $is_create = ($context == 'create');
+
+        if ($is_update || $is_create) {
+            // ----------------------------------- User stateful Url
+            if (get('set-url') === '') {
+                if ($user = BackendAuth::user()) {
+                    if (array_key_exists('acorn_url', $user->getAttributes())) {
+                        $removeQuery = '/\?.*/'; // To avoid a continuous request loop
+                        $user->acorn_url = preg_replace($removeQuery, '', Request::getRequestUri());
+                        $user->save();
+                        // Raise websockets event
+                        UserNavigation::dispatch($user, $user->acorn_url); // channel=acorn, user.navigation
+                    }
+                }
+            }
+
+            // ----------------------------------- QR code scanning form value completion
+            if ($post = post($this->unqualifiedClassName())) { // Transfer[...]
+                if (isset($post['qrcode']) && $post['qrcode']) {
+                    if ($qrcode = json_decode($post['qrcode'])) {
+                        $qrClass      = "$qrcode->author\\$qrcode->plugin\\Models\\$qrcode->model";
+                        $qrObject     = $qrClass::findOrFail($qrcode->id); // throws Exception
+                        $qrObjectName = (method_exists($qrObject, 'name') ?  $qrObject->name() : $qrObject->id());
+                        // names => classes
+                        $fieldsRelations   = array_merge($this->hasOne,     $this->belongsTo,     $this->hasMany,     $this->belongsToMany);
+                        $qrObjectRelations = array_merge($qrObject->hasOne, $qrObject->belongsTo, $qrObject->hasMany, $qrObject->belongsToMany);
+
+                        // Check each field for qr object and its relations
+                        $field          = NULL;
+                        $relevantObject = NULL;
+                        foreach ($fields as $fieldName => &$field) {
+                            // We only accept relations at the moment
+                            if (isset($fieldsRelations[$fieldName])) {
+                                $fieldRelationModel = $fieldsRelations[$fieldName];
+                                if (is_array($fieldRelationModel)) $fieldRelationModel = $fieldRelationModel[0];
+
+                                // We do not overwrite set values
+                                $canHaveValue = (is_null($field->value) || is_array($field->value) || $is_update);
+                                if ($canHaveValue) {
+                                    // ----------------------------------------------- Direct set
+                                    if ($fieldRelationModel == $qrClass) {
+                                        $relevantObject = $qrObject;
+                                        $foundAtText    = "$qrcode->model($qrObjectName) direct";
+                                        break;
+                                    }
+
+                                    // ----------------------------------------------- Scanned Object Relations
+                                    foreach ($qrObjectRelations as $qrObjectRelationName => $qrObjectRelationModel) {
+                                        $qrObject->load($qrObjectRelationName);
+                                        if (is_array($qrObjectRelationModel)) $qrObjectRelationModel = $qrObjectRelationModel[0];
+                                        if (isset($qrObject->$qrObjectRelationName) && $fieldRelationModel == $qrObjectRelationModel) {
+                                            $relevantObject = $qrObject->$qrObjectRelationName;
+                                            $foundAtText    = "$qrcode->model($qrObjectName)->$qrObjectRelationName";
+                                            break;
+                                        }
+                                    }
+                                } // cannot Have a Value
+                            } // not a relation
+
+                            if ($relevantObject) break; // We accept the first only
+                        } // foreach &$field
+
+                        if ($relevantObject) {
+                            // Set the field value
+                            if (is_array($field->value)) array_push($field->value, $relevantObject->id());
+                            else                         $field->value = $relevantObject->id();
+
+                            // Response
+                            $foundOnForm = trans("found on form");
+                            Flash::success(trans("$foundAtText $foundOnForm @ $fieldName"));
+                        } else {
+                            $notFoundOnForm = trans("not found on form");
+                            Flash::error("$qrcode->model $notFoundOnForm");
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------- add_button
+            // Using config
+            //   from: _product_instance
+            //   to: product_instances
+            foreach ($fields as $name => &$field) {
+                if (isset($field->config['path']) && $field->config['path'] == 'add_button') {
+                    // _add_invoice defaults to add _invoice to invoices
+                    $modelName = substr($name, 5); // invoice
+                    $from = (isset($field->config['from']) ? $field->config['from'] : "_$modelName");
+                    $to   = (isset($field->config['to'])   ? $field->config['to']   : Str::plural($modelName));
+
+                    // Silent ignore if $to is not available
+                    // Custom filterFields() must handle these cases
+                    if (property_exists($fields, $to)) {
+                        $collection = &$fields->$to->value;
+                        if (is_null($collection)) $collection = array();
+
+                        if (isset($post[$from])) {
+                            if ($id = $post[$from]) {
+                                array_push($collection, $id);
+                                // Clear the form
+                                $fields->$from->value = NULL;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------- popup_button
+            // TODO: Encapsulate this in to the popup_button formField when it is written
+            foreach ($fields as $name => &$field) {
+                if (isset($field->config['path']) && $field->config['path'] == 'popup_button') {
+                    // _add_invoice defaults to add _invoice to invoices
+                    $modelNameLower = substr($name, 8); // invoice
+                    $modelClass     = (isset($field->config['model']) ? $field->config['model'] : Str::studly($modelNameLower)); // Invoice
+                    $to             = (isset($field->config['to'])    ? $field->config['to']    : "_$modelNameLower"); // _invoice
+
+                    if (property_exists($fields, $to)) $fields->$to->value = $field->value;
+                }
+            }
+
+            // ----------------------------------- Extended config options
+            // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
+            // where:
+            //   location: @source_location
+            /* TODO: filterFields() live dynamic changes
+            foreach ($fields as $name => &$field) {
+                if (isset($field->config['options']) && is_callable($field->config['options']) && isset($field->config['where'])) {
+                    $models = $field->config['options'](NULL, $field);
+                    foreach ($field->config['where'] as $property => $whereClause) {
+                        if (is_array($whereClause)) {
+                            // Relation
+                            $relationClass = $this->belongsTo[$property];
+                            foreach ($whereClauses as $whereField => $value) {
+                                if ($whereField == 'field') {
+                                    $models = $models->where($whereField, $value);
+                                } else {
+                                    $models = $models->where($whereField, $value);
+                                }
+                            }
+                        }
+                    }
+                    $field->value = $models;
+                }
+            }
+            */
+
+
+        } // ($is_update || $is_create)
+    }
+
+    // --------------------------------------------- Hierarchies
+    public function getParentId()
+    {
+        return $this->parent_area_id;
+    }
+
+    public function getChildren(): Collection
+    {
+        $this->load('children');
+        return $this->children;
     }
 }

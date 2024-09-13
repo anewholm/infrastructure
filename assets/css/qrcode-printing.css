@@ -1,0 +1,37 @@
+@media print {
+    .layout-topmenu,
+    thead,
+    table.table.data td.list-checkbox,
+    table.table.data td.list-setup,
+    .list-header,
+    .list-footer,
+    .flash-message,
+    .default-layout-side-inline #layout-sidenav-2 {
+        display: none;
+    }
+    table.table.data {
+        border-bottom: 1px solid #ffffff;
+        overflow-wrap: break-word;
+    }
+    table.table.data tr {
+        display: inline-block;
+        padding:10px;
+        border: 1px black dashed;
+        margin: 0 0 -1px -1px;
+        height: 250px;
+    }
+    table.table.data tbody tr.rowlink:not(.nolink):hover td {
+        background-color: Transparent!important;
+        color: #6b6969;
+    }
+    table.table.data tr > td {
+        display: block;
+        text-align: center;
+        padding: 0px;
+        width: 120px;
+        background-color: Transparent!important;
+    }
+    table.table.data td svg {
+        margin: 0px auto;
+    }
+}

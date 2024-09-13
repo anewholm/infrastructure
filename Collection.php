@@ -4,33 +4,14 @@ namespace Acorn;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
-
 /**
  * @package acorn\builder
- * @author Jaber Rasul , sz 
+ * @author sz
  */
 class Collection extends EloquentCollection
 {
     /**
-     * If you want to use this algorithm you must:
-     * On Your Model Class Add 
-     * This method 
-     * 
-     * public function newCollection(array $models = [])
-     *   {   
-     *        return new Collection($models);
-     *   }
-     * 
-     * this method its change model proparty $model from Illuminate\Database\Eloquent\Collection to Acorn/Colleciton
-     */
-
-
-
-    /**
-     * Generate an associative array for a dropdown menu.
-     *
-     * This method maps the collection to an array of key-value pairs, using the
-     * specified fields from the collection items.
+     * Generate an associative array for a dropdown options.
      *
      * @param string $key   The field to use as the dropdown key. Default is 'name'.
      * @param string $value The field to use as the dropdown value. Default is 'id'.
@@ -41,5 +22,10 @@ class Collection extends EloquentCollection
     {
         // parent::lists(...) does not work due to static::hasMacro() checking
         return $this->pluck($value, $key)->all();
+    }
+
+    public function ids()
+    {
+        return $this->pluck('id')->toArray();
     }
 }
