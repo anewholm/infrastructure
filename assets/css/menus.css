@@ -1,0 +1,10 @@
+div[role=menu] > a:has(i.acorn-splitter) {
+    border-top: 1px solid #d7d7d7;
+    border-bottom: 1px solid #e7e7e7;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    padding: 0px;
+}
+div[role=menu] > a:has(i.acorn-splitter) > * {
+    display:none;
+}

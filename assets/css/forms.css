@@ -1,10 +1,16 @@
+.flash-message a,
+.callout a {
+  color: blue;
+}
 .flash-message a {
-  color: darkblue;
   border-radius:4px;
   padding: 2px 4px;
   background-color:#fff;
 }
 
+body .field-multilingual .ml-btn {
+    z-index: 10;
+}
 .form-group button.form-button {
   margin-top: 0px;
 }
@@ -12,7 +18,9 @@
 .new-row {
   clear:both;
 }
-
+.no-label > label {
+  display:none;
+}
 .form-group.partial-field:has(button.popup-create) > label[for],
 .form-group.partial-field:has(button.add-button) > label[for] {
   display:none;
@@ -50,12 +58,19 @@
   margin-left:-10px;
 }
 
-/* ------------------------------------- Popups */
-#popup-container {
-  padding:2em;
+.select2-results__option--highlighted {
+    background-color: #d7d7d7;
+    font-weight: bold;
 }
-#popup-buttons {
-  text-align:right;
+
+/* ------------------------------------- Popups */
+.modal-dialog .popup-hide,
+.modal-dialog .new-page { /* Disable links to new pages in popups */
+  display:none;
+  visibility:hidden;
+}
+.modal-dialog .popup-col-xs-6 {
+  width: 50%;
 }
 
 /* ------------------------------------- debug */

@@ -15,45 +15,52 @@ function domReady(fn) {
 domReady(function () {
     // If found you qr code
     function onScanSuccess(decodeText, decodeResult) {
-            // https://github.com/mebjas/html5-qrcode
-            var jQrScanner = $('#my-qr-reader');
-            var object     = JSON.parse(decodeText);
-            var urlOptions = document.location.search.substr(1).split('&');
-            object.debug   = (urlOptions.indexOf('debug') !== -1);
+        // https://github.com/mebjas/html5-qrcode
+        var jQrScanner = $('#my-qr-reader');
+        var object;
 
-            // Only allow each object to be scanned once
-            if (!qrCodeObjects[decodeText]) {
-                qrCodeObjects[decodeText] = object;
+        if (window.console) console.info('QRCode:' + decodeText);
 
-                $('#qr-code-objects tbody').append('<tr><td>' + object.model + '</td><td>' + object.id + '</td></tr>');
+        // If the QR code has already been scanned, show a message and do nothing
+        if (qrCodeObjects[decodeText]) {
+            $.oc.flashMsg({
+                'text': 'Qrcode has already been scanned.',
+                'class': 'error',
+                'interval': 3
+            })
+            if (window.console) console.warn('QRCode already scanned');
+            return; //Do nothing else
+        }
+        // If the code has not been scanned before
+        qrCodeObjects[decodeText] = true;
 
-                switch (jQrScanner.attr('mode')) {
-                    case 'redirect':
-                        // Object finding
-                        var authorFolder     = object.author.toLowerCase();
-                        var pluginFolder     = object.plugin.toLowerCase();
-                        var modelFolder      = object.model.toLowerCase();
-                        // TODO: This will all be replaced by URL QRCodes
-                        var controllerFolder = modelFolder + 's';
-                        var action           = 'update';
-                        var pluginRoot       = '/backend/' + authorFolder + '/' + pluginFolder;
-                        var controllerRoot   = pluginRoot + '/' + controllerFolder;
-                        var query            = 'set-url'; // => UserNavigation
-                        document.location    = controllerRoot + '/' + action + '/' + object.id + '?' + query;
-                        break;
-                    case 'field':
-                    default:
-                        // Useful for dependsOn:
-                        if (window.console) console.log(object);
-                        jQrScanner.siblings('input').val(JSON.stringify(object));
-                        jQrScanner.trigger('change', object);
-                        break;
-                }
-            } else {
-                if (window.console) console.warn(object);
-            }
+        // Check if decodeText is a URL
+        var controllerURL = decodeText;
+        if (decodeText.startsWith("{")) {
+            // Legacy JSON object support
+            // "{"author":"Acorn","plugin":"Lojistiks","model":"Transfer","id":"ead5e26f-6ea9-4882-9412-fe5815c04e12"}"
+            var decodeJSON  = JSON.parse(decodeText);
+            var pluralModel = decodeJSON.model.plural();
+            var action      = 'update'; // TODO: Permissions?
+            controllerURL   = '/backend/' + decodeJSON.author.toLowerCase() + '/' + decodeJSON.plugin.toLowerCase() + '/' + pluralModel.toLowerCase() + '/' + action + '/' + decodeJSON.id;
+        }
+        if (window.console) console.log(controllerURL);
+
+        // Handle based on scanner mode (redirect or field)
+        switch (jQrScanner.attr('mode')) {
+            case 'redirect':
+                document.location = controllerURL;
+                break;
+            case 'field':
+            default:
+                // Useful for dependsOn:
+                jQrScanner.siblings('input').val(controllerURL);
+                jQrScanner.trigger('change', controllerURL);
+                break;
+        }
     }
 
+    // Initialize the QR code scanner if the element exists
     if ($("#my-qr-reader").length) {
         let htmlscanner = new Html5QrcodeScanner(
             "my-qr-reader",

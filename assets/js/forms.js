@@ -1,4 +1,10 @@
 $(document).ready(function(){
+  // Callouts (hints) close button
+  // NOTE: Not using data-dismiss="callout" because we want a cross and a slideUp effect
+  $('.callout .close').on('click', function(){
+      $(this).closest('.callout').slideUp();
+  });
+
   $('.goto-form-group-selection').click(function(){
     var jInput  = $(this).closest('.form-group,.custom-checkbox').find(':input').first();
     var rootURL = $(this).attr('href').replace(/\/$/, '');
@@ -32,13 +38,18 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
   var responseId, fieldName;
   if (textStatus == 'success') {
     if (fieldName = context.options.data.field_name) {
-      if (responseId = jqXHR.responseJSON.id) {
-        var jField = $("[data-field-name='" + fieldName + "'] input");
-        jField.val(responseId);
-        jField.trigger('change', context);
+      var jField = $("[data-field-name='" + fieldName + "']");
+      if (jField.length) {
+        jField.trigger('change', [context]);
+        if (responseId = jqXHR.responseJSON.id) jField.find(':input').val(responseId);
+      } else {
+        var sError = 'Field [' + fieldName + '] not found during refresh';
+        if (window) window.console.error(sError);
+        $.wn.flashMsg({
+          'text': sError,
+          'class': 'error'
+        });
       }
-    } else {
-      // TODO: $.request('onRefreshField', {data:{fields:'_purchase'}});
     }
   }
 }

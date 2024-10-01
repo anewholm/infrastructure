@@ -17,13 +17,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
+use Illuminate\Database\QueryException;
 use Winter\Storm\Database\QueryBuilder;
 use DB;
 use Request;
+use Config;
 
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\RelationNotFoundException;
 use InvalidArgumentException;
+
+use Illuminate\Support\Facades\Route;
+use Backend\Classes\BackendController;
+use Acorn\BackendRequestController;
+
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
+use Request as BaseRequest;
 
 // Allowed __get/set() caller classes
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -35,13 +45,15 @@ use Backend\Classes\FormField;
 use Backend\Behaviors\FormController;
 use Winter\Storm\Database\TreeCollection;
 use Backend\Widgets\Filter;
-use Winter\Translate\Behaviors\TranslatableModel;
+use \Acorn\Backendlocalization\Class\TranslateBackend;
 
 use Exception;
 use Flash;
 
 use Acorn\Events\UserNavigation;
 use Acorn\Events\DataChange;
+use Acorn\Events\ModelBeforeSave;
+use Acorn\Events\ModelAfterSave;
 
 /*
 class Saving {
@@ -62,11 +74,14 @@ class Model extends BaseModel
     use Traits\ObjectLocking;
     use Traits\PostGreSQLFieldTypeUtilities;
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
+    use TranslateBackend {
+        __get as protected tb__get;
+    }
 
     // --------------------------------------------- Translation
-    use \Acorn\Backendlocalization\Class\TranslateBackend;
-    public $translatable = ['name'];
+    // TODO: Jabers code, when reviewed: use \Acorn\Backendlocalization\Class\TranslateBackend;
     public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
+    public $translatable = ['name', 'description'];
 
     // --------------------------------------------- Star schema centre => leaf services
     public function getLeafTypeAttribute(?bool $throwIfNull = FALSE)
@@ -83,8 +98,10 @@ class Model extends BaseModel
 
         $relations = array_merge($this->hasOneThrough, $this->hasOne);
         foreach ($relations as $name => &$relativeModel) {
-            $this->load($name);
-            if ($leafObject = $this->$name) break;
+            if (is_array($relativeModel) && isset($relativeModel['leaf']) && $relativeModel['leaf']) {
+                $this->load($name);
+                if ($leafObject = $this->$name) break;
+            }
         }
 
         if ($throwIfNull && !$leafObject) throw new Exception("Leaf $thisName not found for id($this->id)");
@@ -96,21 +113,31 @@ class Model extends BaseModel
     {
         if (env('APP_DEBUG')) {
             $bt     = debug_backtrace();
-            $called = $bt[1]; // Only called from our __get/set()
-            $class  = get_class($this);
-            $aClass = explode('\\', $class);
-            $author = $aClass[0];
-            $plugin = (isset($aClass[1]) ? $aClass[1] : NULL);
-            $func   = $called['function'];
 
+            // This and Called (Our __get/set())
+            $called = $bt[1]; // Our __get/set()
+            $thisClass  = get_class($this);
+            $aThisClass = explode('\\', $thisClass);
+            $thisAuthor = $aThisClass[0];
+            $thisPlugin = (isset($aThisClass[1]) ? $aThisClass[1] : NULL);
+            $func       = $called['function']; // Our __get/set()
+
+            // External caller, potentially an external class
             // ViewMaker can call without calling context
-            $caller      = (count($bt) > 2 ? $bt[2] : []);
-            $callerClass = (isset($caller['class']) ? $caller['class'] : 'None');
-            $callerLine  = $called['line'];
-            $isRelation  = (property_exists($this, 'relations') && isset($this->relations[$attributeName]));
+            $caller       = (count($bt) > 2 ? $bt[2] : []);
+            $callerClass  = (isset($caller['class']) ? $caller['class'] : 'None');
+            $aCallerClass = explode('\\', $callerClass);
+            $callerAuthor = $aCallerClass[0];
+            $callerPlugin = (isset($aCallerClass[1]) ? $aCallerClass[1] : NULL);
+            $callerLine   = $called['line'];
+            $isRelation   = (property_exists($this, 'relations') && isset($this->relations[$attributeName]));
 
-            if (   ! ($plugin == 'Calendar') // TODO: Rewrite calendar for Encapsulation
+            if (
+                // Plugins
+                   ! ($thisPlugin   == 'Calendar') // TODO: Rewrite calendar for Encapsulation
+                && ! ($callerPlugin == 'Calendar')
                 && ! $isRelation
+                // Classes
                 && ! is_a($callerClass, EloquentBuilder::class,   TRUE)
                 && ! is_a($callerClass, Relation::class,   TRUE)
                 && ! is_a($callerClass, Helper::class,     TRUE)
@@ -118,14 +145,16 @@ class Model extends BaseModel
                 && ! is_a($callerClass, ListColumn::class, TRUE)
                 && ! is_a($callerClass, Form::class,       TRUE)
                 && ! is_a($callerClass, FormField::class,  TRUE)
-                && ! is_a($callerClass, FormController::class, TRUE)
-                && ! is_a($callerClass, TreeCollection::class, TRUE)
-                && ! is_a($callerClass, Filter::class, TRUE)
-                && ! is_a($callerClass, TranslatableModel::class, TRUE)
-                && ! is_a($callerClass, $class,            TRUE)
-                && ! is_a($class, $callerClass,            TRUE)
+                && ! is_a($callerClass, Filter::class,     TRUE)
+                && ! is_a($callerClass, FormController::class,    TRUE)
+                && ! is_a($callerClass, TreeCollection::class,    TRUE)
+                && strstr($callerClass, 'Listeners') === FALSE
+                && ! is_a($callerClass, $thisClass,        TRUE)
+                && ! is_a($thisClass, $callerClass,        TRUE)
+                // Traits
+                && $callerClass != 'Winter\Translate\Behaviors\TranslatableModel'
             ) {
-                throw new Exception("Protected $class::$func($attributeName) called by $callerClass:$callerLine");
+                throw new Exception("Protected $thisClass::$func($attributeName) called by $callerPlugin/$thisPlugin $callerClass:$callerLine");
             }
         }
     }
@@ -133,7 +162,8 @@ class Model extends BaseModel
     public function __get($name)
     {
         $this->checkFrameworkCallerEncapsulation($name);
-        return parent::__get($name);
+        // Pass through to TranslateBackend trait
+        return $this->tb__get($name);
     }
 
     public function __set($name, $value)
@@ -149,10 +179,35 @@ class Model extends BaseModel
         return $this->id;
     }
 
-    public function name() {return $this->name;}
-    public function fullyQualifiedName() {return $this->name;}
-    public function fullName() {return $this->name;}
+    public function name() {
+        $name = NULL;
 
+        if ($this->hasAttribute('name') && $this->name) $name = $this->name;
+        else {
+            // We allow 1-1 relations to define the name
+            foreach ($this->belongsTo as $relation => &$belongsTo) {
+                if (is_array($belongsTo) && isset($belongsTo['name']) && $belongsTo['name'] === TRUE) {
+                    $this->load($relation);
+                    $relatedObject = $this->$relation;
+                    if ($relatedObject) {
+                        if (!$relatedObject->hasAttribute('name')) {
+                            $unqualifiedClassName = $this->unqualifiedClassName();
+                            throw new Exception("Name relation on $unqualifiedClassName::belongsTo[$relation] does not have a name attribute");
+                        }
+                        $name = $relatedObject->name;
+                        break;
+                    }
+                }
+            }
+        }
+        if (is_null($name) && $this->hasAttribute('id')) $name = $this->id;
+
+        return $name;
+    }
+    public function fullyQualifiedName() {return $this->name();}
+    public function fullName()           {return $this->name();}
+
+    protected function getNameAttribute() {return $this->name();}
     protected function getFullyQualifiedNameAttribute() {return $this->fullyQualifiedName();}
     protected function getFullNameAttribute() {return $this->fullName();}
 
@@ -173,6 +228,10 @@ class Model extends BaseModel
 
     public function save(?array $options = [], $sessionKey = null)
     {
+        // Useful for auto-completing auto-relations
+        // like created_by_user and created_by_event
+        ModelBeforeSave::dispatch($this);
+
         // Object locking
         if (!isset($options['UNLOCK']) || $options['UNLOCK'] == TRUE) {
             if ($user = BackendAuth::user())
@@ -184,7 +243,47 @@ class Model extends BaseModel
         // This would error on create new
         if (!property_exists($this, 'timestamps') || $this->timestamps) $this->updated_at = NULL;
 
-        return parent::save($options, $sessionKey);
+        try {
+            $result = parent::save($options, $sessionKey);
+        } catch (QueryException $qe) {
+            if (env('APP_DEBUG')) {
+                throw $qe;
+            } else {
+                $message = $qe->getMessage();
+                switch ($qe->getCode()) {
+                    case 23514:
+                        // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acorn_finance_invoices" violates check constraint "payee_either_or"
+                        if (preg_match_all('/relation "([^"]+)" violates check constraint "([^"]+)"/', $message, $matches) == 1) {
+                            if (count($matches) == 3) {
+                                // TODO: Make this a nice validation Flash message
+                                $table   = $matches[1][0];
+                                $check   = $matches[2][0];
+                                $message = "Check $check is required";
+                            }
+                        }
+                        break;
+                    case 23502:
+                        // NotNullConstraintViolationException
+                        // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acorn_finance_receipts" violates not-null constraint
+                        if (preg_match_all('/column "([^"]+)" of relation "([^"]+)"/', $message, $matches) == 1) {
+                            if (count($matches) == 3) {
+                                // TODO: Make this a nice validation Flash message
+                                $column  = $matches[1][0];
+                                $table   = $matches[2][0];
+                                $message = "$column is required";
+                            }
+                        }
+                        break;
+                }
+                if ($message) throw new Exception($message);
+            }
+        }
+
+        // Useful for auto-completing auto-relations
+        // like created_by_user and created_by_event
+        ModelAfterSave::dispatch($this);
+
+        return $result;
     }
 
     // --------------------------------------------- Querying
@@ -384,6 +483,21 @@ SQL;
         print('</div>');
     }
 
+
+    // --------------------------------------------- Hierarchies
+    public function getParentId()
+    {
+        $this->load('parent');
+        return $this->parent?->id();
+    }
+
+    public function getChildren(): Collection
+    {
+        $this->load('children');
+        return $this->children;
+    }
+
+
     // --------------------------------------------- Forms
     protected static function getQualifiedColumnListing()
     {
@@ -393,11 +507,13 @@ SQL;
         return $model->qualifyColumns($columns);
     }
 
-    public static function dropdownOptions($form, $field)
+    public static function dropdownOptions($form, $field, $optionsModel = NULL)
     {
-        $optionsModel = (isset($field->config['optionsModel'])
-            ? $field->config['optionsModel']
-            : NULL
+        $optionsModel = ($optionsModel ?:
+            (isset($field->config['optionsModel'])
+                ? $field->config['optionsModel']
+                : NULL
+            )
         );
         $models = ($optionsModel ? $optionsModel::all() : static::all());
 
@@ -414,6 +530,10 @@ SQL;
         $indentationString = (isset($field->config['indentation-string'])
             ? $field->config['indentation-string']
             : "--&nbsp;"
+        );
+        $ancestor = (isset($field->config['ancestor'])
+            ? $field->config['ancestor']
+            : NULL
         );
 
         // Simple where options
@@ -435,9 +555,11 @@ SQL;
         //   indentation_character: -
         //   start-model: x
         if ($hierarchical) {
+            if ($ancestor) $models = [$ancestor];
             $treeCollection = new TreeCollection($models);
             $nested = $treeCollection->toNested(FALSE);
             $list   = $treeCollection->listsNested($name, 'id', $indentationString);
+            if (strstr(static::class, 'Defendant')) dd(static::class, $hierarchical, $list, $name, $models, $field->config, $models->first()?->hasMany['children']);
         } else {
             $list = $models->lists($name, 'id');
         }
@@ -445,6 +567,28 @@ SQL;
         return $list;
     }
 
+    /**
+    * Extract the record ID from the URL.
+    *
+    * @param string $url
+    * @return int|string
+    */
+    protected function extractRecordIdFromUrl( string $url ): int|string {
+
+        $segments = explode( '/', $url );
+        $recordId = end( $segments );
+
+        //if it is integer return int
+        if ( is_numeric( $recordId ) ) {
+            $recordId = ( int ) $recordId;
+        }
+        return $recordId;
+    }
+
+    /**
+    * Filter the fields based on QR code scanning.
+    * @param string|null $context
+    */
     public function filterFields($fields, $context = NULL)
     {
         $is_update = ($context == 'update');
@@ -465,65 +609,125 @@ SQL;
             }
 
             // ----------------------------------- QR code scanning form value completion
-            if ($post = post($this->unqualifiedClassName())) { // Transfer[...]
-                if (isset($post['qrcode']) && $post['qrcode']) {
-                    if ($qrcode = json_decode($post['qrcode'])) {
-                        $qrClass      = "$qrcode->author\\$qrcode->plugin\\Models\\$qrcode->model";
-                        $qrObject     = $qrClass::findOrFail($qrcode->id); // throws Exception
-                        $qrObjectName = (method_exists($qrObject, 'name') ?  $qrObject->name() : $qrObject->id());
-                        // names => classes
-                        $fieldsRelations   = array_merge($this->hasOne,     $this->belongsTo,     $this->hasMany,     $this->belongsToMany);
-                        $qrObjectRelations = array_merge($qrObject->hasOne, $qrObject->belongsTo, $qrObject->hasMany, $qrObject->belongsToMany);
+            $qrCodeField = NULL;
+            $field2 = NULL;
+            foreach ( $fields as $fieldName => &$field2 ) {
+                if (   $field2->getConfig( 'type' ) == 'qrscan' ) {
+                    $qrCodeField = &$field2;
+                    // get the type and put fildename  in qrCodeField
+                    break;
+                }
+            }
+            // Legacy support
+            foreach ( $fields as $fieldName => &$field2 ) {
+                if ( ! $qrCodeField && strstr($field2->getConfig( 'path' ), '_qrcode_scan') ) {
+                    $qrCodeField = &$field2;
+                    if ($post = post($qrCodeField->arrayName)) {
+                        if (isset($post[$fieldName])) $qrCodeField->value = $post[$fieldName];
+                    }
+                    break;
+                }
+            }
 
-                        // Check each field for qr object and its relations
-                        $field          = NULL;
-                        $relevantObject = NULL;
-                        foreach ($fields as $fieldName => &$field) {
-                            // We only accept relations at the moment
-                            if (isset($fieldsRelations[$fieldName])) {
-                                $fieldRelationModel = $fieldsRelations[$fieldName];
-                                if (is_array($fieldRelationModel)) $fieldRelationModel = $fieldRelationModel[0];
+            if ( $qrCodeField && !empty( $qrCodeField->value ) ) {
+                $newQrcodeUrl = $qrCodeField->value;
 
-                                // We do not overwrite set values
-                                $canHaveValue = (is_null($field->value) || is_array($field->value) || $is_update);
-                                if ($canHaveValue) {
-                                    // ----------------------------------------------- Direct set
-                                    if ($fieldRelationModel == $qrClass) {
-                                        $relevantObject = $qrObject;
-                                        $foundAtText    = "$qrcode->model($qrObjectName) direct";
-                                        break;
-                                    }
+                // Winter makes a separate request from the front-end for every dependsOn field
+                // Generate a lock with a unique key to contain the previous QR code value
+                $lockKey = 'qr_code_lock_' . md5( $newQrcodeUrl );
+                $lock = Cache::lock( $lockKey );
+                // Wait to acquire the lock
+                if ( $lock->get() ) {
+                    // Check the last QR code value stored in the session
+                    $lastQrcodeUrl = Session::get( 'last_qrcode', null );// Default to null if not set
+                    // Store the new QR Code in the session
+                    Session::put( 'last_qrcode', $newQrcodeUrl );
+                    $lock->release();
+                }
 
-                                    // ----------------------------------------------- Scanned Object Relations
-                                    foreach ($qrObjectRelations as $qrObjectRelationName => $qrObjectRelationModel) {
-                                        $qrObject->load($qrObjectRelationName);
-                                        if (is_array($qrObjectRelationModel)) $qrObjectRelationModel = $qrObjectRelationModel[0];
-                                        if (isset($qrObject->$qrObjectRelationName) && $fieldRelationModel == $qrObjectRelationModel) {
-                                            $relevantObject = $qrObject->$qrObjectRelationName;
-                                            $foundAtText    = "$qrcode->model($qrObjectName)->$qrObjectRelationName";
-                                            break;
-                                        }
-                                    }
-                                } // cannot Have a Value
-                            } // not a relation
+                // If the QR code scanned is the same as the last one, skip processing
+                if ( $lastQrcodeUrl != $newQrcodeUrl ) {
+                    // Get the requested controller using the copied method
+                    if ( $controller = BackendRequestController::getController( $newQrcodeUrl ) ) {
+                        // Check if the controller implements the FormController behavior
+                        if ( $controller && in_array( FormController::class, $controller->implement ) ) {
+                            // Extract $recordId from URL
+                            $recordId = $this->extractRecordIdFromUrl( $newQrcodeUrl );
 
-                            if ($relevantObject) break; // We accept the first only
-                        } // foreach &$field
+                            // Use formFindModelObject to get the model
+                            $model = $controller->formFindModelObject( $recordId );
 
-                        if ($relevantObject) {
-                            // Set the field value
-                            if (is_array($field->value)) array_push($field->value, $relevantObject->id());
-                            else                         $field->value = $relevantObject->id();
+                            if ( $model ) {
+                                $qrClass = get_class( $model );
+                                $qrClassShort = class_basename( $model );
+                                // Short class name for messages
+                                $qrObjectName = ( method_exists( $model, 'name' ) ? $model->name() : $model->id() );
+                                // names => classes
+                                $fieldsRelations = array_merge( $this->hasOne, $this->belongsTo, $this->hasMany, $this->belongsToMany );
+                                $qrObjectRelations = array_merge( $model->hasOne, $model->belongsTo, $model->hasMany, $model->belongsToMany );
 
-                            // Response
-                            $foundOnForm = trans("found on form");
-                            Flash::success(trans("$foundAtText $foundOnForm @ $fieldName"));
+                                // Check each field for qr object and its relations
+                                $field          = NULL;
+                                $relevantObject = NULL;
+                                foreach ( $fields as $fieldName => &$field ) {
+                                    // We only accept relations at the moment
+                                    if ( isset( $fieldsRelations[ $fieldName ] ) ) {
+                                        $fieldRelationModel = $fieldsRelations[ $fieldName ];
+                                        if ( is_array( $fieldRelationModel ) ) $fieldRelationModel = $fieldRelationModel[ 0 ];
+                                        // We do not overwrite set values
+                                        $canHaveValue = ( is_null( $field->value ) || is_array( $field->value ) || $is_update );
+
+                                        // ----------------------------------------------- Direct set
+                                        if ( $canHaveValue) {
+                                            if ( $fieldRelationModel == $qrClass ) {
+                                                $relevantObject = $model;
+                                                $foundAtText = "$qrClassShort($qrObjectName) direct";
+                                                break;
+                                            }
+
+                                            // ----------------------------------------------- Scanned Object Relations
+                                            foreach ( $qrObjectRelations as $qrObjectRelationName => $qrObjectRelationModel ) {
+                                                $model->load( $qrObjectRelationName );
+                                                if ( is_array( $qrObjectRelationModel ) ) $qrObjectRelationModel = $qrObjectRelationModel[ 0 ];
+                                                if ( isset( $model->$qrObjectRelationName ) && $fieldRelationModel == $qrObjectRelationModel ) {
+                                                    $relevantObject = $model->$qrObjectRelationName;
+                                                    $foundAtText = "$qrClassShort($qrObjectName)->$qrObjectRelationName";
+                                                    break;
+                                                }
+                                            }
+                                        }  // cannot Have a Value
+                                    } // not a relation
+
+                                    if ( $relevantObject ) break;// We accept the first  only
+                                }// foreach &$field
+
+                                if ( $relevantObject ) {
+                                    // Set the field value
+                                    $id = $relevantObject->id();
+                                    if ( is_array( $field->value ) ) array_push( $field->value, $id );
+                                    else                             $field->value = $id;
+                                    // Response
+                                    $foundOnForm = __( 'found on form' );
+                                    Flash::success( __( "$foundAtText $foundOnForm @ $fieldName [$id] " ) );
+
+                                } else {
+                                    $notFoundOnForm = __( 'not found on form' );
+                                    Flash::error( " $qrClassShort $notFoundOnForm" );
+                                }
+                            } else {
+                                Flash::error( "Model [$recordId] " . __( 'not found for the given QR code' ) );
+                            }
                         } else {
-                            $notFoundOnForm = trans("not found on form");
-                            Flash::error("$qrcode->model $notFoundOnForm");
+                            Flash::error( __( 'Controller does not implement FormController behavior' ) );
                         }
+                    } else {
+                        Flash::error( __( 'Unable to resolve the controller for ' ) . $newQrcodeUrl );
                     }
                 }
+            } else {
+                // We do not want to block a QRCode forever
+                // so normal requests without one will reset the last_qrcode
+                Session::put( 'last_qrcode', '' );
             }
 
             // --------------------------------------------- add_button
@@ -595,17 +799,5 @@ SQL;
 
 
         } // ($is_update || $is_create)
-    }
-
-    // --------------------------------------------- Hierarchies
-    public function getParentId()
-    {
-        return $this->parent_area_id;
-    }
-
-    public function getChildren(): Collection
-    {
-        $this->load('children');
-        return $this->children;
     }
 }
