@@ -1,3 +1,8 @@
+if (!String.prototype.plural) String.prototype.plural = function plural() {
+    if (this.endsWith('y')) return this.substr(0, this.length-1) + 'ies';
+    return this + 's';
+};
+
 function acorn_hashbangCommands() {
     var path, parts, command, hashbang = document.location.hash;
     if (hashbang && hashbang.substr(0,2) == '#!') {

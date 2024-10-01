@@ -23,24 +23,44 @@ if (isset($field->config['action'])) {
   $action = 'create';
 }
 
-$label = (isset($field->config['label']) ? $field->config['label'] : "backend::lang.form.$action");
+$label    = (isset($field->config['label'])    ? $field->config['label']    : "backend::lang.form.$action");
+$disabled = (isset($field->config['disabled']) ? $field->config['disabled'] : FALSE);
 
 $route      = (isset($field->config['route'])       ? $field->config['route']       : "$controller@$action");
 $handler    = (isset($field->config['handler'])     ? $field->config['handler']     : 'onPopupRoute');
 $popupClass = (isset($field->config['popup-class']) ? $field->config['popup-class'] : "popup-$action");
+$dataRequestData = array(
+    'route' => $route,
+    'fieldName' => $fieldName
+);
+// Pass through any field configuration requests from the config
+if (isset($field->config['fields'])) {
+    foreach ($field->config['fields'] as $fieldName => $fieldConfig) {
+        $dataRequestData["Fields[$fieldName]"] = $fieldConfig;
+    }
+}
+
+// Escaping
+$disabledAttr = ($disabled ? 'disabled="disabled"' : '');
+$labelTrans   = e(trans($label));
+$dataRequestDataString = substr(json_encode($dataRequestData), 1, -1);
 
 // -------------------------------------------- Output
+echo <<<HTML
+  <label>&nbsp;</label>
+  <input
+    type="hidden"
+    name="$fqFieldName"
+    value=""
+    class="form-control"
+    data-disposable="data-disposable"
+  ></input>
+  <button
+    $disabledAttr
+    class="btn btn-default form-button $popupClass"
+    data-handler="$handler"
+    data-request-data='$dataRequestDataString'
+    data-control="popup"
+  >$labelTrans</button>
+HTML;
 ?>
-<label>&nbsp;</label>
-<input type="hidden" name="<?php print($fqFieldName); ?>" value="" class="form-control" data-disposable="data-disposable"></input>
-<button
-  class="btn btn-default form-button <?php print($popupClass); ?>"
-  data-handler="<?php print($handler); ?>"
-  data-request-data="
-    route:'<?php print(str_replace('\\', '\\\\', $route)); ?>',
-    fieldName:'<?php print($fieldName); ?>'
-  "
-  data-control="popup"
->
-  <?= e(trans($label)) ?>
-</button>

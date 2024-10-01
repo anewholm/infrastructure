@@ -67,6 +67,7 @@ function acorn_tabbing(){
   });
 
   // Radio field key selection
+  /* TODO: Radio field key selection needs to be fixed
   $('div.form-group.radio-field').keydown(function(event){
     // Select radio
     var jCustomRadios = $(this).find('.custom-radio');
@@ -84,6 +85,7 @@ function acorn_tabbing(){
     var otherLetters = text.substr(1);
     $(this).html(' [' + firstLetter + ']' + otherLetters);
   });
+  */
 
   // Return to submit form
   // Careful not to override custom select functionality
@@ -111,10 +113,9 @@ function acorn_initialFocus(event, jFrom) {
   jFrom.find('.initial-focus').focus();
   jFrom.find('.initial-focus .form-control').focus();
 
-  // Translation helper does not show if we focus it
-  // TODO: Always show the translation helper
+  // Don't focus on callouts
   var jFocus = $(':focus');
-  if (jFocus.val()) jFocus.blur();
+  if (jFocus.closest('.callout').length) jFocus.blur();
 };
 $(document).ready(acorn_initialFocus);
 $(document).on('popup', function(event){

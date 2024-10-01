@@ -12,47 +12,47 @@ trait ObjectLocking
     public function lock(User $user, ?bool $save = TRUE, ?bool $throw = TRUE, ?bool $superuserOverride = FALSE)
     {
         $user = BackendAuth::user();
-        if (!is_null($this->locked_by)) {
-            if ($this->locked_by != $user->id) {
+        if (!is_null($this->locked_by_user_id)) {
+            if ($this->locked_by_user_id != $user->id) {
                 if ($superuserOverride && $user->is_superuser) {
-                    $this->locked_by = $user->id;
+                    $this->locked_by_user_id = $user->id;
                     if ($save) $this->save(array('UNLOCK' => FALSE));
                 } elseif ($throw) {
                     $className = preg_replace('#.*\\\#', '', get_class($this));
-                    $user      = User::find($this->locked_by);
+                    $user      = User::find($this->locked_by_user_id);
                     throw new ObjectIsLocked($className . trans(' is already locked for editing by ') . $user->first_name);
                 }
             }
         } else {
-            $this->locked_by = $user->id;
+            $this->locked_by_user_id = $user->id;
             if ($save) $this->save(array('UNLOCK' => FALSE));
         }
 
-        return ($this->locked_by == $user->id);
+        return ($this->locked_by_user_id == $user->id);
     }
 
     public function unlock(User $user, ?bool $save = FALSE, ?bool $throw = TRUE)
     {
-        if (!is_null($this->locked_by)) {
-            if ($user->id != $this->locked_by) {
+        if (!is_null($this->locked_by_user_id)) {
+            if ($user->id != $this->locked_by_user_id) {
                 if ($throw) {
                     $className = preg_replace('#.*\\\#', '', get_class($this));
-                    $user      = User::find($this->locked_by);
+                    $user      = User::find($this->locked_by_user_id);
                     throw new ObjectIsLocked($className . trans(' is already locked for editing by ') . $user->first_name);
                 }
             } else {
-                $this->locked_by = NULL;
+                $this->locked_by_user_id = NULL;
                 if ($save) $this->save(array('UNLOCK' => FALSE));
             }
         }
 
-        return is_null($this->locked_by);
+        return is_null($this->locked_by_user_id);
     }
 
     public function isLocked()
     {
         $user = BackendAuth::user();
-        return (!is_null($this->locked_by) && $this->locked_by != $user->id);
+        return (!is_null($this->locked_by_user_id) && $this->locked_by_user_id != $user->id);
     }
 }
 

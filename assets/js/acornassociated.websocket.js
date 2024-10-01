@@ -1,7 +1,7 @@
 import Echo   from './laravel-echo.js';
 import Pusher from './pusher-js.js';
 
-window.Pusher = Pusher;
+//window.Pusher = Pusher;
 window.Echo   = new Echo({
     broadcaster: 'pusher',
     key:     'intranet', // import.meta.env.VITE_PUSHER_APP_KEY,
