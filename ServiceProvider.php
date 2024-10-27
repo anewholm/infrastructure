@@ -26,16 +26,32 @@ class ServiceProvider extends ModuleServiceProvider
 {
     public function boot()
     {
+        // -------------------------------------- Global CSS
+        if (self::isDebugAny()) {
+            Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
+                $controller->addCss('~/modules/acorn/assets/css/debug.css');
+            });
+        }
+        Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
+            $controller->addCss('~/modules/acorn/assets/css/module.css');
+        });
+
+        parent::boot('acorn');
+    }
+
+    protected function missingServices(): array
+    {
         // -------------------------------------- Daemons manager
         // We do not want our artisan commands below to also run this!
         // continuous loop would it be
+        // TODO: Alert administrator to any missing commands
         // TODO: Allow plugins to register there own persistent commands
         // using an interface and a call in their Plugin.php
         // maybe inheriting from AA Command that can run itself
-        if (self::isHTTPCall()) {
+        if (self::isHTTPCall() && self::isDebug()) {
             $commands = array(
                 'messaging:run'    => '',
-                'websockets:serve' => '--port 8081',
+                'websockets:serve' => '--port 6001',
                 //'calendar:run' => FALSE,
             );
 
@@ -52,74 +68,71 @@ class ServiceProvider extends ModuleServiceProvider
                     if (isset($commands[$command])) unset($commands[$command]);
                 }
             }
-
-            // Run any missing commands
-            foreach ($commands as $process => $options) {
-                exec("nohup php artisan $process $options > /dev/null &");
-            }
-        }        
-
-        // -------------------------------------- Debugging
-        if (self::isDebug()) {
-            print('<style>');
-            print('.debug {');
-                print('position:relative; display:table-caption; z-index:1000; width:fit-content; z-index:1000;');
-                print('background-color:#ffffca; border:1px solid #aaa; padding:0px 2px; color:#533;');
-            print('}');
-            print('.debug-view {color:darkgreen;}');
-            print('.debug-controller {font-weight:bold; color:darkblue;}');
-            print('.debug-behavior {font-weight:bold; font-style:italic; color:blue;}');
-            print('.debug-widgetbase {font-weight:bold; color:blue;}');
-            print('.debug-path {font-style:italic; color:#444;}');
-            print('.debug-viewpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double}');
-            print('.debug-configpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double red}');
-            print('</style>');
         }
-        
-        parent::boot('acorn');
+
+        return $commands;
+    }
+
+    public function register()
+    {
+        parent::register();
+
+        // Settings placeholders
+        SettingsManager::instance()->registerCallback(function ($manager) {
+            $manager->registerSettingItems('Acorn.Module', [
+                'interface' => [
+                    'label'       => 'acorn::lang.settings.interface.menu_label',
+                    'description' => 'acorn::lang.settings.interface.menu_description',
+                    'category'    => 'Acorn',
+                    'icon'        => 'icon-paint-brush',
+                    'class'       => 'Acorn\Models\InterfaceSetting',
+                    'permissions' => ['acorn.manage_interface'],
+                    'order'       => 500,
+                    'keywords'    => 'interface'
+                ],
+                'reporting' => [
+                    'label'       => 'acorn::lang.settings.reporting.menu_label',
+                    'description' => 'acorn::lang.settings.reporting.menu_description',
+                    'category'    => 'Acorn',
+                    'icon'        => 'icon-book',
+                    'class'       => 'Acorn\Models\ReportingSetting',
+                    'permissions' => ['acorn.manage_reporting'],
+                    'order'       => 500,
+                    'keywords'    => 'reporting'
+                ],
+            ]);
+        });
     }
 
     // ---------------------------------------- Status helpers
-    protected static function isCommandLine()
+    protected static function isCommandLine(): bool
     {
         return !self::isHTTPCall();
     }
 
-    protected static function isHTTPCall()
+    protected static function isHTTPCall(): bool
     {
         return isset($_SERVER['HTTP_HOST']);
     }
 
-    static protected function isDebug()
+    static public function isDebugAny(): bool
     {
-        return isset($_GET['debug']);
+        $isDebugAny = FALSE;
+        if (env('APP_DEBUG')) {
+            foreach ($_GET as $name => $value) {
+                if (substr($name, 0, 5) == 'debug') $isDebugAny = TRUE;
+            }
+        }
+        return $isDebugAny;
     }
 
-    static protected function isAJAX()
+    static public function isDebug(string $type): bool
+    {
+        return (env('APP_DEBUG') && (isset($_GET["debug-$type"]) || isset($_GET['debug-all'])));
+    }
+
+    static protected function isAJAX(): bool
     {
         return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest';
-    }
-
-    static public function showException(string $message, $dd = FALSE, ?bool $onlyWhenDebug = TRUE)
-    {
-        static $sentCSS = FALSE;
-
-        if (!$onlyWhenDebug || self::isDebug() || self::isAJAX()) {
-            if (!$sentCSS) {
-                $sentCSS = TRUE;
-                print("<link href='/modules/system/assets/css/styles.css' rel='stylesheet'>");
-            }
-            print("<div class='exception-name-block'><div>$message</div><p>");
-            $backtrace = debug_backtrace();
-            for ($i = 0; $i < count($backtrace) && $i < 8; $i++) {
-                $entry = &$backtrace[$i];
-                $file  = str_replace(app()->basePath(), '~', $entry['file']);
-                print("$file <span>line</span> $entry[line] $entry[function]()</br>");
-            }
-            print("</p></div>");
-
-            if ($dd === TRUE)  die();
-            if ($dd !== FALSE) dd($dd);
-        }
     }
 }

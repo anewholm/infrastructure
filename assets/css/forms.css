@@ -18,12 +18,45 @@ body .field-multilingual .ml-btn {
 .new-row {
   clear:both;
 }
-.no-label > label {
+.no-label > label,
+.no-label > .debug-relative > label {
   display:none;
 }
-.form-group.partial-field:has(button.popup-create) > label[for],
-.form-group.partial-field:has(button.add-button) > label[for] {
-  display:none;
+
+.bottom {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+.form-sidebar .bottom:before {
+    border-bottom: none!important;
+}
+
+/* Form sidebar */
+.form-sidebar .form-group:not(.interface-component),
+.form-sidebar .form-group.dropdown-field {
+    clear:both;
+}
+.form-sidebar .form-group:not(.interface-component):before {
+    content: '';
+    display:block;
+    margin: 0px -25px 0px -25px;
+    padding-top:15px;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+.form-sidebar .form-group:first-child::before {
+    display:none;
+}
+.form-sidebar .interface-component {
+    width: auto;
+    max-width: 100%;
+    margin-left: inherit;
+    margin-right: 10px;
+}
+
+.btn {
+    border: 1px solid #ccc;
 }
 
 .help-block a,
@@ -36,14 +69,30 @@ body .field-multilingual .ml-btn {
   margin-left: 5px;
 }
 
-.selected-only .field-checkboxlist .custom-checkbox {
+/* relation displays to show only their attached items */
+.selected-only .field-checkboxlist .custom-checkbox,
+.selected-only .custom-checkbox label:before {
     display: none;
 }
-
+.selected-only .relation-widget > .field-checkboxlist .checkboxlist-controls {
+    display: none;
+}
+.selected-only .custom-checkbox label {
+    padding-left: 0px;
+    margin-bottom: 0px;
+}
 .selected-only .field-checkboxlist .custom-checkbox:has(input[checked]) {
     display: block;
 }
-
+/*
+.selected-only:hover .field-checkboxlist .custom-checkbox,
+.selected-only:hover .custom-checkbox label:before {
+    display: inherit;
+}
+.selected-only:hover .custom-checkbox label {
+    padding-left: inherit;
+}
+*/
 .hidden-when-disabled:has(input[disabled]),
 .hidden-when-disabled:has(select[disabled]) {
   display:none;
@@ -54,6 +103,30 @@ body .field-multilingual .ml-btn {
   max-width: 900px;
 }
 
+/* These are always included, but we only show them when debug is enabled */
+.debug-field {
+    display:none;
+}
+
+/* actions */
+.action-functions {
+    float:right;
+    margin-top: -40px;
+    padding: 3px 10px;
+    background-color: #fff;
+    border:1px solid #999;
+    border-radius: 1px;
+}
+.action-functions li {
+    display: inline;
+    padding: 0px 4px 0px 8px;
+    border-left: 1px solid #a7a7a7;
+}
+.action-functions li:first-child {
+    border-left: none;
+}
+
+/* buttons */
 .hug-left {
   margin-left:-10px;
 }
@@ -63,122 +136,58 @@ body .field-multilingual .ml-btn {
     font-weight: bold;
 }
 
+/* Tab only for the relation with one Model */
+.single-tab > label {
+    display: none;
+}
+
+/* qrcode field display, no label */
+.form-group.partial-field[data-field-name=_qrcode] > svg {
+    float:right;
+}
+.form-group.partial-field[data-field-name=_qrcode] > label {
+    display: none;
+}
+
+/* This is when we want the secondary tabs to look like the primary ones, with:
+ * secondary-tabs: cssClass: primary-tabs
+ */
+.control-tabs.secondary-tabs.primary-tabs > div > div > ul.nav-tabs > li,
+.control-tabs.secondary-tabs.primary-tabs > div > ul.nav-tabs > li,
+.control-tabs.secondary-tabs.primary-tabs > ul.nav-tabs > li {
+    border-right: none;
+    margin-right: -20px;
+    padding-right: 0px;
+}
+.control-tabs.secondary-tabs.primary-tabs > div > div > ul.nav-tabs > li a,
+.control-tabs.secondary-tabs.primary-tabs > div > ul.nav-tabs > li a,
+.control-tabs.secondary-tabs.primary-tabs > ul.nav-tabs > li a {
+    font-weight: normal;
+}
+/* Shading to show tab areas better */
+.control-tabs > div > .nav-tabs {
+    margin-top:25px;
+    background: linear-gradient(0deg, #f0f0f0, #f9f9f9);
+}
+.control-tabs > div > .nav-tabs > li > a > .title > span {
+    background: #f9f9f9;
+    padding-bottom: 6px;
+    margin-bottom: -6px;
+}
+
 /* ------------------------------------- Popups */
 .modal-dialog .popup-hide,
-.modal-dialog .new-page { /* Disable links to new pages in popups */
+.modal-dialog .new-page,
+.modal-dialog .help-block .action { /* Disable links to new pages in popups */
   display:none;
   visibility:hidden;
 }
 .modal-dialog .popup-col-xs-6 {
   width: 50%;
 }
-
-/* ------------------------------------- debug */
-@keyframes fadeInOpacity {
-  0% {opacity: 0;}
-  100% {opacity: 1;}
+.modal-dialog .modal-header.compact {
+    padding: 0px;
 }
-
-.debug-block .disabled,
-.debug-block .in-active,
-.debug-block .ERROR,
-.debug-block .CONTEXT,
-.debug-block .LOG,
-.debug-block .STATEMENT,
-.debug-block .enabled,
-.debug-block .active,
-.debug-block .debug-number {
-  color:#fff;
-  border-radius:4px;
-  padding: 0px 2px;
+.modal-dialog .modal-header.compact > button {
+    margin: 10px;
 }
-.debug-block .ERROR,
-.debug-block .CONTEXT {
-  background-color:red;
-}
-.debug-block .LOG,
-.debug-block .STATEMENT {
-  background-color:darkblue;
-}
-.debug-block .enabled,
-.debug-block .active {
-  background-color:darkgreen;
-}
-.debug-block .debug-number {
-  background-color:#000;
-}
-
-.debug-block .time {
-  font-weight:bold;
-}
-.debug-block .time-precise {
-  color:#999;
-}
-.callout > .content .debug-block h2 {
-  font-weight:bold;
-  font-size:13px;
-  margin: 0px;
-}
-.debug-block .name {
-}
-.debug-block > div {
-  float:left;
-  margin-left:10px;
-  padding-left:10px;
-  border-left: 1px solid #d7d7a7;
-  margin-bottom: 20px;
-}
-.debug-block > div > table {
-  margin-bottom:10px;
-}
-.debug-block td {
-  padding:0px 4px;
-}
-.debug-block a {
-  color: blue;
-}
-
-.debug-block #logs {
-  max-height:200px;
-  max-width:800px;
-  overflow-y:scroll;
-}
-.debug-block #logs tr {
-  border-bottom: 1px solid #d7d7d7;
-}
-.debug-block #logs td {
-  padding-bottom:5px;
-}
-
-.debug-block #db-settings .setting-wal_level .value {
-  color:#fff;
-  border-radius:4px;
-  padding: 0px 2px;
-  background-color:darkred;
-}
-.debug-block #db-settings .setting-wal_level > .value-logical {
-  background-color:darkgreen;
-}
-.debug-block #db-settings .setting-port .value {
-  color:#fff;
-  border-radius:4px;
-  padding: 0px 2px;
-  background-color:darkred;
-}
-.debug-block #db-settings .setting-port > .value-5432 {
-  background-color:darkgreen;
-}
-
-.debug-block #db-settings .setting-wal_log_hints .value {
-  color:#fff;
-  border-radius:4px;
-  padding: 0px 2px;
-  background-color:darkred;
-}
-.debug-block #db-settings .setting-wal_log_hints > .value-on {
-  background-color:darkgreen;
-}
-
-
-
-

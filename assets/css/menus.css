@@ -1,10 +1,38 @@
-div[role=menu] > a:has(i.acorn-splitter) {
+#layout-sidenav-1 div[role=menu] > a:has(i.acorn-splitter) {
     border-top: 1px solid #d7d7d7;
     border-bottom: 1px solid #e7e7e7;
     padding-top: 0px;
     padding-bottom: 0px;
     padding: 0px;
 }
-div[role=menu] > a:has(i.acorn-splitter) > * {
+#layout-sidenav-1 div[role=menu] > a:has(i.acorn-splitter) > * {
     display:none;
+}
+#layout-sidenav-1 .headless-menu:has(a[href*=acorn]) > div > .counter {
+  background-color: Transparent;
+  border: 1px solid #aaa;
+  color: #fff;
+  font-size:0.5em;
+}
+#layout-sidenav-1 .headless-menu a[href*=acorn] > .counter {
+  background-color: Transparent;
+  border: 1px solid #aaa;
+  color: #444;
+  font-size:0.8em;
+}
+
+/* -------------------------------------- remove some WinterCMS we don't use */
+#layout-sidenav-1 .headless-menu:has(img[src*=dashboard-icon]),
+#layout-sidenav-1 .headless-menu:has(img[src*=cms-icon]),
+#layout-sidenav-1 .headless-menu:has(img[src*=media-icon]),
+#layout-sidenav-1 a.quick-link[target=_blank]:has(i.icon-crosshairs) {
+    display: none;
+}
+
+/* and WinterCMS settings we don't use */
+li[data-group-code='system::lang.system.categories.cms'],
+li[data-group-code='system::lang.system.categories.mail'],
+.control-tabs > div > ul.nav-tabs > li:has(a[href='#primarytab-backendlangbackend-preferencescode-editor']),
+li[data-group-code='system::lang.system.categories.system'] > ul > li:has(a[href='http://justice.laptop/backend/system/settings/update/winter/backend/editor']) {
+    display:none!important;
 }

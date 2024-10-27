@@ -1,0 +1,18 @@
+# ===================================
+#  Field Definitions
+# ===================================
+# Light palette: [#1abc9c, #2ecc71, #3498db, #9b59b6, #34495e, #f1c40f, #e67e22, #e74c3c, #ecf0f1, #95a5a6]
+# Dark palette:  [#16a085, #27ae60, #2980b9, #8e44ad, #2b3e50, #f39c12, #d35400, #c0392b, #bdc3c7, #7f8c8d]
+
+fields:
+    cube_refresh:
+        label: acorn::lang.settings.reporting.cube_refresh
+        span: auto
+        type: dropdown
+        options:
+            CR: Cron
+            OS: On Save
+    cube_refresh_interval:
+        label: acorn::lang.settings.reporting.cube_refresh_interval
+        span: auto
+        type: number

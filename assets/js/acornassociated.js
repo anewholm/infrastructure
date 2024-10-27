@@ -27,3 +27,12 @@ $(document).ready(acorn_hashbangCommands);
 String.prototype.toUCFirst = function(){
     return this.charAt(0).toUpperCase() + this.replace(/[^a-z]+/gi, '').slice(1);
 }
+
+$(document).ready(function(){
+    $('.multi > li > a').click(function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        $(this).popup(this.attributes);
+        return false;
+    });
+});
