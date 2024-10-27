@@ -12,10 +12,10 @@ class DbServers extends Migration
             $table->engine = 'InnoDB';
             $table->uuid('id')->unique()->primaryKey();
             $table->string('hostname', 1024)->default('hostname()')->unique();
-            $table->uuid('location_id')->nullable();
             $table->text('response')->nullable();
             $table->timestamp('created_at')->default('now()');
         });
+        $this->generated($table, 'name', 'hostname');
 
         // Could not set a function for the default above
         $this->setFunctionDefault($table, 'id', 'gen_random_uuid');

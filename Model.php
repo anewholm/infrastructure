@@ -22,6 +22,7 @@ use Winter\Storm\Database\QueryBuilder;
 use DB;
 use Request;
 use Config;
+use Carbon\Carbon;
 
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\RelationNotFoundException;
@@ -54,6 +55,7 @@ use Acorn\Events\UserNavigation;
 use Acorn\Events\DataChange;
 use Acorn\Events\ModelBeforeSave;
 use Acorn\Events\ModelAfterSave;
+use Acorn\Models\Server;
 
 /*
 class Saving {
@@ -111,7 +113,7 @@ class Model extends BaseModel
     // --------------------------------------------- Encapuslation and Standard Accessors
     protected function checkFrameworkCallerEncapsulation($attributeName)
     {
-        if (env('APP_DEBUG')) {
+        if (env('APP_DEBUG') && FALSE) {
             $bt     = debug_backtrace();
 
             // This and Called (Our __get/set())
@@ -149,6 +151,7 @@ class Model extends BaseModel
                 && ! is_a($callerClass, FormController::class,    TRUE)
                 && ! is_a($callerClass, TreeCollection::class,    TRUE)
                 && strstr($callerClass, 'Listeners') === FALSE
+                // TODO: Settings implements && \System\Behaviors\SettingsModel::class
                 && ! is_a($callerClass, $thisClass,        TRUE)
                 && ! is_a($thisClass, $callerClass,        TRUE)
                 // Traits
@@ -211,6 +214,57 @@ class Model extends BaseModel
     protected function getFullyQualifiedNameAttribute() {return $this->fullyQualifiedName();}
     protected function getFullNameAttribute() {return $this->fullName();}
 
+// TODO: Standard conversions
+// TODO: public $eventFields = []; => mutateCalendarEventId()
+// TODO: ModelBeforeSave listener?
+//
+//     public function getCreatedAtEventIdAttribute($value)
+//     {
+//         return $this->mutateCalendarEventId($value);
+//     }
+//
+//     public function getUpdatedAtEventIdAttribute($value)
+//     {
+//         return $this->mutateCalendarEventId($value);
+//     }
+
+    /*
+    public function setClosedAtEventIdAttribute($value)
+    {
+        // TODO: setClosedAtEventIdAttribute() change to above system!
+        if ($this->isDirty('closed_at_event_id')) {
+            $original = $this->original['closed_at_event_id'];
+            if ($value) {
+                if ($original) {
+                    // Move existing event
+                } else {
+                    // Create a new event
+                }
+            } else $this->attributes['closed_at_event_id'] = NULL;
+        } else $this->attributes['closed_at_event_id'] = $this->original['closed_at_event_id'];
+    }
+
+    public function getClosedAtEventIdAttribute($value)
+    {
+        return $this->mutateCalendarEventId($value);
+    }
+
+    protected function mutateCalendarEventId($uuid)
+    {
+        $eventDate = NULL;
+
+        if ($uuid) {
+            $event = \Acorn\Calendar\Models\Event::findOrFail($uuid);
+            if ($event->event_parts && count($event->event_parts)) {
+                // start = DateTime object
+                $eventDate = new Carbon($event->event_parts->first()->start);
+            }
+        }
+
+        return $eventDate;
+    }
+    */
+
     /*
     protected $dispatchesEvents = [
         'saving' => Saving::class, // TODO: Not used yet. See Saving event above
@@ -231,6 +285,11 @@ class Model extends BaseModel
         // Useful for auto-completing auto-relations
         // like created_by_user and created_by_event
         ModelBeforeSave::dispatch($this);
+
+        // This could also be done with triggers and pg_hostname
+        if ($this->hasAttribute('server_id') && !$this->server_id) {
+            $this->server_id = Server::singleton()->id();
+        }
 
         // Object locking
         if (!isset($options['UNLOCK']) || $options['UNLOCK'] == TRUE) {
@@ -731,43 +790,87 @@ SQL;
             }
 
             // --------------------------------------------- add_button
+            // XtoX additions only
             // Using config
             //   from: _product_instance
             //   to: product_instances
-            foreach ($fields as $name => &$field) {
-                if (isset($field->config['path']) && $field->config['path'] == 'add_button') {
+            $thisModelClass = $this->fullyQualifiedClassName();
+            foreach ($fields as $name => &$buttonField) {
+                if (isset($buttonField->config['path']) && $buttonField->config['path'] == 'add_button') {
                     // _add_invoice defaults to add _invoice to invoices
-                    $modelName = substr($name, 5); // invoice
-                    $from = (isset($field->config['from']) ? $field->config['from'] : "_$modelName");
-                    $to   = (isset($field->config['to'])   ? $field->config['to']   : Str::plural($modelName));
+                    $modelNameLower = substr($name, 5); // invoice
+                    $from   = (isset($buttonField->config['from']) ? $buttonField->config['from'] : "_$modelNameLower");           // _invoice
+                    $to     = (isset($buttonField->config['to'])   ? $buttonField->config['to']   : Str::plural($modelNameLower)); // invoices
+                    $post   = post($buttonField->arrayName);
+                    $addVal = (is_array($post) && isset($post[$name]) ? $post[$name] : NULL);
 
-                    // Silent ignore if $to is not available
+                    // Silent ignore if $to or POST $from is not available
                     // Custom filterFields() must handle these cases
-                    if (property_exists($fields, $to)) {
-                        $collection = &$fields->$to->value;
-                        if (is_null($collection)) $collection = array();
+                    if ($addVal) {
+                        if (!property_exists($fields, $from)) throw new \Exception("From field [$from] not found on [$thisModelClass] when processing [$name]");
+                        if (!property_exists($fields, $to))   throw new \Exception("To field [$to] not found on [$thisModelClass] when processing [$name]");
 
-                        if (isset($post[$from])) {
-                            if ($id = $post[$from]) {
-                                array_push($collection, $id);
-                                // Clear the form
-                                $fields->$from->value = NULL;
-                            }
+                        if ($fromId = $fields->$from->value) {
+                            $toArray = &$fields->$to->value;
+                            if (is_null($toArray)) $toArray = array();
+
+                            // We always, and only, append to many relations
+                            if ( is_array($fromId))  throw new \Exception("From field [$from] on [$thisModelClass] is array, when processing [$name]");
+                            if (!is_array($toArray)) throw new \Exception("To field [$from] on [$thisModelClass] is not array, when processing [$name]");
+
+                            // Add to target array value
+                            array_push($toArray, $fromId);
+
+                            // Reset the [dedicated] interface
+                            $buttonField->value   = NULL;
+                            $fields->$from->value = NULL;
                         }
                     }
                 }
             }
 
-            // --------------------------------------------- popup_button
-            // TODO: Encapsulate this in to the popup_button formField when it is written
-            foreach ($fields as $name => &$field) {
-                if (isset($field->config['path']) && $field->config['path'] == 'popup_button') {
-                    // _add_invoice defaults to add _invoice to invoices
+            // --------------------------------------------- create_button / popup_button
+            // Using config
+            //   to: product_instances
+            // TODO: Encapsulate these buttons in to the popup_button formField when it is written
+            foreach ($fields as $name => &$buttonField) {
+                if (isset($buttonField->config['path'])
+                    && ($buttonField->config['path'] == 'popup_button' || $buttonField->config['path'] == 'create_button')
+                ) {
+                    // _add_invoice defaults $to to _invoice, then invoice depending on which exists
+                    // because _invoice may be another pseudo field that manages the addition process
+                    // like the add button above
                     $modelNameLower = substr($name, 8); // invoice
-                    $modelClass     = (isset($field->config['model']) ? $field->config['model'] : Str::studly($modelNameLower)); // Invoice
-                    $to             = (isset($field->config['to'])    ? $field->config['to']    : "_$modelNameLower"); // _invoice
+                    $modelClass     = (isset($buttonField->config['model']) ? $buttonField->config['model'] : Str::studly($modelNameLower)); // Invoice
+                    $to             = NULL;
+                    if (isset($buttonField->config['to'])) $to = $buttonField->config['to'];
+                    else {
+                        // Search for something sensible
+                        if      (property_exists($fields, "_$modelNameLower")) $to = "_$modelNameLower"; // _invoice
+                        else if (property_exists($fields, $modelNameLower))    $to = $modelNameLower;    // invoice
+                        else {
+                            $to = Str::plural($modelNameLower);                 // invoices
+                            if (property_exists($fields, "_$to")) $to = "_$to"; // _invoices
+                        }
+                    }
+                    if (!property_exists($fields, $to)) throw new \Exception("To field [$to] of [$modelClass] not found on [$thisModelClass] when processing [$name]");
 
-                    if (property_exists($fields, $to)) $fields->$to->value = $field->value;
+                    if ($fromId = $buttonField->value) {
+                        if (is_array($fromId))  throw new \Exception("From field [$from] on [$thisModelClass] is array, when processing [$name]");
+
+                        // Add to/Set target value
+                        $isArray = (isset($fields->$to->config['type']) && $fields->$to->config['type'] == 'relation');
+                        if ($isArray) {
+                            $toArray = &$fields->$to->value;
+                            if (is_null($toArray)) $toArray = array();
+                            array_push($toArray, $fromId);
+                        } else {
+                            $fields->$to->value = $fromId;
+                        }
+
+                        // Reset the create button
+                        $buttonField->value = NULL;
+                    }
                 }
             }
 

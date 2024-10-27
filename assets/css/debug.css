@@ -1,0 +1,148 @@
+/* --------------------------------------- Debug partial yellows --------------------------------- */
+.debug-relative {
+    position:relative;
+}
+.debug {
+    display: none;
+}
+
+.debug-field {}
+.debug-view {color:darkgreen;}
+.debug-controller {font-weight:bold; color:darkblue;}
+.debug-behavior {font-weight:bold; font-style:italic; color:blue;}
+.debug-widgetbase {font-weight:bold; color:blue;}
+.debug-path {font-style:italic; color:#444;}
+.debug-viewpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double}
+.debug-configpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double red}
+
+.debug pre {
+    margin-top:4px;
+    padding-top:4px;
+    border-top: 1px solid #d0d0d0;
+}
+.debug .title {
+    font-weight: bold;
+}
+
+.debug-relative:hover > .debug,
+.form-group:hover .debug {
+    position:absolute;
+    top:0px;
+    left:0px;
+    display:block;
+    z-index:10000;
+    opacity:1.0;
+
+    font-size:12px;
+    background-color:#ffffca;
+    border:1px solid #aaa;
+    padding:0px 5px;
+    color:#533;
+}
+
+/* --------------------------------------- Debug hint --------------------------------- */
+.debug-block .disabled,
+.debug-block .in-active,
+.debug-block .ERROR,
+.debug-block .CONTEXT,
+.debug-block .LOG,
+.debug-block .STATEMENT,
+.debug-block .enabled,
+.debug-block .active,
+.debug-block .debug-number {
+  color:#fff;
+  border-radius:4px;
+  padding: 0px 2px;
+}
+.debug-block .ERROR,
+.debug-block .CONTEXT {
+  background-color:red;
+}
+.debug-block .LOG,
+.debug-block .STATEMENT {
+  background-color:darkblue;
+}
+.debug-block .enabled,
+.debug-block .active {
+  background-color:darkgreen;
+}
+.debug-block .debug-number {
+  background-color:#000;
+}
+
+.debug-block .time {
+  font-weight:bold;
+}
+.debug-block .time-precise {
+  color:#999;
+}
+.callout > .content .debug-block h2 {
+  font-weight:bold;
+  font-size:13px;
+  margin: 0px;
+}
+.debug-block .name {
+}
+.debug-block > div {
+  float:left;
+  margin-left:10px;
+  padding-left:10px;
+  border-left: 1px solid #d7d7a7;
+  margin-bottom: 20px;
+}
+.debug-block > div > table {
+  margin-bottom:10px;
+}
+.debug-block td {
+  padding:0px 4px;
+}
+.debug-block a {
+  color: blue;
+}
+
+/* --------------------------------------- Debug logs --------------------------------- */
+.debug-block #logs {
+  max-height:200px;
+  max-width:800px;
+  overflow-y:scroll;
+}
+.debug-block #logs tr {
+  border-bottom: 1px solid #d7d7d7;
+}
+.debug-block #logs td {
+  padding-bottom:5px;
+}
+
+/* --------------------------------------- Debug settings --------------------------------- */
+.debug-block #db-settings .setting-wal_level .value {
+  color:#fff;
+  border-radius:4px;
+  padding: 0px 2px;
+  background-color:darkred;
+}
+.debug-block #db-settings .setting-wal_level > .value-logical {
+  background-color:darkgreen;
+}
+.debug-block #db-settings .setting-port .value {
+  color:#fff;
+  border-radius:4px;
+  padding: 0px 2px;
+  background-color:darkred;
+}
+.debug-block #db-settings .setting-port > .value-5432 {
+  background-color:darkgreen;
+}
+
+.debug-block #db-settings .setting-wal_log_hints .value {
+  color:#fff;
+  border-radius:4px;
+  padding: 0px 2px;
+  background-color:darkred;
+}
+.debug-block #db-settings .setting-wal_log_hints > .value-on {
+  background-color:darkgreen;
+}
+
+
+
+

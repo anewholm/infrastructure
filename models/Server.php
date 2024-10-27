@@ -72,6 +72,14 @@ class Server extends Model
     public $attachOne = [];
     public $attachMany = [];
 
+    public static function singleton(): Server
+    {
+        $hostname = gethostname();
+        $server   = Server::where('hostname', $hostname)->first();
+        if (!$server) $server = Server::create(['hostname' => $hostname]);
+        return $server;
+    }
+
     public function getNameAttribute()
     {
         $isLocal = ($this->replicated() ? '*' : '');

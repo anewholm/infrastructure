@@ -13,7 +13,7 @@ function domReady(fn) {
 }
 
 domReady(function () {
-    // If found you qr code
+    // If found your QR code
     function onScanSuccess(decodeText, decodeResult) {
         // https://github.com/mebjas/html5-qrcode
         var jQrScanner = $('#my-qr-reader');

@@ -37,6 +37,18 @@ class Migration extends StormMigration
         return TRUE;
     }
 
+    public function setTableTypeContent(string $tableName)
+    {
+        // This is for legacy singular named tables that are the target of new FKs and create-system
+        DB::unprepared("COMMENT ON TABLE $tableName IS 'table-type: content'");
+    }
+
+    public function setPackageTypePlugin(string $tableName)
+    {
+        // This is for legacy singular named tables that are the target of new FKs and create-system
+        DB::unprepared("COMMENT ON TABLE $tableName IS 'package-type: plugin\ntable-type: content'");
+    }
+
     public function tableCounts(?string $tableMask = NULL): array
     {
         if (!$tableMask) $tableMask = $this->tableMask();
@@ -333,6 +345,11 @@ SQL
     public function setFunctionDefault(string $table, string $column, string $function)
     {
         DB::unprepared("alter table \"$table\" alter column \"$column\" set default $function()");
+    }
+
+    public function generated(string $table, string $column, string $function, string $type = 'character varying(1024)')
+    {
+        DB::unprepared("ALTER TABLE $table ADD COLUMN $column $type GENERATED ALWAYS AS ($function) STORED");
     }
 
     public function interval(string $table, string $column, ?bool $nullable = FALSE)

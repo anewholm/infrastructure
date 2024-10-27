@@ -1,3 +1,8 @@
+@keyframes fadeInOpacity {
+  0% {opacity: 0;}
+  100% {opacity: 1;}
+}
+
 /* tr.rowlink */
 .ajax-new {
     background-color:#ffbbbb!important;
@@ -8,3 +13,18 @@
     animation-duration: 2s;
 }
 
+.toolbar-primary > div > button {
+    /* a and button together bit up and down */
+    margin-top: 0px;
+}
+
+.list-cell-type-partial > .multi {
+    list-style: circle;
+}
+table.table.data tbody td.list-cell-type-partial > .multi > li > a {
+    color: darkblue;
+}
+table.table.data tbody td.list-cell-type-partial > .multi > li > a:hover,
+table.table.data tbody td.list-cell-type-partial > a.more:hover {
+    text-decoration: underline;
+}

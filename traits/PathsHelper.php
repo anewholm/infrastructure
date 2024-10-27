@@ -35,7 +35,8 @@ Trait PathsHelper {
     {
         // Short name for debugging output
         // Acorn\Lojistiks\Model\Area => Area
-        return last(explode('\\', $this->fullyQualifiedClassName($object)));
+        $classParts = explode('\\', $this->fullyQualifiedClassName($object));
+        return end($classParts);
     }
 
     public function qualifyClassName(string $className): string
@@ -179,6 +180,12 @@ Trait PathsHelper {
         return $this->singularLowerCaseName();
     }
 
+    public function modelForeignFieldName(?Object $object = NULL): string
+    {
+        // Without ID
+        return Str::singular($this->snakeCaseName());
+    }
+
     public function modelDirectoryPathRelative(?Object $object = NULL): string
     {
         $pluginPathRelative = $this->pluginPathRelative();
@@ -266,7 +273,20 @@ Trait PathsHelper {
     // ----------------------------------------- Controllers
     public function controllerClassName(?Object $object = NULL): string
     {
-        return $this->pluralClassName();
+        return $this->pluralClassName($object);
+    }
+
+    public function controllerFullyQualifiedClass(?Object $object = NULL): string
+    {
+        $fullyQualifiedClassName = $this->fullyQualifiedClassName();
+        // Author\Plugin\<Type>\<Name>
+        $parts  = explode('\\', $fullyQualifiedClassName);
+        $author = $parts[0];
+        $plugin = $parts[1];
+        $type   = $parts[2];
+        $name   = $this->pluralClassName($object);
+
+        return "$author\\$plugin\\Controllers\\$name";
     }
 
     protected function controllerDirectoryPathRelative(?Object $object = NULL): string
