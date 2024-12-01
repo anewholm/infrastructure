@@ -6,18 +6,24 @@ $fieldNameParts = explode('_', trim($fieldName, '_'));
 $fqFieldName    = "${arrayName}[${fieldName}]";
 
 $action   = 'add';
-$label    = (isset($field->config['label']) ? $field->config['label'] : "backend::lang.form.$action");
+$hasCustomLabel = isset($field->config['label']);
 $disabled = (isset($field->config['disabled']) ? $field->config['disabled'] : FALSE);
+$label    = ($hasCustomLabel                   ? $field->config['label']    : "backend::lang.form.$action");
 
 // Escaping
 $disabledAttr = ($disabled ? 'disabled="disabled"' : '');
 $labelTrans   = e(trans($label));
 
 // TODO: ajax-complete reset val()
+$onClick        = "$(this).siblings('input').val(1);"; // Indicate that the add_button needs processing by filterFields()
+$onClick       .= "$(this).trigger('change', 'add');"; // Trigger those fields depndsOn this one
+$onClick       .= "return false;";                     // Prevent any normal actions around or attached to this button
+$onClickEscaped = htmlentities($onClick);
+$labelPlaceholder = ($hasCustomLabel ? '' : '<label>&nbsp;</label>');
 
 // -------------------------------------------- Output
 echo <<<HTML
-  <label>&nbsp;</label>
+  $labelPlaceholder
   <input
     type="hidden"
     name="$fqFieldName"
@@ -28,7 +34,7 @@ echo <<<HTML
   <button
     $disabledAttr
     class="btn btn-default form-button add-button"
-    onclick="$(this).siblings('input').val(1); $(this).trigger('change', 'add'); return false;">
+    onclick="$onClickEscaped">
     $labelTrans
   </button>
 HTML;

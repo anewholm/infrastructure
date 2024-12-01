@@ -33,6 +33,6 @@
 li[data-group-code='system::lang.system.categories.cms'],
 li[data-group-code='system::lang.system.categories.mail'],
 .control-tabs > div > ul.nav-tabs > li:has(a[href='#primarytab-backendlangbackend-preferencescode-editor']),
-li[data-group-code='system::lang.system.categories.system'] > ul > li:has(a[href='http://justice.laptop/backend/system/settings/update/winter/backend/editor']) {
+li[data-group-code='system::lang.system.categories.system'] > ul > li:has(a[href*='/system/settings/update/winter/backend/editor']) {
     display:none!important;
 }

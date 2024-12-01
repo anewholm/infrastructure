@@ -5,6 +5,7 @@
     table.table.data td.list-setup,
     .list-header,
     .list-footer,
+    .control-filter,
     .flash-message,
     .default-layout-side-inline #layout-sidenav-2 {
         display: none;

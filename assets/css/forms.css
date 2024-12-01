@@ -18,9 +18,12 @@ body .field-multilingual .ml-btn {
 .new-row {
   clear:both;
 }
-.no-label > label,
-.no-label > .debug-relative > label {
-  display:none;
+.nolabel > .debug-relative > label {
+    /* We hold the space, but disappear the text */
+    color: transparent;
+    overflow: hidden;
+    width: 10px;
+    white-space: nowrap;
 }
 
 .bottom {
@@ -28,35 +31,57 @@ body .field-multilingual .ml-btn {
     bottom: 10px;
     right: 10px;
 }
-.form-sidebar .bottom:before {
-    border-bottom: none!important;
+
+.relation-manager:has(span.page-next):has(span.page-back) .list-footer {
+    display:none;
+}
+.form-group.single-tab:has(.relation-behavior) {
+    width: 100%;
 }
 
-/* Form sidebar */
-.form-sidebar .form-group:not(.interface-component),
-.form-sidebar .form-group.dropdown-field {
+/* ------------------------------------- Sidebar */
+.form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {
+    border-bottom: none!important;
+}
+.form-sidebar .form-elements > .hide-tabs > .form-group {
+    padding: 0px;
+}
+.form-sidebar .form-elements > .hide-tabs > .form-group:not(.interface-component),
+.form-sidebar .form-elements > .hide-tabs > .form-group.dropdown-field {
     clear:both;
 }
-.form-sidebar .form-group:not(.interface-component):before {
+.form-sidebar .form-elements > .hide-tabs > .form-group:not(.interface-component):before {
+    /* Force new-row due to thin vertical nature of side-bar */
     content: '';
     display:block;
     margin: 0px -25px 0px -25px;
-    padding-top:15px;
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 10px;
 }
-.form-sidebar .form-group:first-child::before {
+.form-sidebar .form-elements > .hide-tabs > .form-group:first-child::before {
     display:none;
 }
-.form-sidebar .interface-component {
+.form-sidebar .form-elements > .hide-tabs > .form-group.interface-component {
+    /* buttons connected to a previous :input */
     width: auto;
     max-width: 100%;
     margin-left: inherit;
     margin-right: 10px;
 }
-
-.btn {
-    border: 1px solid #ccc;
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-manager > .list-widget > .control-list > .table.table.data tbody td {
+    /* relationmanager */
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-top-width: 1px;
+}
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior,
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-manager > .list-widget > .control-list {
+    margin-bottom:0px;
+}
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-manager > .list-widget > .control-list > .list-footer,
+.form-sidebar .list-pagination {
+    padding-top:0px;
+}
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-toolbar > .toolbar-widget > .control-toolbar .toolbar-item a:before {
+    content: none;
 }
 
 .help-block a,
@@ -109,24 +134,64 @@ body .field-multilingual .ml-btn {
 }
 
 /* actions */
-.action-functions {
-    float:right;
+.action-functions li a {
+    cursor: pointer;
+}
+form.layout .action-functions {
+    float:right; /* TODO: float: left if RTL */
     margin-top: -40px;
     padding: 3px 10px;
     background-color: #fff;
     border:1px solid #999;
     border-radius: 1px;
+    box-shadow: 2px 0px 10px #ddd;
 }
-.action-functions li {
+body.rtl form.layout .action-functions {
+    float:left;
+}
+form.layout .action-functions > li {
     display: inline;
-    padding: 0px 4px 0px 8px;
+    padding: 0px 6px 0px 6px;
     border-left: 1px solid #a7a7a7;
 }
-.action-functions li:first-child {
+body.rtl form.layout .action-functions > li {
+    border-right: 1px solid #a7a7a7;
     border-left: none;
+}
+form.layout .action-functions > li:first-child {
+    border-left: none;
+}
+body.rtl form.layout .action-functions > li:first-child {
+    border-right: none;
+}
+form.layout .action-functions > li > #popup-qrscan {
+    display: inline;
+    font-size: 14px;
+}
+table.data tr.rowlink .action-functions {
+    float: right;
+    text-align:center;
+}
+table.data tr.rowlink .action-functions > li {
+    margin-bottom: 3px;
+    padding: 3px 10px;
+    background-color: #fff;
+    border:1px solid #999;
+    border-radius: 1px;
+    box-shadow: 2px 0px 10px #ddd;
+}
+table.table.data tbody tr.rowlink:hover td .action-functions > li > a {
+    color: #666!important;
+}
+table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
+    text-decoration: underline;
 }
 
 /* buttons */
+.btn {
+    border: 1px solid #ccc;
+}
+
 .hug-left {
   margin-left:-10px;
 }
@@ -174,6 +239,10 @@ body .field-multilingual .ml-btn {
     padding-bottom: 6px;
     margin-bottom: -6px;
 }
+.tab-pane .control-tabs > div > .nav-tabs > li > a > .title > span {
+    /* Messaging tab-pane colours are different */
+    background: Transparent;
+}
 
 /* ------------------------------------- Popups */
 .modal-dialog .popup-hide,
@@ -182,12 +251,55 @@ body .field-multilingual .ml-btn {
   display:none;
   visibility:hidden;
 }
+.modal-dialog .modal-header:has(h4.modal-title) {
+    /* Standard relationmanager dialogs */
+    background-color: #d0d9dd;
+    margin-bottom: 14px;
+    padding: 12px 10px 12px 30px;
+}
 .modal-dialog .popup-col-xs-6 {
   width: 50%;
 }
-.modal-dialog .modal-header.compact {
+body.compact-container .modal-dialog .modal-header.compact,
+body.slim-container .modal-dialog .modal-header.compact {
     padding: 0px;
 }
-.modal-dialog .modal-header.compact > button {
+body.compact-container .modal-dialog .modal-header.compact > button,
+body.slim-container .modal-dialog .modal-header.compact > button {
     margin: 10px;
+}
+
+/* wizard popup scrolling */
+.modal-dialog > .modal-content {
+    position: relative;
+    overflow: hidden;
+}
+.modal-dialog > .modal-content > div.in-active {
+    /* other divs in-active */
+    position: absolute; /* Take away its space */
+    opacity: 0.6;
+}
+.modal-dialog > .modal-content > div {
+    /* top div slide in */
+    position: relative; /* Maintain popup size */
+    background: #f9f9f9; /* Hide under-divs */
+}
+.modal-dialog > .modal-content .modal-header > h4 > .old-breadcrumb {
+    float:left;
+    margin: -12px 10px -12px -30px;
+    padding: 12px 10px 12px 30px;
+    background-color: #9098a2;
+    color: #fff;
+}
+.modal-dialog > .modal-content .modal-footer .previous-popup {
+    display: none;
+}
+.modal-dialog > .modal-content:has(div.in-active) .modal-footer > button:before {
+    content: '<<';
+    display: inline;
+    padding:2px 2px 2px 10px;
+    background:linear-gradient(to left, #d7d7d7, #f9f9f9);
+}
+.modal-dialog > .modal-content:has(div.in-active) .modal-footer > button.btn-primary:before {
+    background:linear-gradient(to left, #34495E, #44597E);
 }

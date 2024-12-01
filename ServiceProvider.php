@@ -16,9 +16,12 @@ use System\Classes\CombineAssets;
 use Backend\Classes\WidgetManager;
 use System\Classes\MarkupManager;
 use System\Classes\SettingsManager;
+use Backend\Classes\FormTabs;
+use Acorn\FormWidgets\QrCode;
+use SimpleSoftwareIO\QrCode\Facades\QrCode as SimpleSoftwareQrCode;
+use Backend\Widgets\Lists as BackendLists;
 
 use Winter\Storm\Support\ModuleServiceProvider;
-
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
 use Acorn\Messaging\Console\RunCommand;
 
@@ -34,6 +37,36 @@ class ServiceProvider extends ModuleServiceProvider
         }
         Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
             $controller->addCss('~/modules/acorn/assets/css/module.css');
+            $controller->addJs('~/modules/acorn/assets/js/acorn.js');
+            $controller->addJs('~/modules/acorn/assets/js/acorn.websocket.js', array('type' => 'module'));
+            $controller->addJs('~/modules/acorn/assets/js/html5-qrcode.js');
+            $controller->addJs('~/modules/acorn/assets/js/findbyqrcode.js');
+            $controller->addJs('~/modules/acorn/assets/js/forms.js');
+            $controller->addJs('~/modules/acorn/assets/js/tabbing.js');
+            $controller->addJs('~/modules/acorn/assets/js/lang/lang.'.App::getLocale().'.js');//Translate JS [en][ar][ku]
+        });
+
+        Event::listen('backend.form.extendFields', function ($widget) {
+            if (property_exists($widget->config, 'tertiaryTabs')) {
+                $tabConfig      = &$widget->config->tertiaryTabs;
+
+                // Add the fields to the outside and allFields section
+                $count          = count($widget->getFields());
+                $widget->addFields($tabConfig['fields']);
+                $allFields      = $widget->getFields();
+                $tertiaryFields = array_splice($allFields, $count);
+
+                // Create a new Tertiary area FormTab for reference
+                // Use of a form-with-sidebar layout is necessary to show this area
+                // using formTertiaryTabs()
+                $allTabs = $widget->getTabs();
+                $allTabs->tertiary = new FormTabs('tertiary', $tabConfig);
+                foreach ($tertiaryFields as $name => &$field) {
+                    $allTabs->tertiary->addField($name, $field);
+                    // Remove the fields from the outside area
+                    $allTabs->outside->removeField($name);
+                }
+            }
         });
 
         parent::boot('acorn');
@@ -78,30 +111,44 @@ class ServiceProvider extends ModuleServiceProvider
         parent::register();
 
         // Settings placeholders
-        SettingsManager::instance()->registerCallback(function ($manager) {
-            $manager->registerSettingItems('Acorn.Module', [
-                'interface' => [
-                    'label'       => 'acorn::lang.settings.interface.menu_label',
-                    'description' => 'acorn::lang.settings.interface.menu_description',
-                    'category'    => 'Acorn',
-                    'icon'        => 'icon-paint-brush',
-                    'class'       => 'Acorn\Models\InterfaceSetting',
-                    'permissions' => ['acorn.manage_interface'],
-                    'order'       => 500,
-                    'keywords'    => 'interface'
-                ],
-                'reporting' => [
-                    'label'       => 'acorn::lang.settings.reporting.menu_label',
-                    'description' => 'acorn::lang.settings.reporting.menu_description',
-                    'category'    => 'Acorn',
-                    'icon'        => 'icon-book',
-                    'class'       => 'Acorn\Models\ReportingSetting',
-                    'permissions' => ['acorn.manage_reporting'],
-                    'order'       => 500,
-                    'keywords'    => 'reporting'
-                ],
-            ]);
-        });
+        if (class_exists('SettingsManager'))
+            SettingsManager::instance()->registerCallback(function ($manager) {
+                $manager->registerSettingItems('Acorn.Module', [
+                    'interface' => [
+                        'label'       => 'acorn::lang.settings.interface.menu_label',
+                        'description' => 'acorn::lang.settings.interface.menu_description',
+                        'category'    => 'Acorn',
+                        'icon'        => 'icon-paint-brush',
+                        'class'       => 'Acorn\Models\InterfaceSetting',
+                        'permissions' => ['acorn.manage_interface'],
+                        'order'       => 500,
+                        'keywords'    => 'interface'
+                    ],
+                    'reporting' => [
+                        'label'       => 'acorn::lang.settings.reporting.menu_label',
+                        'description' => 'acorn::lang.settings.reporting.menu_description',
+                        'category'    => 'Acorn',
+                        'icon'        => 'icon-book',
+                        'class'       => 'Acorn\Models\ReportingSetting',
+                        'permissions' => ['acorn.manage_reporting'],
+                        'order'       => 500,
+                        'keywords'    => 'reporting'
+                    ],
+                ]);
+            });
+
+        // Register FormWidgets
+        if (class_exists('WidgetManager'))
+            WidgetManager::instance()->registerFormWidgets(function($manager) {
+                $manager->registerFormWidget('Acorn\FormWidgets\QrScan', [
+                    'label' => 'QR Scan Field',
+                    'code'  => 'qrscan'
+                ]);
+                $manager->registerFormWidget('Acorn\FormWidgets\QrCode', [
+                    'label' => 'QR Generate Field',
+                    'code'  => 'qrcode'
+                ]);
+            });
     }
 
     // ---------------------------------------- Status helpers

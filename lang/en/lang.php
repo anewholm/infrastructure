@@ -29,9 +29,6 @@
             'select' => 'Select',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
-            'qrcode_name' => 'QR Code name',
-            'scan_qrcode' => 'Scan A QRCode',
-            'find_by_qrcode' => 'Find by QRCode',
             'save_and_print' => 'Save and Print',
             'correct_and_print' => 'Save correction and print',
             'print' => 'Print',
@@ -40,7 +37,13 @@
             'from_backend_user_group' => 'From Group',
             'or' => 'Or',
             'centre_id' => 'Centre ID',
-            'leaf_id' => 'Leaf ID'
+            'leaf_id' => 'Leaf ID',
+            'qrcode_name' => 'QR Code name',
+            'scan_qrcode' => 'Scan A QRCode',
+            'find_by_qrcode' => 'Find by QRCode',
+            'find_in_list' => 'Find in list',
+            'redirect' => 'Go to record',
+            'form_field_complete' => 'Fill out form fields'
         ],
         'server' => [
             'label' => 'Server',
@@ -49,5 +52,8 @@
             'replicated' => 'Replicated',
             'replicated_source' => 'Replication Source'
         ]
+    ],
+    'helpblock' => [
+        'view_add' => 'View / Add'
     ]
 ];

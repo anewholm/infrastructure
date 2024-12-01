@@ -5,7 +5,7 @@
 
 /* tr.rowlink */
 .ajax-new {
-    background-color:#ffbbbb!important;
+    background-color:#ffdddd!important;
     opacity: 1;
     animation-name: fadeInOpacity;
     animation-iteration-count: 1;
@@ -27,4 +27,25 @@ table.table.data tbody td.list-cell-type-partial > .multi > li > a {
 table.table.data tbody td.list-cell-type-partial > .multi > li > a:hover,
 table.table.data tbody td.list-cell-type-partial > a.more:hover {
     text-decoration: underline;
+}
+
+tr.rowlink.qrscan-highlight > td {
+    background-color:#ffdddd!important;
+    opacity: 1;
+    animation-name: fadeInOpacity;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in;
+    animation-duration: 2s;
+}
+tr.rowlink.qrscan-highlight > td {
+    border-top:1px solid #000!important;
+    border-bottom:1px solid #000!important;
+}
+tr.rowlink.qrscan-highlight > td:first-child {
+    border-left:1px solid #000!important;
+    border-radius: 5px 0px 0px 5px;
+}
+tr.rowlink.qrscan-highlight > td:last-child {
+    border-right:1px solid #000!important;
+    border-radius: 0px 5px 5px 0px;
 }

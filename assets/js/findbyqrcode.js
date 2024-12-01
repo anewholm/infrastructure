@@ -1,76 +1,104 @@
 // https://github.com/mebjas/html5-qrcode
 var qrCodeObjects = {};
+var qrScannerInitialized = false;
 
-function domReady(fn) {
-	if (
-		document.readyState === "complete" ||
-		document.readyState === "interactive"
-	) {
-		setTimeout(fn, 1000);
-	} else {
-		document.addEventListener("DOMContentLoaded", fn);
-	}
+function onScanSuccess(decodeText, decodeResult) {
+    var jQrScanner    = $(this);
+    var controllerURL = decodeText;
+    var actionsString = jQrScanner.attr("actions");
+    var actions       = actionsString.split(",");
+    var listSelector  = jQrScanner.attr("list-selector");
+    var formSelector  = jQrScanner.attr("form-selector");
+
+    var i = 0;
+    var actionSuccess, action, isLast;
+    do {
+        actionSuccess = false;
+        action        = actions[i++];
+        isLast        = (i == actions.length);
+
+        switch (action) {
+            case "find-in-list": {
+                var uuid = decodeText;
+                var targetRow = $(listSelector).find('tr.rowlink:has(a[href*="' + uuid + '"])');
+                if (targetRow.length) {
+                    $(listSelector).find("tr.rowlink").removeClass("qrscan-highlight");
+                    targetRow.addClass("qrscan-highlight");
+
+                    // Scroll to row
+                    // TODO: Untested scrollIntoView()
+                    targetRow[0].scrollIntoView({
+                        behavior: "smooth", // or "auto" or "instant"
+                        block:    "start"   // or "end"
+                    });
+
+                    actionSuccess = true;
+                } else if (isLast) {
+                    // TODO: Translate JS Flash message
+                    $.wn.flashMsg({
+                        'text': 'Could not find QR code item in the list',
+                        'class': 'error'
+                    });
+                }
+                break;
+            }
+
+            case "redirect": {
+                document.location = controllerURL;
+                actionSuccess     = true;
+                break;
+            }
+
+            case "form-field-complete": {
+                var jInput = jQrScanner.siblings("input");
+                var id     = jInput.attr('id');
+
+                // Copy or find the input in the target form
+                // Note that this target form may be blank
+                // as this formField widget <input> may already be in the target form
+                var jTargetForm = $(formSelector);
+                if (jTargetForm.length) {
+                    var jExists = jTargetForm.find('#' + id);
+                    if (jExists.length) jInput = jExists;
+                    else                jInput = jInput.appendTo(jTargetForm);
+                }
+
+                // Set the value, and trigger a change in the target form
+                jInput.val(controllerURL);
+                jInput.trigger("change", controllerURL);
+
+                actionSuccess = true;
+                break;
+            }
+        }
+    } while (i < actions.length && !actionSuccess);
+
+    if (actionSuccess) $(this).trigger('close.oc.popup');
 }
 
-domReady(function () {
-    // If found your QR code
-    function onScanSuccess(decodeText, decodeResult) {
-        // https://github.com/mebjas/html5-qrcode
-        var jQrScanner = $('#my-qr-reader');
-        var object;
+function initializeQrScanner() {
+    // Initialize the QR code scanner when the element exists
+    $("#my-qr-reader").each(function () {
+        var self = this;
+        let htmlscanner = new Html5QrcodeScanner("my-qr-reader", {
+            fps: 10,
+            qrbos: 300,
+            facingMode: "user",
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        });
+        htmlscanner.render(function (decodeText, decodeResult) {
+            onScanSuccess.call(self, decodeText, decodeResult);
+        });
+        qrScannerInitialized = true;
+    });
+}
 
-        if (window.console) console.info('QRCode:' + decodeText);
+$(document).ready(function () {
+    initializeQrScanner();
+    console.log('initializeQrScanner is work  from domready ')
+});
 
-        // If the QR code has already been scanned, show a message and do nothing
-        if (qrCodeObjects[decodeText]) {
-            $.oc.flashMsg({
-                'text': 'Qrcode has already been scanned.',
-                'class': 'error',
-                'interval': 3
-            })
-            if (window.console) console.warn('QRCode already scanned');
-            return; //Do nothing else
-        }
-        // If the code has not been scanned before
-        qrCodeObjects[decodeText] = true;
-
-        // Check if decodeText is a URL
-        var controllerURL = decodeText;
-        if (decodeText.startsWith("{")) {
-            // Legacy JSON object support
-            // "{"author":"Acorn","plugin":"Lojistiks","model":"Transfer","id":"ead5e26f-6ea9-4882-9412-fe5815c04e12"}"
-            var decodeJSON  = JSON.parse(decodeText);
-            var pluralModel = decodeJSON.model.plural();
-            var action      = 'update'; // TODO: Permissions?
-            controllerURL   = '/backend/' + decodeJSON.author.toLowerCase() + '/' + decodeJSON.plugin.toLowerCase() + '/' + pluralModel.toLowerCase() + '/' + action + '/' + decodeJSON.id;
-        }
-        if (window.console) console.log(controllerURL);
-
-        // Handle based on scanner mode (redirect or field)
-        switch (jQrScanner.attr('mode')) {
-            case 'redirect':
-                document.location = controllerURL;
-                break;
-            case 'field':
-            default:
-                // Useful for dependsOn:
-                jQrScanner.siblings('input').val(controllerURL);
-                jQrScanner.trigger('change', controllerURL);
-                break;
-        }
-    }
-
-    // Initialize the QR code scanner if the element exists
-    if ($("#my-qr-reader").length) {
-        let htmlscanner = new Html5QrcodeScanner(
-            "my-qr-reader",
-            {
-                fps: 10,
-                qrbos: 300,
-                facingMode: "user",
-                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
-            }
-        );
-        htmlscanner.render(onScanSuccess);
-    }
+$(document).on("complete.oc.popup", function () {
+    initializeQrScanner();
+    console.log('initializeQrScanner is work from Complted popup');
 });

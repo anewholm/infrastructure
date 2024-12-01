@@ -81,7 +81,6 @@ class Model extends BaseModel
     }
 
     // --------------------------------------------- Translation
-    // TODO: Jabers code, when reviewed: use \Acorn\Backendlocalization\Class\TranslateBackend;
     public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = ['name', 'description'];
 
@@ -113,7 +112,7 @@ class Model extends BaseModel
     // --------------------------------------------- Encapuslation and Standard Accessors
     protected function checkFrameworkCallerEncapsulation($attributeName)
     {
-        if (env('APP_DEBUG') && FALSE) {
+        if (env('APP_DEBUG') && FALSE) { // TODO: checkFrameworkCallerEncapsulation()
             $bt     = debug_backtrace();
 
             // This and Called (Our __get/set())
@@ -176,6 +175,9 @@ class Model extends BaseModel
     }
 
     // --------------------------------------------- Standard fields
+    // These are standard accessors
+    // to allow Encapsulated access
+    // avoiding checkFrameworkCallerEncapsulation() above
     public function id()
     {
         // Allow id checks, override in Derived Class if necessary
@@ -208,62 +210,7 @@ class Model extends BaseModel
         return $name;
     }
     public function fullyQualifiedName() {return $this->name();}
-    public function fullName()           {return $this->name();}
-
-    protected function getNameAttribute() {return $this->name();}
     protected function getFullyQualifiedNameAttribute() {return $this->fullyQualifiedName();}
-    protected function getFullNameAttribute() {return $this->fullName();}
-
-// TODO: Standard conversions
-// TODO: public $eventFields = []; => mutateCalendarEventId()
-// TODO: ModelBeforeSave listener?
-//
-//     public function getCreatedAtEventIdAttribute($value)
-//     {
-//         return $this->mutateCalendarEventId($value);
-//     }
-//
-//     public function getUpdatedAtEventIdAttribute($value)
-//     {
-//         return $this->mutateCalendarEventId($value);
-//     }
-
-    /*
-    public function setClosedAtEventIdAttribute($value)
-    {
-        // TODO: setClosedAtEventIdAttribute() change to above system!
-        if ($this->isDirty('closed_at_event_id')) {
-            $original = $this->original['closed_at_event_id'];
-            if ($value) {
-                if ($original) {
-                    // Move existing event
-                } else {
-                    // Create a new event
-                }
-            } else $this->attributes['closed_at_event_id'] = NULL;
-        } else $this->attributes['closed_at_event_id'] = $this->original['closed_at_event_id'];
-    }
-
-    public function getClosedAtEventIdAttribute($value)
-    {
-        return $this->mutateCalendarEventId($value);
-    }
-
-    protected function mutateCalendarEventId($uuid)
-    {
-        $eventDate = NULL;
-
-        if ($uuid) {
-            $event = \Acorn\Calendar\Models\Event::findOrFail($uuid);
-            if ($event->event_parts && count($event->event_parts)) {
-                // start = DateTime object
-                $eventDate = new Carbon($event->event_parts->first()->start);
-            }
-        }
-
-        return $eventDate;
-    }
-    */
 
     /*
     protected $dispatchesEvents = [
@@ -343,6 +290,100 @@ class Model extends BaseModel
         ModelAfterSave::dispatch($this);
 
         return $result;
+    }
+
+    // --------------------------------------------- New Relations
+    // composer require staudenmeir/eloquent-has-many-deep # New Deep relations
+    use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
+
+    // New $hasManyDeep relation e.g. [
+    /*
+    public $hasManyDeep = [
+        'legalcase_justice_scanned_documents_legalcase' => [
+            \Acorn\Justice\Models\ScannedDocument::class,
+            'throughRelations'    => ['legalcase', 'justice_scanned_documents_legalcase']
+        ],
+        'legalcase_justice_legalcase_identifiers_legalcase' => [
+            \Acorn\Justice\Models\LegalcaseIdentifier::class,
+            'throughRelations'    => ['legalcase', 'justice_legalcase_identifiers_legalcase']
+        ],
+        'legalcase_justice_legalcase_legalcase_category_legalcases' => [
+            \Acorn\Justice\Models\LegalcaseCategory::class,
+            'throughRelations'    => ['legalcase', 'justice_legalcase_legalcase_category_legalcases']
+        ],
+    ];
+    */
+    public $hasManyDeep = [];
+
+    protected static $relationTypes = [
+        'hasOne',
+        'hasMany',
+        'belongsTo',
+        'belongsToMany',
+        'morphTo',
+        'morphOne',
+        'morphMany',
+        'morphToMany',
+        'morphedByMany',
+        'attachOne',
+        'attachMany',
+        'hasOneThrough',
+        'hasManyThrough',
+        // Ours added
+        'hasManyDeep',
+    ];
+
+    protected function handleRelation($relationName)
+    {
+        $relationObj  = NULL;
+        $relationType = $this->getRelationType($relationName);
+        switch ($relationType) {
+            case 'hasManyDeep':
+                $relationConfig       = $this->validateRelationArgs($relationName, ['throughRelations']);
+                $relatedModel         = $relationConfig[0] ?? NULL;
+                // Translate the relation names to relation objects
+                $throughRelationObjects = [];
+                $throughRelationModel   = $this;
+                foreach ($relationConfig['throughRelations'] as $throughRelationName) {
+                    $throughRelationObject = $throughRelationModel->$throughRelationName();
+                    array_push($throughRelationObjects, $throughRelationObject);
+                    $throughRelationModel = $throughRelationObject->getRelated();
+                }
+                $finalModelClass = get_class($throughRelationModel);
+                if ($relatedModel && $finalModelClass != $relatedModel) {
+                    throw new Exception("Final relation model [$finalModelClass] does not yield the stated Model[$relatedModel]");
+                }
+
+                // Assemble parameters
+                [
+                    $related, // string
+                    $through,
+                    $foreignKeys,
+                    $localKeys,
+                    $postGetCallbacks,
+                    $customThroughKeyCallback,
+                    $customEagerConstraintsCallback,
+                    $customEagerMatchingCallback
+                ]          = $this->hasOneOrManyDeepFromRelations($throughRelationObjects);
+                $query     = $this->newRelatedInstance($finalModelClass)->newQuery();
+                $farParent = $this;
+                $throughParents = [];
+                foreach ($through as $throughClass) array_push($throughParents, new $throughClass);
+                
+                $relationObj = new \Acorn\Relationships\HasManyDeep(
+                    $query,
+                    $farParent,
+                    $throughParents,
+                    $foreignKeys,
+                    $localKeys,
+                    $relationName // Extra parameter for Winter Relationships
+                );
+                break;
+            default:
+                $relationObj = parent::handleRelation($relationName);
+        }
+
+        return $relationObj;
     }
 
     // --------------------------------------------- Querying
@@ -668,29 +709,22 @@ SQL;
             }
 
             // ----------------------------------- QR code scanning form value completion
-            $qrCodeField = NULL;
-            $field2 = NULL;
-            foreach ( $fields as $fieldName => &$field2 ) {
-                if (   $field2->getConfig( 'type' ) == 'qrscan' ) {
-                    $qrCodeField = &$field2;
-                    // get the type and put fildename  in qrCodeField
-                    break;
+            $newQrcodeUrl = post('_qrscan');
+            foreach ( $fields as $fieldName => &$qrCodeField ) {
+                // FormWidget type:qrscan
+                if (  $qrCodeField->getConfig( 'type' ) == 'qrscan' ) {
+                    $newQrcodeUrl = $qrCodeField->value;
                 }
-            }
-            // Legacy support
-            foreach ( $fields as $fieldName => &$field2 ) {
-                if ( ! $qrCodeField && strstr($field2->getConfig( 'path' ), '_qrcode_scan') ) {
-                    $qrCodeField = &$field2;
+                // Legacy type:partial support
+                if (strstr($qrCodeField->getConfig( 'path' ), '_qrscan')) {
                     if ($post = post($qrCodeField->arrayName)) {
-                        if (isset($post[$fieldName])) $qrCodeField->value = $post[$fieldName];
+                        if (isset($post[$fieldName])) $newQrcodeUrl = $post[$fieldName];
                     }
-                    break;
                 }
+                if ($newQrcodeUrl) break;
             }
 
-            if ( $qrCodeField && !empty( $qrCodeField->value ) ) {
-                $newQrcodeUrl = $qrCodeField->value;
-
+            if ($newQrcodeUrl) {
                 // Winter makes a separate request from the front-end for every dependsOn field
                 // Generate a lock with a unique key to contain the previous QR code value
                 $lockKey = 'qr_code_lock_' . md5( $newQrcodeUrl );
@@ -798,18 +832,38 @@ SQL;
             foreach ($fields as $name => &$buttonField) {
                 if (isset($buttonField->config['path']) && $buttonField->config['path'] == 'add_button') {
                     // _add_invoice defaults to add _invoice to invoices
-                    $modelNameLower = substr($name, 5); // invoice
-                    $from   = (isset($buttonField->config['from']) ? $buttonField->config['from'] : "_$modelNameLower");           // _invoice
-                    $to     = (isset($buttonField->config['to'])   ? $buttonField->config['to']   : Str::plural($modelNameLower)); // invoices
+                    $modelNameLower  = substr($name, 5);             // invoice
+                    $modelNamePlural = Str::plural($modelNameLower); // invoices
                     $post   = post($buttonField->arrayName);
                     $addVal = (is_array($post) && isset($post[$name]) ? $post[$name] : NULL);
 
-                    // Silent ignore if $to or POST $from is not available
-                    // Custom filterFields() must handle these cases
-                    if ($addVal) {
-                        if (!property_exists($fields, $from)) throw new \Exception("From field [$from] not found on [$thisModelClass] when processing [$name]");
-                        if (!property_exists($fields, $to))   throw new \Exception("To field [$to] not found on [$thisModelClass] when processing [$name]");
+                    // Auto-From must always be the un-nested singular pseudo
+                    // otherwise we cannot distinguish between a from and to
+                    $from   = (isset($buttonField->config['from']) ? $buttonField->config['from'] : "_$modelNameLower"); // _invoice
 
+                    // and auto-to can only be plural
+                    $to     = NULL;
+                    if (isset($buttonField->config['to'])) $to = $buttonField->config['to'];
+                    else {
+                        // AUTO-Search for something sensible, including nested model[field1][field2]
+                        foreach ($fields as $searchName => &$searchField) {
+                            // Remove any nesting
+                            $baseName = preg_replace('/^.*\[|\]$/', '', $searchName);
+                            if (   $baseName == "_$modelNamePlural" // _invoices
+                                || $baseName == $modelNamePlural    // invoices
+                            ) {
+                                $to = $searchName;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Checks
+                    if (!property_exists($fields, $from)) throw new \Exception("From field [$from] not found on [$thisModelClass] when processing [$name]");
+                    if (!property_exists($fields, $to))   throw new \Exception("To field [$to] not found on [$thisModelClass] when processing [$name]");
+
+                    // add_button value in POST must be set
+                    if ($addVal) {
                         if ($fromId = $fields->$from->value) {
                             $toArray = &$fields->$to->value;
                             if (is_null($toArray)) $toArray = array();
@@ -840,20 +894,30 @@ SQL;
                     // _add_invoice defaults $to to _invoice, then invoice depending on which exists
                     // because _invoice may be another pseudo field that manages the addition process
                     // like the add button above
-                    $modelNameLower = substr($name, 8); // invoice
-                    $modelClass     = (isset($buttonField->config['model']) ? $buttonField->config['model'] : Str::studly($modelNameLower)); // Invoice
-                    $to             = NULL;
+                    $modelNameLower  = substr($name, 8);             // invoice
+                    $modelNamePlural = Str::plural($modelNameLower); // invoices
+                    $modelClass      = (isset($buttonField->config['model']) ? $buttonField->config['model'] : Str::studly($modelNameLower)); // Invoice
+
+                    $to              = NULL;
                     if (isset($buttonField->config['to'])) $to = $buttonField->config['to'];
                     else {
-                        // Search for something sensible
-                        if      (property_exists($fields, "_$modelNameLower")) $to = "_$modelNameLower"; // _invoice
-                        else if (property_exists($fields, $modelNameLower))    $to = $modelNameLower;    // invoice
-                        else {
-                            $to = Str::plural($modelNameLower);                 // invoices
-                            if (property_exists($fields, "_$to")) $to = "_$to"; // _invoices
+                        // AUTO-Search for something sensible, including nested model[field1][field2]
+                        foreach ($fields as $searchName => &$searchField) {
+                            // Remove any nesting
+                            $baseName = preg_replace('/^.*\[|\]$/', '', $searchName);
+                            if (   $baseName == "_$modelNameLower"  // _invoice
+                                || $baseName == $modelNameLower     // invoice
+                                || $baseName == "_$modelNamePlural" // _invoices
+                                || $baseName == $modelNamePlural    // invoices
+                            ) {
+                                $to = $searchName;
+                                break;
+                            }
                         }
                     }
-                    if (!property_exists($fields, $to)) throw new \Exception("To field [$to] of [$modelClass] not found on [$thisModelClass] when processing [$name]");
+
+                    // Checks
+                    if (is_null($to) || !property_exists($fields, $to)) throw new \Exception("To field [$to] of [$modelClass] not found on [$thisModelClass] when processing [$name]");
 
                     if ($fromId = $buttonField->value) {
                         if (is_array($fromId))  throw new \Exception("From field [$from] on [$thisModelClass] is array, when processing [$name]");

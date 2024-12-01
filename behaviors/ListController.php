@@ -2,13 +2,20 @@
 
 use \Backend\Behaviors\ListController as BackendListController;
 use \Exception;
+use Backend\Widgets\Search;
 
 class ListController extends BackendListController
 {
     public function __construct($controller)
     {
         parent::__construct($controller);
+
         $this->addViewPath('~/modules/backend/behaviors/listcontroller/partials');
+
+        Search::extend(function ($widget) {
+            $widget->addViewPath('~/modules/acorn/partials/');
+        });
+
     }
 
     protected function array_insert(&$array, $positionKey, $insert)
@@ -91,23 +98,55 @@ class ListController extends BackendListController
                     if (property_exists($subConfig, 'columns')) {
                         foreach ($subConfig->columns as $subFieldName => $subFieldConfig) {
                             // TODO: Nested 1from1 relations
-                            $subType        = (isset($subFieldConfig['type']) ? $subFieldConfig['type'] : 'text');
-                            $includeContext = (isset($subFieldConfig['includeContext']) ? $subFieldConfig['includeContext'] : 'include');
-                            if ($subFieldName != 'id' && $includeContext != 'no-include') {
+                            $subType        = ($subFieldConfig['type']           ?? 'text');
+                            $includeContext = ($subFieldConfig['includeContext'] ?? 'include');
+                            if (   $subFieldName != 'id' 
+                                && $includeContext != 'no-include'
+                                // Dates will not work because this model does not have the same $dates casting
+                                // TODO: Support datetime types include
+                                && $subType != 'timetense' 
+                                && $subType != 'date' 
+                            ) {
+                                $isAlreadyNested   = (strstr($subFieldName, '[') !== FALSE);
                                 $isPseudoFieldName = (substr($subFieldName, 0, 1) == '_');
                                 $nestedFieldName   = $subFieldName;
                                 if (!$isPseudoFieldName) {
-                                    // Sub-relation fields: The relation is added in to the name[relation]
+                                    // Sub-relation fields: The relation is added in to the name[relation][valueFrom]
                                     if (isset($subFieldConfig['relation'])) {
-                                        $subFieldName = $subFieldConfig['relation'];
+                                        // We cannot use the relation field because there already is one
+                                        // relation: does work with nesting, but let's move to full nested name anyway
+                                        $subFieldName    = $subFieldConfig['relation'];
+                                        $nestedFieldName = "${fieldName}[$subFieldName]";
                                         unset($subFieldConfig['relation']);
-                                    }
-                                    $nestedFieldName = "${fieldName}[$subFieldName]";
-                                    if (isset($subFieldConfig['valueFrom'])) {
-                                        $nestedFieldName = "${nestedFieldName}[$subFieldConfig[valueFrom]]";
-                                        unset($subFieldConfig['valueFrom']);
+                                        /* 
+                                        if (isset($subFieldConfig['valueFrom'])) {
+                                            $valueFrom = $subFieldConfig['valueFrom'];
+                                            $nestedFieldName = "${nestedFieldName}[$valueFrom]";
+                                            unset($subFieldConfig['valueFrom']);
+                                        }
+                                        */
+                                        $subFieldConfig['searchable'] = FALSE;
+                                        $subFieldConfig['sortable']   = FALSE;
+                                    } else {
+                                        // No relation field, so lets just set it
+                                        // relation: user
+                                        // no additional field name nesting
+                                        // TODO: select: ?
+                                        $subFieldConfig['relation']   = $fieldName;
+                                        // valueFrom: is necessary for the relation to work
+                                        $subFieldConfig['valueFrom'] = ($subFieldConfig['valueFrom'] ?? 'name');
+                                        // TODO: Should be able to maintain searcheable in certain conditions
+                                        // $subFieldConfig['searchable'] = TRUE; // Leave as before
+                                        $subFieldConfig['sortable']   = FALSE;
                                     }
                                 }
+
+                                // Custom nesting information
+                                $nestLevel = $subFieldConfig['nestLevel'] ?? 0;
+                                $subFieldConfig['nested']    = TRUE;
+                                $subFieldConfig['nestLevel'] = $nestLevel+1;
+                                $subFieldConfig['included']  = TRUE;
+                
                                 // Insert before $fieldName
                                 $this->array_insert($config->columns, $fieldName, array($nestedFieldName => $subFieldConfig));
                             }
@@ -118,7 +157,7 @@ class ListController extends BackendListController
                 // Remove include directives
                 foreach ($subConfigs as $fieldName => $subConfig) unset($config->columns[$fieldName]);
 
-//                 if (count($subConfigs)) dd($configFile, $config);
+                //if (count($subConfigs)) dd($configFile, $config);
             }
         }
 
