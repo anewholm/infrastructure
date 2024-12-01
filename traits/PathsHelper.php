@@ -2,7 +2,7 @@
 
 use Str;
 use Exception;
-use Acorn\Model;
+use Model;
 
 Trait PathsHelper {
     // This Trait can be added to either Model or Controller
@@ -106,12 +106,18 @@ Trait PathsHelper {
 
     public function translationDomainBackend(string $name)
     {
+        if ($name == 'update') $name = 'save';
         return "backend::lang.form.$name";
     }
 
-    public function transModel(string $name, ?Model $model = NULL)
+    public function translateModelKey(string $name = 'label', ?Model $model = NULL)
     {
         if (is_null($model)) $model = &$this;
+        if (!method_exists($this, 'translationDomainModel')) {
+            $modelClass = get_class($model);
+            throw new \Exception("Model [$modelClass] does not have a translationDomainModel() method");
+        }
+        
         return trans($this->translationDomainModel($model, $name));
     }
 
@@ -289,7 +295,7 @@ Trait PathsHelper {
         return "$author\\$plugin\\Controllers\\$name";
     }
 
-    protected function controllerDirectoryPathRelative(?Object $object = NULL): string
+    public function controllerDirectoryPathRelative(?Object $object = NULL): string
     {
         $pluginPathRelative      = $this->pluginPathRelative();
         $controllerDirectoryName = $this->controllerDirectoryName();

@@ -20,7 +20,7 @@ class FormController extends BackendFormController
         }
     }
 
-    protected function getSettingsModel(string $modelClass): string
+    protected function getSettingsModel(string $modelClass): string|NULL
     {
         $settingsClass = NULL;
         $modelClassParts = explode('\\', $modelClass);
@@ -41,32 +41,37 @@ class FormController extends BackendFormController
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
         $config = parent::makeConfig($configFile, $requiredConfig);
+
+
         if (is_string($configFile) && $configFile) {
             $configFileParts = explode('/', $configFile);
             $configFileName  = last($configFileParts);
 
+            if ($configFileName == 'config_form.yaml') {
+                // ------------------------------------------------- Action functions
+                if (property_exists($this->controller, 'actionFunctions') && property_exists($config, 'actionFunctions'))
+                    $this->controller->actionFunctions = $config->actionFunctions;
+            }
+
             if ($configFileName == 'fields.yaml') {
+                // ------------------------------------------------- Process comments for translate
+                if (isset($config->fields)) {
+                    foreach ($config->fields as &$fieldConfig) {
+                        $this->processCommentEmbeddedTranslationKeys($fieldConfig);
+                    }
+                }
+
                 // ------------------------------------------------- setting: directives
                 // This allows fields to be conditionally shown
                 // in the same way as permissions
                 // setting: my_setting
                 // where my_setting must be valid on a local Plugin Setting[s] class
                 foreach ($config->fields as $fieldName => &$fieldConfig) {
-                    if (isset($fieldConfig['setting'])) {
-                        if ($settingsClass = $this->getSettingsModel($this->getConfig('modelClass'))) {
-                            $setting = $settingsClass::get($fieldConfig['setting']);
-                            if ($setting != '1') unset($config->tabs['fields'][$fieldName]);
-                        }
-                    }
+                    if ($this->settingRemove($fieldConfig)) unset($config->fields[$fieldName]);
                 }
                 if (isset($config->tabs['fields'])) {
                     foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
-                        if (isset($fieldConfig['setting'])) {
-                            if ($settingsClass = $this->getSettingsModel($this->getConfig('modelClass'))) {
-                                $setting = $settingsClass::get($fieldConfig['setting']);
-                                if ($setting != '1') unset($config->tabs['fields'][$fieldName]);
-                            }
-                        }
+                        if ($this->settingRemove($fieldConfig)) unset($config->tabs['fields'][$fieldName]);
                     }
                 }
 
@@ -77,16 +82,20 @@ class FormController extends BackendFormController
                 $subConfigs = array();
                 foreach ($config->fields as $fieldName => &$fieldConfig) {
                     if (isset($fieldConfig['include'])) {
-                        $path = NULL;
+                        $path       = NULL;
+                        $modelClass = NULL;
                         if (isset($fieldConfig['includeModel'])) {
-                            $modeClass = $fieldConfig['includeModel'];
-                            $model     = new $modeClass;
-                            $modelDir  = $model->modelDirectoryPathRelative();
-                            $path      = "$modelDir/fields.yaml";
+                            $modelClass = $fieldConfig['includeModel'];
+                            $model      = new $modelClass;
+                            $modelDir   = $model->modelDirectoryPathRelative();
+                            $path       = "$modelDir/fields.yaml";
                         }
                         if (isset($fieldConfig['path'])) $path = $fieldConfig['path'];
                         if ($path) $subConfigs[$fieldName] = $this->makeConfig($path, $requiredConfig);
                         else throw new Exception("Include directive without path or model in [$fieldName]");
+
+                        // Stamp the modelClass on the fields
+                        $subConfigs[$fieldName]->modelClass = $modelClass;
                     }
                 }
 
@@ -96,23 +105,22 @@ class FormController extends BackendFormController
                     if (property_exists($subConfig, 'tabs') && isset($subConfig->tabs['fields'])) {
                         if (!property_exists($config, 'tabs')) $config->tabs = array();
                         if (!isset($config->tabs['fields']))   $config->tabs['fields'] = array();
-                        $this->processFields($config->tabs['fields'], $subConfig->tabs['fields'], $fieldName);
+                        $this->processFields($config->tabs['fields'], $subConfig->tabs['fields'], $fieldName, $subConfig->modelClass);
                     }
                     if (property_exists($subConfig, 'secondaryTabs') && isset($subConfig->secondaryTabs['fields'])) {
                         if (!property_exists($config, 'secondaryTabs')) $config->secondaryTabs = array();
                         if (!isset($config->secondaryTabs['fields']))   $config->secondaryTabs['fields'] = array();
-                        $this->processFields($config->secondaryTabs['fields'], $subConfig->secondaryTabs['fields'], $fieldName);
+                        $this->processFields($config->secondaryTabs['fields'], $subConfig->secondaryTabs['fields'], $fieldName, $subConfig->modelClass);
                     }
                     if (property_exists($subConfig, 'tertiaryTabs') && isset($subConfig->tertiaryTabs['fields'])) {
                         if (!property_exists($config, 'tertiaryTabs')) $config->tertiaryTabs = array();
                         if (!isset($config->tertiaryTabs['fields']))   $config->tertiaryTabs['fields'] = array();
-                        $this->processFields($config->tertiaryTabs['fields'], $subConfig->tertiaryTabs['fields'], $fieldName);
+                        $this->processFields($config->tertiaryTabs['fields'], $subConfig->tertiaryTabs['fields'], $fieldName, $subConfig->modelClass);
                     }
                 }
 
                 // Remove include directives
                 foreach ($subConfigs as $fieldName => $subConfig) unset($config->fields[$fieldName]);
-
                 //if (count($subConfigs)) dd($config);
             }
         }
@@ -120,18 +128,45 @@ class FormController extends BackendFormController
         return $config;
     }
 
-    protected function processFields(array &$configFields, array &$subConfigFields, string $fieldName): void
+    protected function settingRemove(array &$fieldConfig, string $modelClass = NULL): bool
+    {
+        if (!$modelClass) $modelClass = $this->getConfig('modelClass');
+        $settingsClass = $this->getSettingsModel($modelClass);
+        $removeField   = ($settingsClass && isset($fieldConfig['setting']) && $settingsClass::get($fieldConfig['setting']) != '1');
+        return $removeField;
+    }
+
+    /**
+     * Process comments for translation
+     *
+     * @param array $fieldConfig
+     */
+    protected function processCommentEmbeddedTranslationKeys(array &$fieldConfig): void
+    {
+        if (isset($fieldConfig['comment']) && is_string($fieldConfig['comment'])) {
+            $fieldConfig['comment'] = preg_replace_callback(
+                "/([a-zA-Z0-9_\.]+::lang\.[a-zA-Z0-9_\.\-]+)/",
+                function ($matches) {
+                    return trans($matches[1]) ?: $matches[1];
+                },
+                $fieldConfig['comment']
+            );
+        }
+    }
+
+    protected function processFields(array &$configFields, array &$subConfigFields, string $fieldName, string $modelClass = NULL): void
     {
         $inserts = array();
         foreach ($subConfigFields as $subFieldName => $subFieldConfig) {
             // TODO: Nested 1from1 relations
-            $subType        = (isset($subFieldConfig['type']) ? $subFieldConfig['type'] : 'text');
-            $includeContext = (isset($subFieldConfig['includeContext']) ? $subFieldConfig['includeContext'] : 'include');
-            if ($subFieldName != 'id' && $includeContext != 'no-include') {
-                $isPseudoFieldName = (substr($subFieldName, 0, 1) == '_');
+            $subType           = (isset($subFieldConfig['type']) ? $subFieldConfig['type'] : 'text');
+            $includeContext    = (isset($subFieldConfig['includeContext']) ? $subFieldConfig['includeContext'] : 'include');
+            $isPseudoFieldName = (substr($subFieldName, 0, 1) == '_');
 
+            if ($subFieldName != 'id' && $includeContext != 'no-include') {
                 // Config changes
-                if ($subType == 'relation') $subFieldConfig['context'] = array('update');
+                // TODO: support relation and fileupload fields on create
+                if ($subType == 'relation' || $subType == 'fileupload') $subFieldConfig['context'] = array('update');
                 if (isset($subFieldConfig['dependsOn'])) {
                     $dependsOn = $subFieldConfig['dependsOn'];
                     foreach ($dependsOn as $i => $dependsOnField) {
@@ -143,7 +178,12 @@ class FormController extends BackendFormController
 
                 // Nesting in to existing form
                 $nestedFieldName   = ($isPseudoFieldName ? $subFieldName : "${fieldName}[$subFieldName]");
-                $inserts[$nestedFieldName] = $subFieldConfig;
+                $nestLevel         = $subFieldConfig['nestLevel'] ?? 0;
+                $subFieldConfig['nested']    = TRUE;
+                $subFieldConfig['nestLevel'] = $nestLevel+1;
+                $subFieldConfig['included']  = TRUE;
+                if (!$modelClass || !$this->settingRemove($subFieldConfig, $modelClass))
+                    $inserts[$nestedFieldName] = $subFieldConfig;
             }
         }
 

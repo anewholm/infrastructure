@@ -13,9 +13,9 @@ use Request;
 use ReflectionClass;
 use Flash;
 use \Exception;
+use Str;
 
 use Acorn\User\Models\User;
-
 use Acorn\Events\DataChange;
 use Acorn\Events\UserNavigation;
 use Acorn\ServiceProvider;
@@ -27,6 +27,11 @@ class Controller extends BackendController
 {
     use Traits\PathsHelper;
 
+    // These can appear in Lists and Forms
+    // wherever the model is displayed
+    // see config_form.yaml
+    public $actionFunctions = array();
+
     public function __construct()
     {
         parent::__construct();
@@ -34,27 +39,13 @@ class Controller extends BackendController
         $this->addViewPath('~/modules/acorn/partials');
 
         Event::listen('backend.page.beforeDisplay', function($controller, $action, $params) {
-            $this->addJs('/modules/acorn/assets/js/acorn.js');
-            $this->addJs('/modules/acorn/assets/js/acorn.websocket.js', array('type' => 'module'));
-
-            // Forms
-            $this->addJs('/modules/acorn/assets/js/html5-qrcode.js');
-            $this->addJs('/modules/acorn/assets/js/findbyqrcode.js');
-            $this->addJs('/modules/acorn/assets/js/forms.js');
-            $this->addJs('/modules/acorn/assets/js/tabbing.js');
-            $this->addCss('/modules/acorn/assets/css/tabbing.css');
-            $this->addCss('/modules/acorn/assets/css/menus.css');
-            $this->addCss('/modules/acorn/assets/css/forms.css');
-            $this->addCss('/modules/acorn/assets/css/lists.css');
-            $this->addCss('/modules/acorn/assets/css/qrcode-printing.css');
-            $this->addCss('/modules/acorn/assets/css/html5-qrcode.css');
-
             // Files commonly get loaded in popups, so we always include this widget
             // TODO: attach the FileUpload widget instead
             $controller->addJs('~/modules/backend/formwidgets/fileupload/assets/js/fileupload.js');
             $controller->addCss('~/modules/backend/formwidgets/fileupload/assets/css/fileupload.css');
 
             // Include general plugin CSS/JS for this controller
+            // TODO: This plugin.css should be done in the Plugin, with the same event name
             $reflection = new ReflectionClass($this);
             $absolutePluginPath = File::normalizePath(dirname(dirname($reflection->getFileName())));
             $relativePluginPath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $absolutePluginPath);
@@ -65,6 +56,23 @@ class Controller extends BackendController
             if (file_exists("$absolutePluginPath/$relativeAssetPath"))
                 $this->addJs("$relativePluginPath/$relativeAssetPath");
         });
+
+        // Files commonly get loaded in popups, so we always include this widget
+        // TODO: Hardcoded testing to be removed
+        /*
+        if (class_exists('\Acorn\Justice\Models\ScannedDocument')) {
+            // Users controller goes in to a loop for some reason
+            if (!$this instanceof \Acorn\User\Controllers\Users) {
+                $config = array(
+                    'valueFrom' => 'document',
+                    'model'     => new \Acorn\Justice\Models\ScannedDocument,
+                );
+                $pseudoUpload = new \Backend\Classes\FormField('ScannedDocument[document]', 'Document');
+                $pseudoUpload->displayAs('text', $config);
+                $this->widget->formDocument = new \Backend\FormWidgets\FileUpload($this, $pseudoUpload, $config);
+            }
+        }
+        */
     }
 
     // ------------------------------------------ Leaf models
@@ -133,37 +141,32 @@ class Controller extends BackendController
         $popupRoute  = post('route');
         $breadcrumb  = post('breadcrumb');
         $dependsOnFieldName = post('fieldName');
+        $dataRequestUpdate  = post('dataRequestUpdate'); // Array
 
-        $popupParams = explode(',', post('params'));
+        $popupParams = (post('params') ?: array());
         list($controllerClass, $popupAction) = explode('@', $popupRoute);
         if (!$popupAction) $popupAction = 'create';
 
         // ------------------------------- Form behavior
-        // FormController::create() => FormController::initForm($model) prepares:
-        //   $this->formWidget
-        //   $this->prepareVars($model);
-        //   $this->model = $model;
+        // Controller::create() is redirected to its implemented Form behavior:
+        //   FormController::create() => FormController::initForm($model) with $model = formCreateModelObject() prepares:
+        //     $this->formWidget = $this->makeWidget('Backend\Widgets\Form', $config);
+        //     $this->formWidget->bindToController(); // $controller->widget->form = $this
+        //     $this->prepareVars($model);
+        //     $this->model = $model;
+        // Use the relevant to controller to handle the form render
         $fullyQualifiedControllerClass = $this->qualifyClassName($controllerClass);
+        if (!class_exists($fullyQualifiedControllerClass))  throw new \Exception("Controller [$fullyQualifiedControllerClass] does not exist");
         $controller = new $fullyQualifiedControllerClass;
+        if (!is_callable(array($controller, $popupAction))) throw new \Exception("action method [$popupAction] does not exist on [$fullyQualifiedControllerClass]");
         $controller->$popupAction(...$popupParams);
+        if (!property_exists($controller->widget, 'form'))  throw new \Exception("Failed to bind formWidget to controller [$fullyQualifiedControllerClass] during $popupAction($paramString)");
+
         $form    = &$controller->widget->form; // Backend\Widgets\Form
         $model   = &$form->model;
         $unqualifiedControllerName = $controller->unqualifiedClassName();
         $unqualifiedModelName      = $model?->unqualifiedClassName();
         $fullyQualifiedModelClass  = $model?->fullyQualifiedClassName();
-
-
-        // Files commonly get loaded in popups, so we always include this widget
-        // TODO: However, image does not save propery
-        /*
-        $config = array(
-            'valueFrom' => 'image',
-            'model'     => $model,
-        );
-        $pseudoUpload = new \Backend\Classes\FormField('ScannedDocument[image]', 'Image');
-        $pseudoUpload->displayAs('text', $config);
-        $controller->widget->formImage = new \Backend\FormWidgets\FileUpload($controller, $pseudoUpload, $config);
-        */
 
         // Inject, hide and control formFields from post request
         // Fields: {legalcase_id: [@value:id]} will set the legalcase_id value to the URL id
@@ -223,7 +226,7 @@ class Controller extends BackendController
         $postUrl = $controller->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
         $closeName      = $this->transBackend('close');
         $actionName     = $this->transBackend($popupAction);
-        $modelTitle     = (method_exists($this, 'transModel') && $model instanceof Model ? $this->transModel('label', $model) : last(explode('\\', get_class($model))));
+        $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label', $model) : last(explode('\\', get_class($model))));
         $popupTitle     = "$actionName $modelTitle";
         $breadcrumbHTML = "";
         if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
@@ -241,10 +244,13 @@ class Controller extends BackendController
         $dataRequestData = array(
             'fully_qualified_model' => $fullyQualifiedModelClass,
             'action'                => $popupAction,
+            'route'                 => $popupRoute,
             'field_name'            => $dependsOnFieldName, // Form field to refresh
             'redirect'              => 0, // IMPORTANT: This prevents the onSave() handler issuing a redirect
+            'params'                => $popupParams,
         );
-        $dataRequestDataString = substr(json_encode($dataRequestData), 1, -1);
+        $dataRequestDataString   = e(substr(json_encode($dataRequestData), 1, -1));
+        $dataRequestUpdateString = e($dataRequestUpdate ? substr(json_encode($dataRequestUpdate), 1, -1) : '');
 
         return <<<HTML
             <div class="modal-header compact">
@@ -262,9 +268,10 @@ class Controller extends BackendController
                 <button
                     type='submit'
                     data-request-url='$postUrl'
-                    data-request='onSave'
+                    data-request='onControllerSave'
                     data-request-form='.modal-body form'
                     data-request-data='$dataRequestDataString'
+                    data-request-update='$dataRequestUpdateString'
                     data-hotkey='ctrl+s, cmd+s'
                     data-load-indicator='$popupTitle...'
                     data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
@@ -279,10 +286,34 @@ class Controller extends BackendController
 HTML;
     }
 
-    public function onActionFunction(): array
+    public function onControllerSave()
     {
-        $results = array();
-        if ($fnName = post('name')) {
+        // Use the relevant to controller to handle the save
+        $popupRoute  = post('route');
+        $popupParams = (post('params') ?: array());
+        list($controllerClass, $action) = explode('@', $popupRoute);
+
+        $fullyQualifiedControllerClass  = $this->qualifyClassName($controllerClass);
+        $controller = new $fullyQualifiedControllerClass;
+        $onSave     = "${action}_onSave";
+
+        return $controller->$onSave(...$popupParams);
+    }
+
+    public function onActionFunction(): string
+    {
+        $results     = array();
+        $fnName      = post('name');
+        $closeName   = $this->transBackend('close');
+        $eventJs     = 'popup';
+        $initJs      = "$('body > .control-popup').trigger('$eventJs');";
+        $refresh     = 'document.location.reload()';
+        $fnNameParts = explode('_', $fnName);
+        $nameParts   = array_slice($fnNameParts, 5);
+        $title       = e(trans(Str::title(implode(' ', $nameParts))));
+        $modelName   = $this->unqualifiedClassName();
+
+        if ($fnName) {
             if ($parameters = post('parameters')) {
                 if ($id = post('id')) {
                     if ($user = User::authUser()) {
@@ -296,7 +327,67 @@ HTML;
             } else throw new \Exception("onActionFunction() had no POST parameters");
         } else throw new \Exception("onActionFunction() had no POST name");
 
-        return $results;
+        return <<<HTML
+            <div class="modal-header compact">
+                <button type="button" class="close" data-dismiss="popup">&times;</button>
+                <h4 class="modal-title">
+                    <div class='control-breadcrumb'><ul><li>$modelName</li><li>$title</li>></ul></div>
+                </h4>
+            </div>
+            <div class="modal-body">
+                SUCCESS
+            </div>
+            <div class="modal-footer">
+                <button
+                    type='button'
+                    data-dismiss='popup'
+                    class='btn btn-default'
+                    onclick='$refresh'
+                >$closeName</button>
+                <script>$initJs</script>
+            </div>
+HTML;
+    }
+
+    public function onLoadQrScanPopup()
+    {
+        // Post can include:
+        //   actions:     array of string function names of the qrscan
+        //   formFieldId: the form field in the main form to update with the value
+        //   formClass:   the (unique) HTML class of a form to update with the scanned value
+        //   formId:      the HTML @id of a form to update with the scanned value
+        // The popup will JavaScript trigger(change) on the form field after inserting it into
+        // the destsination form
+        $actions        = post('actions');
+        $eventJs        = 'popup';
+        $actionsList    = '';
+        $translationBaseKey = 'acorn::lang.models.general';
+        foreach ($actions as $action) {
+            $actionKey = str_replace('-', '_', $action);
+            if ($actionsList) $actionsList .= ' | ';
+            $actionsList .= e(trans("$translationBaseKey.$actionKey")); // str_replace('-', ' ', Str::title($action));
+        }
+        $scanQrCode     = e(trans('acorn::lang.models.general.scan_qrcode'));
+        $breadcrumbHTML = "<li>$scanQrCode</li><li>$actionsList</li>";
+        ///modal genreal scan_qrcode
+        $closeName      = $this->transBackend('close');
+        $initJs         = "$('body > .control-popup').trigger('$eventJs');";
+        $qrScanPartial  = $this->makePartial('qrscan', post());
+
+        return <<<HTML
+            <div class="modal-header compact">
+                <button type="button" class="close" data-dismiss="popup">&times;</button>
+                <h4 class="modal-title">
+                    <div class='control-breadcrumb'><ul>$breadcrumbHTML</ul></div>
+                </h4>
+            </div>
+            <div class="modal-body">
+                $qrScanPartial
+            </div>
+            <div class="modal-footer">
+                <script>$initJs</script>
+            </div>
+HTML;
     }
 
     public function onWebSocket()
@@ -384,18 +475,16 @@ HTML;
 
     public function formTertiaryTabs(): string
     {
+        // NOTE: This combines with the AA\Module ServiceProvider Event backend.form.extendFields
         // form-with-sidebar layout sidebar
-        $tertiaryFields = array();
-        if ($tabConfig = $this->widget->form->config->tertiaryTabs) {
-            // This is a bit tricky to use the addFields()
-            // but other methods are protected
-            $count     = count($this->widget->form->getFields());
-            $this->widget->form->addFields($tabConfig['fields']);
-            $allFields      = $this->widget->form->getFields();
-            $tertiaryFields = array_splice($allFields, $count);
+        $html = '';
+        $form = &$this->widget->form;
+        if ($tab = $form->getTab('tertiary')) {
+            if ($fieldTabs = $tab->getFields())
+                $html = $form->makePartial('form_fields', array('fields' => end($fieldTabs)));
         }
 
-        return $this->widget->form->makePartial('form_fields', array('fields' => $tertiaryFields));
+        return $html;
     }
 
     // -------------------------------------- ViewMaker overrides for debug

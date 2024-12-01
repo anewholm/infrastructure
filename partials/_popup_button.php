@@ -15,15 +15,15 @@ if (isset($field->config['controller'])) {
 }
 $controller = $this->qualifyClassName($unqualifiedControllerClass);
 
-if (isset($field->config['action'])) {
-  $action = $field->config['action'];
-} else if ($fieldNameParts[0]) {
-  $action = $fieldNameParts[0];
-} else {
-  $action = 'create';
-}
+$action = 'create';
+if      (isset($field->config['action'])) $action = $field->config['action'];
+else if ($fieldNameParts[0])              $action = $fieldNameParts[0];
 
-$label    = (isset($field->config['label'])    ? $field->config['label']    : "backend::lang.form.$action");
+$hasCustomLabel = isset($field->config['label']);
+$label    = ($hasCustomLabel
+    ? $field->config['label']
+    : ($action == 'create' ? "backend::lang.form.$action" : 'backend::lang.form.save')
+);
 $disabled = (isset($field->config['disabled']) ? $field->config['disabled'] : FALSE);
 
 $route      = (isset($field->config['route'])       ? $field->config['route']       : "$controller@$action");
@@ -44,10 +44,11 @@ if (isset($field->config['fields'])) {
 $disabledAttr = ($disabled ? 'disabled="disabled"' : '');
 $labelTrans   = e(trans($label));
 $dataRequestDataString = substr(json_encode($dataRequestData), 1, -1);
+$labelPlaceholder = ($hasCustomLabel ? '' : '<label>&nbsp;</label>');
 
 // -------------------------------------------- Output
 echo <<<HTML
-  <label>&nbsp;</label>
+  $labelPlaceholder
   <input
     type="hidden"
     name="$fqFieldName"

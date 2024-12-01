@@ -41,4 +41,7 @@ return [
             'replicated_source' => 'مصدر تكرار البيانات',
         ],
     ],
+    'helpblock' => [
+        'view_add' => 'عرض / أضافة',
+    ],
 ];

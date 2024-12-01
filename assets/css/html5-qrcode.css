@@ -1,4 +1,16 @@
 /* https://github.com/mebjas/html5-qrcode */
+#popup-qrscan:hover {
+    cursor:pointer;
+}
+#popup-qrscan {
+  font-size: 30px;
+}
+.search-qrscan-container {
+    float:left;
+    margin-right:10px;
+    margin-top:-4px;
+}
+
 #my-qr-reader {
     padding: 5px !important;
     border: 1.5px solid #b2b2b2 !important;
@@ -25,8 +37,11 @@
     z-index:1000;
     position:relative;
 }
-
-button {
+.control-popup .modal-body #my-qr-reader {
+    float:none;
+    max-width:none;
+}
+#my-qr-reader button {
     padding: 10px 20px;
     border: 1px solid #b2b2b2;
     outline: none;
@@ -40,7 +55,7 @@ button {
     transition: 0.3s background-color;
 }
 
-button:hover {
+#my-qr-reader button:hover {
     background-color: #008000;
 }
 
@@ -49,7 +64,7 @@ button:hover {
     color: #1d9bf0;
 }
 
-video {
+#my-qr-reader video {
     width: 100% !important;
     border: 1px solid #b2b2b2 !important;
     border-radius: 0.25em;

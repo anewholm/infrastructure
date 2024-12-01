@@ -1,18 +1,23 @@
 <?php
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
-
+use Illuminate\Support\Str;
 
 $model  = (isset($formModel) ? $formModel : $record);
 $config = (isset($formField) ? $formField->config : $column->config);
-$size   = (isset($config['size']) ? $config['size'] : 96);
-$class  = get_class($model);
+$size   = (isset($config['size']) && is_numeric($config['size'])) ? (int)$config['size'] : 96;
+
+$class      = get_class($model);
+$classParts = explode('\\', $class);
+$author     = strtolower($classParts[0]);
+$plugin     = strtolower($classParts[1]);
+$modelName  = strtolower(Str::plural($classParts[3]));
+
 $id     = $model->id();
-$info   = explode('\\', $class);
-$data   = [
-    'author' => $info[0],
-    'plugin' => $info[1],
-    'model'  => $info[3],
-    'id'     => $id,
-];
-print(QrCode::size($size)->generate(json_encode($data)));
+
+// Get url from config
+$baseUrl = config('app.url');
+$url     = "{$baseUrl}/backend/{$author}/{$plugin}/{$modelName}/update/{$id}";
+if (strstr($baseUrl, '://') === FALSE) throw new \Exception('app.url does not contain the protocol://');
+
+print(QrCode::size($size)->generate($url));
 ?>
