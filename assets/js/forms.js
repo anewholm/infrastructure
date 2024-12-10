@@ -68,56 +68,94 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
 
   $(window).on('complete.oc.popup', function (event, $content, $popup) {
     // Move extra popups in to the main popup
-    var $popups   = $('body > div.control-popup.modal');
+    // NOTE: complete.oc.popup fires x 2!
+    var validFormPopup = '.modal-content > div > form[data-request*=onRelationManage]';
+    var $popups   = $(`body > div.control-popup.modal:has(${validFormPopup})`);
     var popupMain = $popups.first().data('oc.popup'); // Contains popup div collection
     var popupNew  = $popup.data('oc.popup'); // Whole new popup, to be injected and removed
-    popupMain.lock(true);
+    
+    if ($popups.length > 1 && popupMain) {
+      popupMain.lock(true);
 
-    if ($popups.length > 1) {
-      // Dim the old content
+      // Dim the old divs
       popupMain.$content.children('div').addClass('in-active');
 
       // TODO: Breadcrumb
-      // TODO: This should come from the server
-      // TODO: oldBreadcrumb = oldBreadcrumb.replace(/^[^ ]+/, ''); // Remove the action: Update / Create
-      /*
-      var $newBreadcrumbH4      = popupNew.$content.find('.modal-header > h4');
+      // The visible breadcrumb will be contained _within_ the appended popupNew.firstDiv
+      // thus the popupNew.firstDiv breadcrumb should be altered
+      // => latest div#Form breadcrumb + <li>popupNew.firstDiv breadcrumb
+      var $newModalHeader       = popupNew.$content.find('.modal-header');
+      var $newBreadcrumbH4      = $newModalHeader.children('h4');
       var newText               = $newBreadcrumbH4.text().trim();
+      var $newItem              = $('<li>').text(newText);
       var $previousBreadcrumbH4 = popupMain.$content.children('div').last().find('.modal-header > h4');
-      var $crumbs = $('ul', {class: 'breadcrumb'});
-      $crumbs.append($('li').text());
-      if ($previousBreadcrumbH4.children('ul.breadcrumb').length) 
-      $newBreadcrumbH4.html($previousBreadcrumbH4);
-      $newBreadcrumbH4.children('ul.breadcrumb').append($('<li>').text(newText));
-      */
-
+      var $previousBreadCrumbCB = $previousBreadcrumbH4.children('div.control-breadcrumb').clone();
+      if (!$previousBreadCrumbCB.length) {
+        // Create the initial control-breadcrumb
+        var $ul = $('<ul>').append($('<li>').text($previousBreadcrumbH4.text().trim()));
+        $previousBreadCrumbCB = $('<div>', {class: 'control-breadcrumb'}).append($ul);
+      }
+      $newModalHeader.addClass('compact');
+      $newBreadcrumbH4.addClass('modal-title');
+      $previousBreadCrumbCB.children('ul').append($newItem);
+      // Annotate LIs and texts
+      var $lis = $previousBreadCrumbCB.children('ul').children('li');
+      var i    = $lis.length - 1;
+      $lis.each(function() {
+        // Remove verb
+        if (i) $(this).text($(this).text().replace(/^[^ ]+/, ''));
+        $(this).attr('class', 'stage-' + i--);
+      });
+      $newBreadcrumbH4.html($previousBreadCrumbCB);
+      
       // Append
       // We cannot position: absolute because the content dictates the popup size
-      popupNew.$content.children('script').remove();
-      popupMain.$content.append(popupNew.$content);
+      var $newDiv = popupNew.$content.children('div').first();
+      popupMain.$content.append($newDiv);
       // Animate
-      popupNew.$content.css({left: '90%'}).animate({left: '0%'}, 1000);
+      var $lastDiv = popupMain.$content.children('div').last();
+      $lastDiv.css({left: '90%'}).animate({left: '0%'}, 1000);
 
       // Remove intended new popup
       // We do not use hide() as it will trigger the hide.oc.popup event process below
+      // NOTE: complete.oc.popup fires x 2!
+      // So it is necessary to remove the extra popup immediately
       $popup.remove();
-      popupNew.setBackdrop(false);
+      // The timeout is necessary because popup.js has already set a timer to act on the backdrop
+      setTimeout(function() {
+        popupNew.$backdrop.remove();
+      }, 100);
     }
   });
 
   $(window).on('hide.oc.popup', function (event, $content, $popup) {
-    var popupMain  = $popup.data('oc.popup');
-    var $popupDivs = popupMain.$content.children('div');
-
+    var popupDivs  = '.modal-content > div:has(> form[data-request*=onRelationManage])';
+    var $popupDivs = $popup.find(popupDivs);
+    var popup      = $popup.data('oc.popup');
+    
     if ($popupDivs.length > 1) {
       var $lastDiv = $popupDivs.last();
       $lastDiv.css({opacity: '100%'}).animate({left: '90%', opacity: '10%'}, 1000, 'swing', function(){
+        // Remove the last div, and then Active the new last div
         $lastDiv.remove();
-        popupMain.$content.children('div').last().removeClass('in-active');
+        $lastDiv = $popup.find(popupDivs).last();
+        $lastDiv.removeClass('in-active');
       });
-    } else if (popupMain.isOpen) {
-      popupMain.isOpen = false;
-      popupMain.$modal.modal('hide');
+    } else if (popup.isOpen) {
+      // This will trigger another hide.oc.popup event
+      // but this time isOpen == false 
+      popup.isOpen = false;
+      popup.$modal.modal('hide'); // hide.bs.modal
     }
+  });
+
+  $(document).on('ajaxPromise', '[data-popup-load-indicator]', function(event, context) {
+    // The standard functionality ajaxPromise event
+    // hides the popup when a form submit request is made
+    // and shows the loading indicator
+    // then, after success, it remains hidden for some reason
+    // We show both
+    if ($(this).data('request') != context.handler) return;
+    $(this).closest('.control-popup').addClass('in');
   });
 }(window.jQuery);

@@ -9,8 +9,10 @@ use Acorn\Model;
 
 class RelationController extends RelationControllerBase
 {
-    protected const PARAM_PARENT_MODEL = '_parent_model';
-    protected const PARAM_PARENT_MODEL_ID = '_parent_model_id';
+    use \Acorn\Traits\MorphConfig;
+
+    public const PARAM_PARENT_MODEL = '_parent_model';
+    public const PARAM_PARENT_MODEL_ID = '_parent_model_id';
     protected $popupModel;
     protected $popupConfig;
 
@@ -72,9 +74,10 @@ class RelationController extends RelationControllerBase
                     // to onRelationClickViewList()
                     // to override the popupModel for this controller
                     // will only set the main $model below if it does not have the requested field
-                    $paramParentModelObj = NULL;
-                    if ($paramParentModelId) $paramParentModelObj = $paramParentModel::find($paramParentModelId);
-                    else                     $paramParentModelObj = new $paramParentModel;
+                    $paramParentModelObj = ($paramParentModelId 
+                        ? $paramParentModel::find($paramParentModelId)
+                        : new $paramParentModel
+                    );
                     if (!$model->is($paramParentModelObj)) {
                         $model = $paramParentModelObj;
                         // None of this models config_relation.yaml is present
@@ -158,6 +161,9 @@ class RelationController extends RelationControllerBase
     }
 
     protected function loadModelRelationConfig(Model &$model): void {
+        // Load the config_relation.yaml for a different Controller
+        // This expects the config to be in the standard place
+        // TODO: Instantiate and ask the assumed Controller
         $controllerDir  = $model->controllerDirectoryPathRelative(); // plugins/...
         $relationConfig = "$controllerDir/config_relation.yaml";
         if (File::exists($relationConfig)) {
@@ -174,6 +180,7 @@ class RelationController extends RelationControllerBase
         // Includes forceViewMode
         $viewMode = parent::evalViewMode();
 
+        // Implement our new relation types
         if (!$viewMode) {
             // Similar to ~/modules/backend/behaviors/RelationController.php
             switch ($this->relationType) {
@@ -190,6 +197,14 @@ class RelationController extends RelationControllerBase
     {
         $manageMode = parent::evalManageMode();
 
+        // The popup RelationManager create buttons post the entire popup form
+        // which includes the existing popup form manage_id
+        // If left set, it will force the subsequent form to update mode
+        if ($this->eventTarget == 'button-create') {
+            $this->manageId = NULL;
+        }
+
+        // Implement our new relation types
         if (!$manageMode) {
             // Similar to ~/modules/backend/behaviors/RelationController.php
             switch ($this->relationType) {

@@ -1,10 +1,13 @@
 <?php
 // TODO: The controller (FormController behaviour) can also have actionFunctions, from config_form.yaml
 // Model action functions
-$model = (isset($listRecord)
-    ? $listRecord // relationmanager
-    : (isset($formModel) ? $formModel : $record)
-);
+// RelationManagers loading popups need the relationObject instead
+if      (isset($listRecord)) $model = $listRecord;
+else if (isset($relationManageWidget)) $model = $relationManageWidget->model;
+else if (isset($formModel))  $model = $formModel;
+else if (isset($record))     $model = $record;
+else throw new \Exception("Cannot ascertain model for actions operation");
+
 $formMode        = (isset($formModel) && $model == $formModel);
 $modelArrayName  = $model->unqualifiedClassName();
 $actionFunctions = ($model->actionFunctions ?: array());
@@ -40,7 +43,7 @@ foreach ($model->belongsTo as $name => $relationDefinition) {
     }
 }
 
-if (count($actionFunctions) || $formMode) {
+if (count($actionFunctions) || $formMode || $model->printable) {
     print('<ul class="action-functions">');
 
     // --------------------------------- Actions
@@ -66,6 +69,16 @@ if (count($actionFunctions) || $formMode) {
             </li>
 HTML
         );
+    }
+
+    // --------------------------------- Printing
+    if ($model->printable) {
+        $print = e(trans('acorn::lang.models.general.print'));
+        $previewLink = $model->controllerUrl('preview', $model->id());
+        print("<li><a 
+            target='_blank'
+            href='$previewLink'
+        >$print</a></li>");
     }
 
     // --------------------------------- QR scan

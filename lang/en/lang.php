@@ -18,7 +18,8 @@
             'cube' => 'Cube',
             'cube_refresh' => 'Cube refresh strategy',
             'cube_refresh_interval' => 'Cube refresh interval'
-        ]
+        ],
+        'infrastructure' => 'Infrastructure'
     ],
     'models' => [
         'general' => [

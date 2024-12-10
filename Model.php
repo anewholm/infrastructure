@@ -80,6 +80,8 @@ class Model extends BaseModel
         __get as protected tb__get;
     }
 
+    public $printable = FALSE;
+
     // --------------------------------------------- Translation
     public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = ['name', 'description'];
@@ -368,7 +370,11 @@ class Model extends BaseModel
                 $query     = $this->newRelatedInstance($finalModelClass)->newQuery();
                 $farParent = $this;
                 $throughParents = [];
-                foreach ($through as $throughClass) array_push($throughParents, new $throughClass);
+                foreach ($through as $throughClass) {
+                    if (!class_exists($throughClass)) 
+                        throw new \Exception("Class $throughClass does not exist, or was not ConcatenableRelation");
+                    array_push($throughParents, new $throughClass);
+                }
                 
                 $relationObj = new \Acorn\Relationships\HasManyDeep(
                     $query,

@@ -10,6 +10,37 @@ class Migration extends StormMigration
 {
     use Traits\PathsHelper;
 
+    // --------------------------------------- Semantic
+    public static function setTableComment($table, $comment): bool
+    {
+        // The yaml files normalize space
+        // So spaces are pre-transformed to &nbsp;
+        // here, we transform back
+        $commentEscaped = str_replace("\xc2\xa0",' ', $comment);
+        $commentEscaped = str_replace("'",'\\\'', $commentEscaped);
+        return DB::statement("COMMENT ON TABLE $table IS '$commentEscaped'");
+    }
+
+    public static function setColumnComment($table, $column, $comment): bool
+    {
+        // The yaml files normalize space
+        // So spaces are pre-transformed to &nbsp;
+        // here, we transform back
+        $commentEscaped = str_replace("\xc2\xa0",' ', $comment);
+        $commentEscaped = str_replace("'",'\\\'', $commentEscaped);
+        return DB::statement("COMMENT ON COLUMN $table.$column IS '$commentEscaped'");
+    }
+
+    public static function setForeignKeyComment($table, $foreignkey, $comment): bool
+    {
+        // The yaml files normalize space
+        // So spaces are pre-transformed to &nbsp;
+        // here, we transform back
+        $commentEscaped = str_replace("\xc2\xa0",' ', $comment);
+        $commentEscaped = str_replace("'",'\\\'', $commentEscaped);
+        return DB::statement("COMMENT ON CONSTRAINT $foreignkey ON $table IS '$commentEscaped'");
+    }
+
     // --------------------------------------- Replication
     public function isCentralPublisher(): bool
     {
