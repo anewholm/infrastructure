@@ -29,7 +29,7 @@ body .field-multilingual .ml-btn {
 .bottom {
     position: absolute;
     bottom: 10px;
-    right: 10px;
+    right: 20px;
 }
 
 .relation-manager:has(span.page-next):has(span.page-back) .list-footer {
@@ -134,43 +134,60 @@ body .field-multilingual .ml-btn {
 }
 
 /* actions */
-.action-functions li a {
+.action-functions > li > a {
     cursor: pointer;
+    white-space: nowrap;
 }
 form.layout .action-functions {
     float:right; /* TODO: float: left if RTL */
     margin-top: -40px;
+}
+form .action-functions {
     padding: 3px 10px;
     background-color: #fff;
     border:1px solid #999;
     border-radius: 1px;
     box-shadow: 2px 0px 10px #ddd;
 }
-body.rtl form.layout .action-functions {
+body.rtl form .action-functions {
     float:left;
 }
-form.layout .action-functions > li {
+form .action-functions > li {
     display: inline;
     padding: 0px 6px 0px 6px;
     border-left: 1px solid #a7a7a7;
 }
-body.rtl form.layout .action-functions > li {
+body.rtl form .action-functions > li {
     border-right: 1px solid #a7a7a7;
     border-left: none;
 }
-form.layout .action-functions > li:first-child {
+form .action-functions > li:first-child {
     border-left: none;
 }
-body.rtl form.layout .action-functions > li:first-child {
+body.rtl form .action-functions > li:first-child {
     border-right: none;
 }
-form.layout .action-functions > li > #popup-qrscan {
+form .action-functions > li > #popup-qrscan {
     display: inline;
     font-size: 14px;
 }
+.modal-content > div > form .action-functions {
+    /* In a popup */
+    position: absolute;
+    top:34px;
+    right:36px;
+}
+
+/* List action functions */
 table.data tr.rowlink .action-functions {
     float: right;
     text-align:center;
+    /* Negate form CSS on Relation Manager tables */
+    margin-top: 0px;
+    background-color: transparent;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
 }
 table.data tr.rowlink .action-functions > li {
     margin-bottom: 3px;
@@ -179,6 +196,10 @@ table.data tr.rowlink .action-functions > li {
     border:1px solid #999;
     border-radius: 1px;
     box-shadow: 2px 0px 10px #ddd;
+    margin-left: 4px;
+}
+table.data tr.rowlink .action-functions > li:hover {
+    box-shadow: none;
 }
 table.table.data tbody tr.rowlink:hover td .action-functions > li > a {
     color: #666!important;
@@ -245,6 +266,9 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 }
 
 /* ------------------------------------- Popups */
+.modal-dialog .control-list p.no-data {
+    text-align: left;
+}
 .modal-dialog .popup-hide,
 .modal-dialog .new-page,
 .modal-dialog .help-block .action { /* Disable links to new pages in popups */
@@ -284,12 +308,14 @@ body.slim-container .modal-dialog .modal-header.compact > button {
     position: relative; /* Maintain popup size */
     background: #f9f9f9; /* Hide under-divs */
 }
-.modal-dialog > .modal-content .modal-header > h4 > .old-breadcrumb {
-    float:left;
-    margin: -12px 10px -12px -30px;
-    padding: 12px 10px 12px 30px;
-    background-color: #9098a2;
-    color: #fff;
+.modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb > ul > li.stage-2 {
+    background-color: #808892;
+}
+.modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb > ul > li.stage-3 {
+    background-color: #707882;
+}
+.modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb > ul > li.stage-4 {
+    background-color: #606872;
 }
 .modal-dialog > .modal-content .modal-footer .previous-popup {
     display: none;
@@ -302,4 +328,27 @@ body.slim-container .modal-dialog .modal-header.compact > button {
 }
 .modal-dialog > .modal-content:has(div.in-active) .modal-footer > button.btn-primary:before {
     background:linear-gradient(to left, #34495E, #44597E);
+}
+
+/* Move QR code */
+.modal-dialog > .modal-content div.form-group.partial-field[data-field-name=_qrcode] {
+    position: absolute;
+    bottom: 3px;
+    left: 25px;
+    width: auto;
+    margin: 0px 0px -40px 0px;
+    padding: 2px;
+
+    border: 1px dotted #777;
+    background-color: #fff;
+}
+.modal-dialog > .modal-content div.form-group.partial-field[data-field-name=_qrcode] svg {
+    width: 48px;
+    height: 48px;
+}
+.modal-dialog > .modal-content div.form-group.partial-field[data-field-name=_qrcode]:hover svg {
+    width: inherit;
+    height: 96px;
+    z-index: 1000;
+    transition: 0.3s height;
 }

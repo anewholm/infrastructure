@@ -550,21 +550,18 @@ HTML;
         return parent::makeLayoutPartial($partial, $params);
     }
 
-    protected function debugWrap(string $content, string $debug, string $type): string
+    protected function debugWrap(string $content, string $debugHtml, string $type, bool $removeAbsolutePaths = TRUE): string
     {
         // Ignore CSS class and HTML attribute rendering
-        if (   strstr($debug, 'icon-classes')     === FALSE
-            && strstr($debug, 'browser_detector') === FALSE
+        if (   strstr($debugHtml, 'icon-classes')     === FALSE
+            && strstr($debugHtml, 'browser_detector') === FALSE
         ) {
-            $debug = str_replace($_SERVER['DOCUMENT_ROOT'], '', $debug);
-            // TODO: Actually we should insert before, not wrap
-            // #ListContainer for example, will not display like this
-            return <<<HTML
-                <span class="debug-relative">
-                    <div class="debug debug-$type">$debug</div>
-                    $content
-                </span>
-HTML;
+            if ($removeAbsolutePaths) $debugHtml = str_replace($_SERVER['DOCUMENT_ROOT'], '', $debugHtml);
+            // Add .debug-relative to the first element class
+            // TODO: What if it does not have a @class
+            $debugPane = "<div class='debug debug-$type'>$debugHtml</div>";
+            $debugPaneEscaped = htmlentities($debugPane);
+            $content   = preg_replace('/^(\s*<[^ >]+) /', "\\1 debug-pane='$debugPaneEscaped' ", $content);
         }
 
         return $content;

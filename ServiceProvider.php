@@ -24,15 +24,19 @@ use Backend\Widgets\Lists as BackendLists;
 use Winter\Storm\Support\ModuleServiceProvider;
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
 use Acorn\Messaging\Console\RunCommand;
+use \System\Controllers\Updates;
 
 class ServiceProvider extends ModuleServiceProvider
 {
+    static $pluginFlags = array();
+
     public function boot()
     {
         // -------------------------------------- Global CSS
         if (self::isDebugAny()) {
             Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
                 $controller->addCss('~/modules/acorn/assets/css/debug.css');
+                $controller->addJs( '~/modules/acorn/assets/js/debug.js');
             });
         }
         Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
@@ -67,6 +71,37 @@ class ServiceProvider extends ModuleServiceProvider
                     $allTabs->outside->removeField($name);
                 }
             }
+        });
+
+        // --------------------------------------------- acorn_infrastructure
+        if (!self::$pluginFlags) {
+            $results = DB::select('select * from public.system_plugin_versions');
+            foreach ($results as $result) self::$pluginFlags[$result->code] = $result;
+        }
+
+        Event::listen('backend.menu.extendItems', function (&$navigationManager) {
+            $mainMenuItems = $navigationManager->listMainMenuItems();
+            foreach (self::$pluginFlags as $plugin) {
+                if ($plugin->acorn_infrastructure) {
+                    foreach ($mainMenuItems as $mainMenu) {
+                        if ($plugin->code == $mainMenu->owner) 
+                            $navigationManager->removeMainMenuItem($plugin->code, $mainMenu->code);
+                    }
+                }
+            }
+        });
+
+        Updates::extendListColumns(function ($widget, $model) {
+            // We need to be careful when using the database
+            // during migrations, tables may not exist
+            $widget->getController()->addViewPath('modules/acorn/partials');
+            $widget->addColumns([
+                'acorn_infrastructure' => [
+                    'label'   => 'acorn::lang.settings.infrastructure',
+                    'type'    => 'partial',
+                    'path'    => 'is_infrastructure',
+                ],
+            ]);
         });
 
         parent::boot('acorn');

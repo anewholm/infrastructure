@@ -6,7 +6,6 @@
     display: none;
 }
 
-.debug-field {}
 .debug-view {color:darkgreen;}
 .debug-controller {font-weight:bold; color:darkblue;}
 .debug-behavior {font-weight:bold; font-style:italic; color:blue;}
@@ -14,14 +13,25 @@
 .debug-path {font-style:italic; color:#444;}
 .debug-viewpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double}
 .debug-configpaths {font-style:italic; color:#444; padding-left:10px; border-left:2px double red}
+.debug-layouts, .debug-partials {margin-top: -8px;}
 
 .debug pre {
     margin-top:4px;
     padding-top:4px;
     border-top: 1px solid #d0d0d0;
 }
+.debug pre.comment-dirty {
+  color: red;
+}
 .debug .title {
     font-weight: bold;
+}
+.debug .create-system-comment-edit-link {
+  color: blue;
+}
+.debug .create-system-db-lang-path {
+  font-size:10px;
+  color:#777;
 }
 
 .debug-relative:hover > .debug,

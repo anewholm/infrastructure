@@ -2,7 +2,7 @@
 
 use BackendMenu;
 use Acorn\Controller; // extends Backend\Classes\Controller
-use Acorn\Model;
+use Acorn\Migration;
 use Acorn\Events\DataChange;
 use \Exception;
 
@@ -35,6 +35,45 @@ class DB extends Controller
         if (!$response) {
             DataChange::dispatch($TG_NAME, $TG_OP, $TG_TABLE_SCHEMA, $TG_TABLE_NAME, $ID);
             $response = "DataChange event for $this->modelClass($this->ID) Dispatched";
+        }
+
+        return $response;
+    }
+
+    public function comment(): string
+    {
+        $response = 'Not understood';
+
+        if ($dbLangPath = post('dbLangPath')) {
+            // dbLangPath: tables.public.acorn.criminal.legalcase_defendants.foreignkeys.legalcase_id
+            $dbPath = explode('.', $dbLangPath);
+            if ($comment = post('comment')) {
+                // Update request
+                switch ($dbPath[0]) {
+                    case 'tables':
+                        $schema = $dbPath[1];
+                        $table  = implode('_', array_slice($dbPath, 2,3));
+                        switch ($dbPath[5]) {
+                            case 'columns':
+                                $name     = $dbPath[6];
+                                // EloquentDB::select();
+                                $response = "Update Ok [$schema.$table column $name]";
+                                Migration::setColumnComment("$schema.$table", $name, $comment);
+                                break;
+                            case 'foreignkeys':
+                                $name     = $dbPath[6];
+                                Migration::setForeignKeyComment("$schema.$table", $name, $comment);
+                                $response = "Update Ok [$schema.$table foreign key $name]";
+                                break;
+                            default:
+                                throw new \Exception("Unconsidered functionality");
+                                Migration::setTableComment("$schema.$table", $comment);
+                        }
+                        break;
+                }
+            }
+        } else {
+            // TODO: Get and return the comment
         }
 
         return $response;

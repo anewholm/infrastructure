@@ -26,5 +26,8 @@ Event::listen('system.route', function () {
         '\\'.AuthWrapper::class.'@authenticate'
     )->middleware('web');
 
+    Route::get( '/api/comment', DB::class . '@comment');
+    Route::post('/api/comment', DB::class . '@comment');
+
     Event::fire('acorn.route');
 }, PHP_INT_MIN);
