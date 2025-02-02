@@ -33,15 +33,19 @@ SQL
           'res public.http_response',
         ], <<<SQL
             -- https://www.postgresql.org/docs/current/plpgsql-trigger.html
-            domain = 'acorn-lojistiks.laptop';
-            plugin_path = '/api';
-            action = '/datachange';
-            params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
-            url = concat('http://', domain, plugin_path, action, '?', params);
-
-            res = public.http_get(url);
-            new.response = concat(res.status, ' ', res.content);
-
+            select domain into domain from acorn_servers where hostname = hostname();
+            if domain is null then
+              new.response = 'No domain specified';
+            else
+              plugin_path = '/api';
+              action = '/datachange';
+              params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
+              url = concat('http://', domain, plugin_path, action, '?', params);
+  
+              res = public.http_get(url);
+              new.response = concat(res.status, ' ', res.content);
+            end if;
+            
             return new;
 SQL
       );

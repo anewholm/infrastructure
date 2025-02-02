@@ -50,6 +50,10 @@ body .field-multilingual .ml-btn {
 .form-sidebar .form-elements > .hide-tabs > .form-group.dropdown-field {
     clear:both;
 }
+.form-sidebar .control-list p.no-data {
+    text-align: left;
+    margin:0px;
+}
 .form-sidebar .form-elements > .hide-tabs > .form-group:not(.interface-component):before {
     /* Force new-row due to thin vertical nature of side-bar */
     content: '';
@@ -80,8 +84,9 @@ body .field-multilingual .ml-btn {
 .form-sidebar .list-pagination {
     padding-top:0px;
 }
+.form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-toolbar > .toolbar-widget > .control-toolbar .toolbar-item button:before,
 .form-sidebar .form-elements > .hide-tabs > .form-group > .relation-behavior > .relation-toolbar > .toolbar-widget > .control-toolbar .toolbar-item a:before {
-    content: none;
+        content: none;
 }
 
 .help-block a,
@@ -268,12 +273,15 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 /* ------------------------------------- Popups */
 .modal-dialog .control-list p.no-data {
     text-align: left;
+    margin:0px;
 }
-.modal-dialog .popup-hide,
-.modal-dialog .new-page,
-.modal-dialog .help-block .action { /* Disable links to new pages in popups */
+.modal-dialog .popup-hide {
   display:none;
   visibility:hidden;
+}
+.modal-dialog .modal-footer .view-all {
+    color:#4444ff;
+    margin:0px 5px; /* like storm */
 }
 .modal-dialog .modal-header:has(h4.modal-title) {
     /* Standard relationmanager dialogs */

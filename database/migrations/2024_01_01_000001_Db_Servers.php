@@ -12,6 +12,7 @@ class DbServers extends Migration
             $table->engine = 'InnoDB';
             $table->uuid('id')->unique()->primaryKey();
             $table->string('hostname', 1024)->default('hostname()')->unique();
+            $table->string('domain', 1024)->nullable();
             $table->text('response')->nullable();
             $table->timestamp('created_at')->default('now()');
         });

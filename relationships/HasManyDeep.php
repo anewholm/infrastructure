@@ -5,25 +5,41 @@ use Acorn\Collection;
 use Acorn\Collection as CollectionBase;
 use Acorn\Model;
 use Acorn\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class HasManyDeep extends StaudenmeirHasManyDeep
 {
     use \Winter\Storm\Database\Relations\Concerns\HasOneOrMany;
     use \Winter\Storm\Database\Relations\Concerns\DefinedConstraints;
 
+    protected $throughRelationObjects;
+
     /**
      * Create a new has many relationship instance.
      * @return void
      */
-    public function __construct(Builder $query, Model $farParent, array $throughParents, array $foreignKeys, array $localKeys, string $relationName = null)
+    public function __construct(Builder $query, Model $farParent, array $throughParents, array $foreignKeys, array $localKeys, array $throughRelationObjects, string $relationName = null)
     {
-        $this->relationName = $relationName;
+        $this->throughRelationObjects = $throughRelationObjects; // Extra parameter for us, useful for saving
+        $this->relationName = $relationName; // Extra parameter for Winter Relationships
 
         parent::__construct($query, $farParent, $throughParents, $foreignKeys, $localKeys);
 
         $this->addDefinedConstraints();
     }
 
+    protected function getLastRelation(): Relation
+    {
+        return last($this->throughRelationObjects);
+    }
+
+    public function add(Model $model, $sessionKey = null): void
+    {
+        // We save the last relation in the chain
+        // this assumes that the rest of the chain already exists
+        $this->getLastRelation()->add($model, $sessionKey);
+    }
+    
     public function getParentKey()
     {
         // Additional Storm method

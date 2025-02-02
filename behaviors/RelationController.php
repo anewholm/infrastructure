@@ -2,6 +2,7 @@
 
 use Backend\Behaviors\RelationController as RelationControllerBase;
 use Acorn\Relationships\HasManyDeep;
+use Winter\Storm\Database\Pivot;
 use Log;
 use Str;
 use File;
