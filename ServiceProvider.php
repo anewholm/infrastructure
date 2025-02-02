@@ -82,7 +82,7 @@ class ServiceProvider extends ModuleServiceProvider
         Event::listen('backend.menu.extendItems', function (&$navigationManager) {
             $mainMenuItems = $navigationManager->listMainMenuItems();
             foreach (self::$pluginFlags as $plugin) {
-                if ($plugin->acorn_infrastructure) {
+                if (property_exists($plugin, 'acorn_infrastructure') && $plugin->acorn_infrastructure) {
                     foreach ($mainMenuItems as $mainMenu) {
                         if ($plugin->code == $mainMenu->owner) 
                             $navigationManager->removeMainMenuItem($plugin->code, $mainMenu->code);

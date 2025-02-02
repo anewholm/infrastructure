@@ -44,7 +44,8 @@
             'find_by_qrcode' => 'Find by QRCode',
             'find_in_list' => 'Find in list',
             'redirect' => 'Go to record',
-            'form_field_complete' => 'Fill out form fields'
+            'form_field_complete' => 'Fill out form fields',
+            'view_all' => 'View all'
         ],
         'server' => [
             'label' => 'Server',

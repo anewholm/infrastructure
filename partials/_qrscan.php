@@ -11,6 +11,8 @@ if (!isset($dataFieldName)) $dataFieldName = preg_replace('/^.*\[|\]$/', '', $fo
 //   listSelector: CSS selector of the list to search
 if (!isset($formSelector)) $formSelector = NULL;
 if (!isset($listSelector)) $listSelector = NULL;
+
+if (!isset($actions) || !is_array($actions)) $actions = array();
 ?>
 
 <div id="my-qr-reader"

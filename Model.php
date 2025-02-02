@@ -1,6 +1,7 @@
 <?php namespace Acorn;
 
 use Winter\Storm\Database\Model as BaseModel;
+use Winter\Storm\Database\Pivot;
 use BackendAuth;
 use \Backend\Models\User;
 use \Backend\Models\UserGroup;
@@ -235,7 +236,7 @@ class Model extends BaseModel
         // like created_by_user and created_by_event
         ModelBeforeSave::dispatch($this);
 
-        // This could also be done with triggers and pg_hostname
+        // TODO: This should be only done with triggers and pg_hostname
         if ($this->hasAttribute('server_id') && !$this->server_id) {
             $this->server_id = Server::singleton()->id();
         }
@@ -253,7 +254,9 @@ class Model extends BaseModel
 
         try {
             $result = parent::save($options, $sessionKey);
-        } catch (QueryException $qe) {
+        } 
+        // Last chance error formatting for some presentable & understandable SQL problems
+        catch (QueryException $qe) {
             if (env('APP_DEBUG')) {
                 throw $qe;
             } else {
@@ -298,7 +301,7 @@ class Model extends BaseModel
     // composer require staudenmeir/eloquent-has-many-deep # New Deep relations
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
 
-    // New $hasManyDeep relation e.g. [
+    // New $hasManyDeep 1-1 => 1-X relation examples:
     /*
     public $hasManyDeep = [
         'legalcase_justice_scanned_documents_legalcase' => [
@@ -309,11 +312,32 @@ class Model extends BaseModel
             \Acorn\Justice\Models\LegalcaseIdentifier::class,
             'throughRelations'    => ['legalcase', 'justice_legalcase_identifiers_legalcase']
         ],
+    ];
+    */
+
+    // New $hasManyDeep 1-1 => X-X (with pivot table) relation examples:
+    /*
+    public $hasManyDeep = [
         'legalcase_justice_legalcase_legalcase_category_legalcases' => [
             \Acorn\Justice\Models\LegalcaseCategory::class,
             'throughRelations'    => ['legalcase', 'justice_legalcase_legalcase_category_legalcases']
         ],
     ];
+
+    // This results in the following:
+    HasManyDeep(object) {
+        parent:         Acorn\Justice\Models\LegalCase
+        related:        Acorn\Justice\Models\LegalCaseCategory
+        throughParent:  Acorn\Justice\Models\LegalCase
+        farParent:      Acorn\Criminal\Models\LegalCase
+        firstKey:       id
+        secondKey:      legalcase_id
+        localKey:       legalcase_id
+        secondLocalKey: id
+        throughParents: [Acorn\Justice\Models\LegalCase, Pivot(acorn_justice_legalcase_legalcase_category)]
+        foreignKeys:    [id, legalcase_id, id]
+        localKeys:      [legalcase_id, id, legalcase_category_id]
+    }
     */
     public $hasManyDeep = [];
 
@@ -341,22 +365,45 @@ class Model extends BaseModel
         $relationType = $this->getRelationType($relationName);
         switch ($relationType) {
             case 'hasManyDeep':
+                // Get relation configuration
                 $relationConfig       = $this->validateRelationArgs($relationName, ['throughRelations']);
-                $relatedModel         = $relationConfig[0] ?? NULL;
-                // Translate the relation names to relation objects
-                $throughRelationObjects = [];
-                $throughRelationModel   = $this;
+                $relatedModel         = $relationConfig[0] ?? NULL; // Optional double-check
+
+                // Translate the Model relation name chain to Relation Objects (has*|belongsTo*...)
+                $throughRelationObjects   = [];
+                $throughRelationInstance  = $this;
                 foreach ($relationConfig['throughRelations'] as $throughRelationName) {
-                    $throughRelationObject = $throughRelationModel->$throughRelationName();
+                    // Traverse the Model instances / classes for the relations
+                    $throughRelationObject = $throughRelationInstance->$throughRelationName();
                     array_push($throughRelationObjects, $throughRelationObject);
-                    $throughRelationModel = $throughRelationObject->getRelated();
+                    
+                    // Traverse the actual instances for the loaded Models, until we meet a collection
+                    // then traverse the Models only
+                    // This is to ensure that $parent is set on the throughRelations for save()ing
+                    $throughRelationInstance = $throughRelationInstance->$throughRelationName;
+                    if (! $throughRelationInstance instanceof Model) $throughRelationInstance  = $throughRelationObject->getRelated();
                 }
-                $finalModelClass = get_class($throughRelationModel);
+
+                // If we have the optional double-check configuration clause then
+                // check that the chain arrived at the same final model in $relationConfig[0]
+                $finalModelClass = get_class($throughRelationInstance);
                 if ($relatedModel && $finalModelClass != $relatedModel) {
                     throw new Exception("Final relation model [$finalModelClass] does not yield the stated Model[$relatedModel]");
                 }
 
-                // Assemble parameters
+                // Assemble parameters for HasManyDeep __constructor()
+                // https://github.com/staudenmeir/eloquent-has-many-deep?tab=readme-ov-file#manytomany
+                // Double many-to-many chain from Models & tables: 
+                //   $user->hasManyDeep(Permission::class, ['role_user', Role::class, 'permission_role']);
+                //     return $this->newHasManyDeep(...$this->hasOneOrManyDeep($related, $through, $foreignKeys, $localKeys));
+                //       return new HasManyDeep($query, $farParent, $throughParents, $foreignKeys, $localKeys);
+                //   Note the 2 x stated intermediate pivot tables at each stage
+                //
+                // Double many-to-many chain from Relation Objects:
+                //   $user->hasManyDeepFromRelations($user->roles(), (new Role)->permissions()) 
+                //     $user->hasManyDeep(...$this->hasOneOrManyDeepFromRelations($relations));
+                //       return $this->newHasManyDeep(...$this->hasOneOrManyDeep($related, $through, $foreignKeys, $localKeys));
+                //         return new HasManyDeep($query, $farParent, $throughParents, $foreignKeys, $localKeys);
                 [
                     $related, // string
                     $through,
@@ -369,27 +416,56 @@ class Model extends BaseModel
                 ]          = $this->hasOneOrManyDeepFromRelations($throughRelationObjects);
                 $query     = $this->newRelatedInstance($finalModelClass)->newQuery();
                 $farParent = $this;
+
+                // Translate strings to EMPTY Models or Pivot->setTable()s
+                // Pivot->setTable() is used when the intermediate table has no associated Model
                 $throughParents = [];
-                foreach ($through as $throughClass) {
-                    if (!class_exists($throughClass)) 
-                        throw new \Exception("Class $throughClass does not exist, or was not ConcatenableRelation");
-                    array_push($throughParents, new $throughClass);
+                foreach ($through as $throughEntry) {
+                    // This just creates an new empty Model() or a Pivot($table)
+                    $model = $this->newRelatedDeepThroughInstance($throughEntry);
+                    // TODO: For now, we turn timestamps OFF for AA Pivot situations
+                    if ($model instanceof Pivot) $model->timestamps = FALSE;
+                    array_push($throughParents, $model);
                 }
-                
+
+                // Create relation object
                 $relationObj = new \Acorn\Relationships\HasManyDeep(
                     $query,
-                    $farParent,
-                    $throughParents,
+                    $farParent, // $this
+                    $throughParents, // $parent = $throughParents[0]
                     $foreignKeys,
                     $localKeys,
+                    $throughRelationObjects, // Extra parameter for us, useful for saving
                     $relationName // Extra parameter for Winter Relationships
                 );
+
+                /* TODO: customizeHasOneOrManyDeepRelationship()
+                $relationObj = $this->customizeHasOneOrManyDeepRelationship(
+                    $relationObj,
+                    $postGetCallbacks,
+                    $customThroughKeyCallback,
+                    $customEagerConstraintsCallback,
+                    $customEagerMatchingCallback
+                );
+                */
                 break;
             default:
                 $relationObj = parent::handleRelation($relationName);
         }
 
         return $relationObj;
+    }
+
+    protected function newRelatedDeepThroughInstance(string $class): BaseModel
+    {
+        // Staudenmeir\EloquentHasManyDeep\HasRelationships::newRelatedDeepThroughInstance()
+        // Overridden to return a Storm Pivot
+        // Copied
+        return str_contains($class, '\\')
+            ? (method_exists($this, 'newRelatedThroughInstance') // TODO[L10]
+                ? $this->newRelatedThroughInstance($class) // new $class
+                : new $class())
+            : (new Pivot())->setTable($class);
     }
 
     // --------------------------------------------- Querying
@@ -836,7 +912,9 @@ SQL;
             //   to: product_instances
             $thisModelClass = $this->fullyQualifiedClassName();
             foreach ($fields as $name => &$buttonField) {
-                if (isset($buttonField->config['path']) && $buttonField->config['path'] == 'add_button') {
+                if (isset($buttonField->config['path']) && $buttonField->config['path'] == 'add_button'
+                    && (!isset($buttonField->config['custom']) || $buttonField->config['custom'] == false)
+                ) {
                     // _add_invoice defaults to add _invoice to invoices
                     $modelNameLower  = substr($name, 5);             // invoice
                     $modelNamePlural = Str::plural($modelNameLower); // invoices
@@ -896,6 +974,7 @@ SQL;
             foreach ($fields as $name => &$buttonField) {
                 if (isset($buttonField->config['path'])
                     && ($buttonField->config['path'] == 'popup_button' || $buttonField->config['path'] == 'create_button')
+                    && (!isset($buttonField->config['custom']) || $buttonField->config['custom'] == false)
                 ) {
                     // _add_invoice defaults $to to _invoice, then invoice depending on which exists
                     // because _invoice may be another pseudo field that manages the addition process

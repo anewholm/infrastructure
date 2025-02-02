@@ -15,5 +15,10 @@ if (post($PARAM_PARENT_MODEL)) {
     print("<input type='hidden' name='$PARAM_PARENT_MODEL_ID' value='$parentModelId' />");
 }
 
+// To view all records of this type
+$viewAll = trans('acorn::lang.models.general.view_all');
+$href    = $formModel->controllerUrl();
+print("<a class='view-all' href='$href' target='_blank'>$viewAll</a>");
+
 require('modules/backend/behaviors/relationcontroller/partials/_manage_form_footer_update.php');
 ?>
