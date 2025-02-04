@@ -8,8 +8,11 @@ Trait MorphConfig
 {
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
-        $config     = parent::makeConfig($configFile, $requiredConfig);
-        $modelClass = $this->getConfig('modelClass');
+        $config        = parent::makeConfig($configFile, $requiredConfig);
+        $modelClass    = $this->getConfig('modelClass');
+        $parentModel   = post(RelationController::PARAM_PARENT_MODEL);
+        $parentModelId = post(RelationController::PARAM_PARENT_MODEL_ID);
+        $primaryModel  = @$this->controller->widget->form->model;
 
         if (is_string($configFile) && $configFile) {
             $configFileParts = explode('/', $configFile);
@@ -31,18 +34,41 @@ Trait MorphConfig
                         }
                     }
 
-                    // ------------------------------------------------- Auto-hide parent model
-                    if ($parentModel = post(RelationController::PARAM_PARENT_MODEL)) {
+                    if ($parentModel) {
+                        // ------------------------------- Auto-hide and set parent model drop-down
                         // We have a parent context
-                        $parentModelParts = explode('\\', $parentModel);
-                        $parentFieldName  = Str::snake(end($parentModelParts));
-                        $parentModelId    = post(RelationController::PARAM_PARENT_MODEL_ID);
+                        // TODO: This does not work if the parent field is nested
                         foreach ($config->fields as $fieldName => &$fieldConfig) {
                             // Look for a parent model selector
-                            if ($fieldName == $parentFieldName && $fieldConfig['type'] == 'dropdown') {
-                                // TODO: This does not work if the parent field is nested
-                                $fieldConfig['cssClass'] .= ' hidden';
-                                $fieldConfig['default']   = $parentModelId;
+                            if (isset($fieldConfig['type']) 
+                                && $fieldConfig['type'] == 'dropdown'
+                                && isset($fieldConfig['options'])
+                            ) {
+                                // Only works for create-system standard drop-down specification
+                                $optionsParts = explode('::', $fieldConfig['options']);
+                                $model        = $optionsParts[0];
+
+                                if ($model == $parentModel) {
+                                    $fieldConfig['cssClass'] .= ' hidden';
+                                    $fieldConfig['default']   = $parentModelId;
+                                } else if ($primaryModel && $model == get_class($primaryModel)) {
+                                    $fieldConfig['cssClass'] .= ' hidden';
+                                    $fieldConfig['default']   = $primaryModel->id;
+                                }
+                            }
+                        }
+                        
+                        // ------------------------------------- Auto-hide parent model reverse relation managers
+                        // so that X-X relations do not have repeating relationmanager popup loops
+                        // TODO: Secondary tabs
+                        if (isset($config->tabs['fields'])) {
+                            foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
+                                if ($fieldConfig['type'] == 'relationmanager'
+                                    && isset($fieldConfig['relatedModel'])
+                                    && $fieldConfig['relatedModel'] == $parentModel
+                                ) {
+                                    unset($config->tabs['fields'][$fieldName]);
+                                }
                             }
                         }
                     }

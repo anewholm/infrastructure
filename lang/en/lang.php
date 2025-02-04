@@ -25,6 +25,8 @@
         'general' => [
             'id' => 'ID',
             'name' => 'Name',
+            'description' => 'Notes',
+            'notes' => 'Notes',
             'type' => 'Type',
             'image' => 'Image',
             'select' => 'Select',
