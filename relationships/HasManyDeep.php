@@ -40,6 +40,13 @@ class HasManyDeep extends StaudenmeirHasManyDeep
         $this->getLastRelation()->add($model, $sessionKey);
     }
     
+    public function remove(Model $model, $sessionKey = null): void
+    {
+        // We save the last relation in the chain
+        // this assumes that the rest of the chain already exists
+        $this->getLastRelation()->remove($model, $sessionKey);
+    }
+
     public function getParentKey()
     {
         // Additional Storm method

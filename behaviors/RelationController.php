@@ -63,10 +63,32 @@ class RelationController extends RelationControllerBase
          * on the second initRelation() call
          * and then set it for subsequent RelationManagers in the popup
          * This will then set $model, $this->model and $this->vars[formModel] below
+         * 
+         * For example:
+         *   $paramParentModel::find($paramParentModelId)->$paramField
+         *   PopupModelInstance->relation for RelationMnager
          */
         $paramField         = post(self::PARAM_FIELD);           // Also used in the parent
         $paramParentModel   = post(self::PARAM_PARENT_MODEL);    // New parameter
         $paramParentModelId = post(self::PARAM_PARENT_MODEL_ID); // New parameter
+
+        // Tricky things to understand if we have a column setup|apply call
+        // This RelationController initialises before a handler is called
+        // and crashes because of manageId
+        $ajaxHandler = $this->controller->getAjaxHandler();
+        $ajaxMethod  = ($ajaxHandler && strstr($ajaxHandler, '::') 
+            ? last(explode('::', $ajaxHandler)) 
+            : NULL
+        );
+        switch ($ajaxMethod) {
+            case 'onLoadSetup':
+                $this->eventTarget = 'button-setup';
+                break;
+            case 'onApplySetup':
+                $this->eventTarget = 'button-apply';
+                $paramParentModel  = NULL;
+                break;
+        }
 
         if ($paramField) {
             if (!$this->popupModel) {
@@ -81,6 +103,8 @@ class RelationController extends RelationControllerBase
                     );
                     if (!$model->is($paramParentModelObj)) {
                         $model = $paramParentModelObj;
+                        // Send the formModel to _container.php | _manage_list.php
+                        $this->vars['formModel'] = $model;
                         // None of this models config_relation.yaml is present
                         // so we pre-load
                         $this->loadModelRelationConfig($model);
@@ -196,13 +220,23 @@ class RelationController extends RelationControllerBase
 
     protected function evalManageMode()
     {
-        $manageMode = parent::evalManageMode();
-
-        // The popup RelationManager create buttons post the entire popup form
-        // which includes the existing popup form manage_id
+        // The RelationManager popups add $controlPanel buttons to popup RelationManager
+        // However, the buttons post the entire popup form
+        // which includes the existing popup form manage_id & _relation_mode
         // If left set, it will force the subsequent form to update mode
-        if ($this->eventTarget == 'button-create') {
-            $this->manageId = NULL;
+        // parent::evalManageMode() will $mode = post(self::PARAM_MODE) and immediately return
+        $manageMode  = parent::evalManageMode();
+
+        switch ($this->eventTarget) {
+            case 'button-setup':
+            case 'button-create':
+                $this->manageId = NULL;
+                break;
+            // New custom eventTargets from overrides below
+            case 'button-unlink':
+            case 'button-link':
+                $manageMode = 'list';
+                break;
         }
 
         // Implement our new relation types
@@ -221,5 +255,13 @@ class RelationController extends RelationControllerBase
         }
         
         return $manageMode;
+    }
+
+    public function onRelationButtonUnlink()
+    {
+        // We need this custom eventTarget to guide the manageMode process above
+        // in the case of popups with _relation_mode set for their form save
+        $this->eventTarget = 'button-unlink';
+        return parent::onRelationButtonUnlink();
     }
 }

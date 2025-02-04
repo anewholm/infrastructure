@@ -1,3 +1,7 @@
+<?php
+// partial overridden
+// data-request-data fields added for _parent_model & id
+?>
 <div
     id="<?= $this->relationGetId() ?>"
     data-request-data="

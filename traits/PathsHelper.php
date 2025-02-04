@@ -144,12 +144,18 @@ Trait PathsHelper {
 
     public function singularClassName(?Object $object = NULL): string
     {
-        return (property_exists($this, 'nameSingular') ? $this->nameSingular : Str::singular($this->unqualifiedClassName($object)));
+        return (property_exists($this, 'nameSingular') 
+            ? Str::studly($this->nameSingular)
+            : Str::singular($this->unqualifiedClassName($object))
+        );
     }
 
     public function pluralClassName(?Object $object = NULL): string
     {
-        return (property_exists($this, 'namePlural') ? $this->namePlural : Str::plural($this->unqualifiedClassName()));
+        return (property_exists($this, 'namePlural') 
+            ? Str::studly($this->namePlural)
+            : Str::plural($this->unqualifiedClassName())
+        );
     }
 
     public function singularLowerCaseName(?Object $object = NULL): string
@@ -299,7 +305,10 @@ Trait PathsHelper {
     {
         $pluginPathRelative      = $this->pluginPathRelative();
         $controllerDirectoryName = $this->controllerDirectoryName();
-        return "$pluginPathRelative/controllers/$controllerDirectoryName";
+        $path = "$pluginPathRelative/controllers/$controllerDirectoryName";
+        if (!is_dir($path)) 
+            throw new \Exception("Path [$path] does not exist");
+        return $path;
     }
 
     public function controllerDirectoryName(?Object $object = NULL): string

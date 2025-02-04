@@ -95,6 +95,7 @@ class Controller extends BackendController
     }
 
     // ------------------------------------------ Event Handlers
+    // TODO: These were made for the list view _multi editing popups. Is there not another way?
     public function onRefreshField()
     {
         // Copied from Winter Form::onRefresh()
