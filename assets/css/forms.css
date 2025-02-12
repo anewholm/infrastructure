@@ -25,6 +25,9 @@ body .field-multilingual .ml-btn {
     width: 10px;
     white-space: nowrap;
 }
+.form-group.nolabel > label {
+    display: none;
+}
 
 .bottom {
     position: absolute;
@@ -43,8 +46,14 @@ body .field-multilingual .ml-btn {
 .form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {
     border-bottom: none!important;
 }
+.form-sidebar table.table.data {
+    border-bottom: none;
+}
 .form-sidebar .form-elements > .hide-tabs > .form-group {
-    padding: 0px;
+    padding: 0px 0px 20px 0px;
+}
+.form-sidebar .form-group > .relation-behavior .control-toolbar {
+    padding: 0 0 5px 0;
 }
 .form-sidebar .form-elements > .hide-tabs > .form-group:not(.interface-component),
 .form-sidebar .form-elements > .hide-tabs > .form-group.dropdown-field {
@@ -359,4 +368,13 @@ body.slim-container .modal-dialog .modal-header.compact > button {
     height: 96px;
     z-index: 1000;
     transition: 0.3s height;
+}
+
+/* ------------------------------- fixes */
+.is-rtl button.pika-prev, button.pika-next {
+    /* Not sure why Storm button is overriding this */ 
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAYAAAAsEj5rAAAAU0lEQVR42u3VOwoAMAgE0dwfAnNjU26bYkBCFGwfiL9VVWoO+BJ4Gf3gtsEKKoFBNTCoCAYVwaAiGNQGMUHMkjGbgjk2mIONuXo0nC8XnCf1JXgArVIZAQh5TKYAAAAASUVORK5CYII=);
+}
+.is-rtl button.pika-next, button.pika-prev {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAYAAAAsEj5rAAAAUklEQVR42u3VMQoAIBADQf8Pgj+OD9hG2CtONJB2ymQkKe0HbwAP0xucDiQWARITIDEBEnMgMQ8S8+AqBIl6kKgHiXqQqAeJepBo/z38J/U0uAHlaBkBl9I4GwAAAABJRU5ErkJggg==);
 }

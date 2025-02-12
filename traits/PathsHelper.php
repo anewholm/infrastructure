@@ -345,7 +345,7 @@ Trait PathsHelper {
         $tableNameParts       = explode('_', $unqualifiedTableName);
         $authorDirName        = $tableNameParts[0];
         $pluginDirName        = $tableNameParts[1];
-        $classSnakeCasePlural = $tableNameParts[2];
+        $classSnakeCasePlural = implode('_', array_slice($tableNameParts, 2));
         $unqualifiedPascalClassName = Str::singular(Str::studly($classSnakeCasePlural)); // Pascal case
         $authorPascalCase     = self::authorPascalCase($authorDirName);
         $pluginPascalCase     = Str::studly($pluginDirName); // Pascal case

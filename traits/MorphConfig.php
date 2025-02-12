@@ -9,10 +9,13 @@ Trait MorphConfig
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
         $config        = parent::makeConfig($configFile, $requiredConfig);
-        $modelClass    = $this->getConfig('modelClass');
         $parentModel   = post(RelationController::PARAM_PARENT_MODEL);
         $parentModelId = post(RelationController::PARAM_PARENT_MODEL_ID);
         $primaryModel  = @$this->controller->widget->form->model;
+        $modelClass    = ($this instanceof RelationController && $this->relationModel
+            ? get_class($this->relationModel) 
+            : $this->getConfig('modelClass')
+        );
 
         if (is_string($configFile) && $configFile) {
             $configFileParts = explode('/', $configFile);
@@ -63,8 +66,9 @@ Trait MorphConfig
                         // TODO: Secondary tabs
                         if (isset($config->tabs['fields'])) {
                             foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
-                                if ($fieldConfig['type'] == 'relationmanager'
+                                if (   isset($fieldConfig['type']) 
                                     && isset($fieldConfig['relatedModel'])
+                                    && $fieldConfig['type'] == 'relationmanager'
                                     && $fieldConfig['relatedModel'] == $parentModel
                                 ) {
                                     unset($config->tabs['fields'][$fieldName]);
@@ -104,24 +108,24 @@ Trait MorphConfig
                         if (isset($fieldConfig['include'])) {
                             $path       = NULL;
                             $modelClass = NULL;
-                            if (isset($fieldConfig['includeModel'])) {
+                            
+                            if (     isset($fieldConfig['path'])) $path = $fieldConfig['path'];
+                            else if (isset($fieldConfig['includeModel'])) {
                                 $modelClass = $fieldConfig['includeModel'];
                                 $model      = new $modelClass;
                                 $modelDir   = $model->modelDirectoryPathRelative();
                                 $path       = "$modelDir/$configFileName";
                             }
-                            if (isset($fieldConfig['path'])) $path = $fieldConfig['path'];
+                            
                             if ($path) $subConfigs[$fieldName] = $this->makeConfig($path, $requiredConfig);
                             else throw new Exception("Include directive without path or model in [$fieldName]");
-
-                            // Stamp the modelClass on the fields
                             $subConfigs[$fieldName]->modelClass = $modelClass;
                         }
                     }
 
                     // Inject fields and tabs
                     foreach ($subConfigs as $fieldName => $subConfig) {
-                        if (property_exists($subConfig, 'fields')) self::processFields($config->fields, $subConfig->fields, $fieldName);
+                        if (property_exists($subConfig, 'fields')) self::processFields($config->fields, $subConfig->fields, $fieldName, $subConfig->modelClass);
                         if (property_exists($subConfig, 'tabs') && isset($subConfig->tabs['fields'])) {
                             if (!property_exists($config, 'tabs')) $config->tabs = array();
                             if (!isset($config->tabs['fields']))   $config->tabs['fields'] = array();
@@ -197,8 +201,8 @@ Trait MorphConfig
                                     && $subType != 'timetense' 
                                     && $subType != 'date' 
                                 ) {
-                                    $isAlreadyNested   = (strstr($subFieldName, '[') !== FALSE);
-                                    $isPseudoFieldName = (substr($subFieldName, 0, 1) == '_');
+                                    $isAlreadyNested   = self::isNested($subFieldName);
+                                    $isPseudoFieldName = self::isPseudo($subFieldName);
                                     $nestedFieldName   = $subFieldName;
                                     if (!$isPseudoFieldName) {
                                         // Sub-relation fields: The relation is added in to the name[relation][valueFrom|name]
@@ -321,6 +325,40 @@ Trait MorphConfig
         }
     }
 
+    protected static function unnestFieldName(string $fieldName): array
+    {
+        return preg_split('/[\\]\\[]+/', trim($fieldName, ']'));
+    }
+
+    protected static function nestFieldPath(array $fieldPath): string
+    {
+        $fieldName = $fieldPath[0];
+        if (count($fieldPath) > 1) {
+            $fieldNests = implode('][', array_slice($fieldPath, 1));
+            $fieldName .= "[$fieldNests]";
+        }
+        return $fieldName;
+    }
+
+    protected static function nestField(string|array $nest, string|array $fieldName, int &$nestlevel = NULL): string
+    {
+        if (!is_array($nest))      $nest      = self::unnestFieldName($nest);
+        if (!is_array($fieldName)) $fieldName = self::unnestFieldName($fieldName);
+        $nestedFieldPath = array_merge($nest, $fieldName);
+        $nestlevel       = count($nestedFieldPath);
+        return self::nestFieldPath($nestedFieldPath);
+    }
+
+    protected static function isNested(string $fieldName): bool
+    {
+        return (count(self::unnestFieldName($fieldName)) > 1);
+    }
+
+    protected static function isPseudo(string $fieldName): bool
+    {
+        return ($fieldName && $fieldName[0] == '_');
+    }
+
     protected static function processFields(array &$configFields, array &$subConfigFields, string $fieldName, string $modelClass = NULL): void
     {
         $inserts = array();
@@ -328,26 +366,44 @@ Trait MorphConfig
             // TODO: Nested 1from1 relations
             $subType           = (isset($subFieldConfig['type']) ? $subFieldConfig['type'] : 'text');
             $includeContext    = (isset($subFieldConfig['includeContext']) ? $subFieldConfig['includeContext'] : 'include');
-            $isPseudoFieldName = (substr($subFieldName, 0, 1) == '_');
+            $isPseudoFieldName = self::isPseudo($subFieldName);
 
             if ($subFieldName != 'id' && $includeContext != 'no-include') {
                 // Config changes
                 // TODO: support relation and fileupload fields on create
-                if ($subType == 'relation' || $subType == 'fileupload') $subFieldConfig['context'] = array('update');
+                // Currently relation & fileupload will crash 
+                // because the relations are null on create
+                if ($subType == 'relation') {
+                    if (isset($subFieldConfig['options'])) {
+                        // This relation has been designed for a dropdown scenario also
+                        // by additionally indicating the options during create
+                        // TODO: Can this be auto-generated? We have:
+                        //   get_class((new $modelClass)->$fieldName()->getRelated()) . '::dropdownOptions'
+                        $subFieldConfig['type'] = 'dropdown';
+                    } else {
+                        // We cannot support embedded relation fields in create mode
+                        $subFieldConfig['context'] = array('update');
+                    }
+                }
+                else if ($subType == 'fileupload') {
+                    // TODO: support emedded fileupload fields on create
+                    $subFieldConfig['context'] = array('update');
+                }
+
                 if (isset($subFieldConfig['dependsOn'])) {
                     $dependsOn = $subFieldConfig['dependsOn'];
                     foreach ($dependsOn as $i => $dependsOnField) {
-                        $isDepndsPseudoFieldName = (substr($dependsOnField, 0, 1) == '_');
-                        if (!$isDepndsPseudoFieldName)
-                            $subFieldConfig['dependsOn'][$i] = "${fieldName}[$dependsOnField]";
+                        $isDependsPseudoFieldName = self::isPseudo($dependsOnField);
+                        if (!$isDependsPseudoFieldName)
+                            $subFieldConfig['dependsOn'][$i] = self::nestField($fieldName, $dependsOnField);
                     }
                 }
 
                 // Nesting in to existing form
-                $nestedFieldName   = ($isPseudoFieldName ? $subFieldName : "${fieldName}[$subFieldName]");
-                $nestLevel         = $subFieldConfig['nestLevel'] ?? 0;
+                $nestedFieldName   = ($isPseudoFieldName ? $subFieldName : self::nestField($fieldName, $subFieldName));
+                $formNestLevel     = $subFieldConfig['nestLevel'] ?? 0;
                 $subFieldConfig['nested']    = TRUE;
-                $subFieldConfig['nestLevel'] = $nestLevel+1;
+                $subFieldConfig['nestLevel'] = $formNestLevel+1;
                 $subFieldConfig['included']  = TRUE;
                 if (!$modelClass || !self::settingRemove($subFieldConfig, $modelClass))
                     $inserts[$nestedFieldName] = $subFieldConfig;
