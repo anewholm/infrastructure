@@ -7,6 +7,7 @@ if ($value) {
     // Custom config settings
     $limit     = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
     $action    = (isset($column->config['action']) ? $column->config['action'] : 'update');
+    $useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->config['use-linked-popups'] : FALSE);
     // We do not respect the values passed in value
     // instead, we create a collection and re-apply the valueFrom/select logic
     // this is to standardise the Collection display
@@ -56,7 +57,7 @@ if ($value) {
     $count = $value->count();
     $i     = 0;
     print("<ul id='$multiId' class='multi'>");
-    $value->each(function ($model) use (&$i, &$limit, $valueFrom, $action, $multiId) {
+    $value->each(function ($model) use (&$i, &$limit, $valueFrom, $action, $multiId, $useLinkedPopups) {
         // A method is used because of Encapsulation
         $name       = $model->$valueFrom(); // TODO: AA\User and FQN?
         $id         = $model->id();
@@ -66,19 +67,24 @@ if ($value) {
             'params'  => [$id],
             'dataRequestUpdate' => array('multi' => $multiId),
         );
-
         $nameEscaped = e($name);
-        $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
-        print(<<<HTML
-        <li><a
-            data-handler="onPopupRoute"
-            data-request-data="$dataRequestDataEscaped"
-            data-control="popup"
-        >
-            $nameEscaped
-        </a></li>
+
+        // Output LI item
+        print('<li>');
+        if ($useLinkedPopups) {
+            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
+            print(<<<HTML
+            <a
+                data-handler="onPopupRoute"
+                data-request-data="$dataRequestDataEscaped"
+                data-control="popup"
+            >$nameEscaped</a>
 HTML
-        );
+            );
+        } else {
+            print($nameEscaped);
+        }
+        print('</li>');
 
         // False exists the loop
         $continue = (++$i < $limit);

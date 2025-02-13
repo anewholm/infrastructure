@@ -227,6 +227,13 @@ class Model extends BaseModel
         if ($user = BackendAuth::user())
             $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
 
+        // We also allow RelationShip 'delete' for belongsTo relations
+        // https://wintercms.com/docs/v1.2/docs/database/relations#detailed-relation-methods
+        foreach ($this->belongsTo as $name => $relation) {
+            if (isset($relation['delete']) && $relation['delete'] && $this->$name) 
+                $this->$name->delete();
+        }
+
         return parent::delete();
     }
 
