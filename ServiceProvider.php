@@ -101,6 +101,11 @@ class ServiceProvider extends ModuleServiceProvider
                     'type'    => 'partial',
                     'path'    => 'is_infrastructure',
                 ],
+                'acorn_seeding' => [
+                    'label'   => 'acorn::lang.settings.seeding_functions',
+                    'type'    => 'partial',
+                    'path'    => 'seeding_functions',
+                ],
             ]);
         });
 

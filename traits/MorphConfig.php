@@ -1,7 +1,7 @@
 <?php namespace Acorn\Traits;
 
 use Acorn\Behaviors\RelationController;
-use Str;
+use Winter\Storm\Html\Helper as HtmlHelper;
 use \Exception;
 
 Trait MorphConfig
@@ -325,12 +325,7 @@ Trait MorphConfig
         }
     }
 
-    protected static function unnestFieldName(string $fieldName): array
-    {
-        return preg_split('/[\\]\\[]+/', trim($fieldName, ']'));
-    }
-
-    protected static function nestFieldPath(array $fieldPath): string
+    protected static function arrayToName(array $fieldPath): string
     {
         $fieldName = $fieldPath[0];
         if (count($fieldPath) > 1) {
@@ -342,16 +337,16 @@ Trait MorphConfig
 
     protected static function nestField(string|array $nest, string|array $fieldName, int &$nestlevel = NULL): string
     {
-        if (!is_array($nest))      $nest      = self::unnestFieldName($nest);
-        if (!is_array($fieldName)) $fieldName = self::unnestFieldName($fieldName);
+        if (!is_array($nest))      $nest      = HtmlHelper::nameToArray($nest);
+        if (!is_array($fieldName)) $fieldName = HtmlHelper::nameToArray($fieldName);
         $nestedFieldPath = array_merge($nest, $fieldName);
         $nestlevel       = count($nestedFieldPath);
-        return self::nestFieldPath($nestedFieldPath);
+        return self::arrayToName($nestedFieldPath);
     }
 
     protected static function isNested(string $fieldName): bool
     {
-        return (count(self::unnestFieldName($fieldName)) > 1);
+        return (count(HtmlHelper::nameToArray($fieldName)) > 1);
     }
 
     protected static function isPseudo(string $fieldName): bool

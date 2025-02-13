@@ -19,7 +19,8 @@
             'cube_refresh' => 'Cube refresh strategy',
             'cube_refresh_interval' => 'Cube refresh interval'
         ],
-        'infrastructure' => 'Infrastructure'
+        'infrastructure' => 'Infrastructure',
+        'seeding_functions' => 'Seeding functions',
     ],
     'models' => [
         'general' => [

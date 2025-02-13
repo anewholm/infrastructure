@@ -4,6 +4,9 @@
 }
 
 /* tr.rowlink */
+tr.rowlink .nowrap {
+    white-space: nowrap;
+}
 .ajax-new {
     background-color:#ffdddd!important;
     opacity: 1;

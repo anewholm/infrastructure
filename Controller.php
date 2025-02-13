@@ -393,66 +393,69 @@ HTML;
 
     public function onWebSocket()
     {
-        $eventData  = post('event');
-        $eventClass = $eventData['eventClass']; // Fully Qualified
-        $event      = $eventClass::fromArray($eventData); // DataChange, UserNavigation
-        $context    = (object) post('context'); // [acorn, data, change]
         $handled    = FALSE;
+        $eventData  = post('event');
+        // Check if it is a WebSocket event that we understand
+        if (is_array($eventData) && isset($eventData['eventClass'])) {
+            $eventClass = $eventData['eventClass']; // Fully Qualified
+            $event      = $eventClass::fromArray($eventData); // DataChange, UserNavigation
+            $context    = (object) post('context'); // [acorn, data, change]
 
-        // Actually only necessary for partials with 'list'
-        // Request::header('X_WINTER_REQUEST_PARTIALS')
-        if (array_search(ListController::class, $this->implement)) {
-            // Returns 'list' => Backend\Widgets\Lists
-            $this->makeLists();
-        }
+            // Actually only necessary for partials with 'list'
+            // Request::header('X_WINTER_REQUEST_PARTIALS')
+            if (array_search(ListController::class, $this->implement)) {
+                // Returns 'list' => Backend\Widgets\Lists
+                $this->makeLists();
+            }
 
-        // ALL websocket events come through to here
-        // DataChange, UserNavigation, etc.
-        switch (get_class($event)) {
-            case DataChange::class:
-                // Backend\Behaviors\ListController
-                if (property_exists($this->widget, 'list')) {
-                    // List config
-                    $listWidget = $this->widget->list;
-                    $listConfig = &$listWidget->config;
-                    $listModel  = &$listConfig->model;
-                    $eventModel = $event->model();
+            // ALL websocket events come through to here
+            // DataChange, UserNavigation, etc.
+            switch (get_class($event)) {
+                case DataChange::class:
+                    // Backend\Behaviors\ListController
+                    if (property_exists($this->widget, 'list')) {
+                        // List config
+                        $listWidget = $this->widget->list;
+                        $listConfig = &$listWidget->config;
+                        $listModel  = &$listConfig->model;
+                        $eventModel = $event->model();
 
-                    if (get_class($listModel) == get_class($eventModel)) {
-                        // Highlight the new change in list displays
-                        $listWidget->bindEvent('list.injectRowClass', function ($record) use (&$event) {
-                            if ($record->id() == $event->id()) {
-                                return 'ajax-new';
-                            }
-                        });
+                        if (get_class($listModel) == get_class($eventModel)) {
+                            // Highlight the new change in list displays
+                            $listWidget->bindEvent('list.injectRowClass', function ($record) use (&$event) {
+                                if ($record->id() == $event->id()) {
+                                    return 'ajax-new';
+                                }
+                            });
+                        }
                     }
-                }
 
-                // Flash
-                $unqualifiedClassName = $eventModel->unqualifiedClassName();
-                $operation            = $event->operation();
-                $updateUrl            = ''; // $eventModel->controllerUrl('update', $event->id());
-                $viewHTML             = ''; // TODO: "<a target='_blank' href='$updateUrl'>view</a>";
-                $flash                = "A new $unqualifiedClassName has been $operation. $viewHTML";
-                Flash::success($flash);
+                    // Flash
+                    $unqualifiedClassName = $eventModel->unqualifiedClassName();
+                    $operation            = $event->operation();
+                    $updateUrl            = ''; // $eventModel->controllerUrl('update', $event->id());
+                    $viewHTML             = ''; // TODO: "<a target='_blank' href='$updateUrl'>view</a>";
+                    $flash                = "A new $unqualifiedClassName has been $operation. $viewHTML";
+                    Flash::success($flash);
 
-                $handled = TRUE;
-                break;
+                    $handled = TRUE;
+                    break;
 
-            case UserNavigation::class:
-                $user = BackendAuth::user();
-                if ($event->isFor($user)) {
-                    // TODO: Acorn\\Events\\UserNavigation return a Redirect command
-                }
-                $handled = TRUE;
-                break;
+                case UserNavigation::class:
+                    $user = BackendAuth::user();
+                    if ($event->isFor($user)) {
+                        // TODO: Acorn\\Events\\UserNavigation return a Redirect command
+                    }
+                    $handled = TRUE;
+                    break;
+            }
+
+            // ~/modules/backend/classes/Controller.php execAjaxHandlers() will now:
+            // $partialList = Request::header('X_WINTER_REQUEST_PARTIALS')
+            // foreach ($partialList as $partial) {
+            //     $responseContents[$partial] = $this->makePartial($partial);
+            // }
         }
-
-        // ~/modules/backend/classes/Controller.php execAjaxHandlers() will now:
-        // $partialList = Request::header('X_WINTER_REQUEST_PARTIALS')
-        // foreach ($partialList as $partial) {
-        //     $responseContents[$partial] = $this->makePartial($partial);
-        // }
 
         return $handled;
     }
