@@ -151,44 +151,52 @@ class ServiceProvider extends ModuleServiceProvider
         parent::register();
 
         // Settings placeholders
-        if (class_exists('SettingsManager'))
-            SettingsManager::instance()->registerCallback(function ($manager) {
-                $manager->registerSettingItems('Acorn.Module', [
-                    'interface' => [
-                        'label'       => 'acorn::lang.settings.interface.menu_label',
-                        'description' => 'acorn::lang.settings.interface.menu_description',
-                        'category'    => 'Acorn',
-                        'icon'        => 'icon-paint-brush',
-                        'class'       => 'Acorn\Models\InterfaceSetting',
-                        'permissions' => ['acorn.manage_interface'],
-                        'order'       => 500,
-                        'keywords'    => 'interface'
-                    ],
-                    'reporting' => [
-                        'label'       => 'acorn::lang.settings.reporting.menu_label',
-                        'description' => 'acorn::lang.settings.reporting.menu_description',
-                        'category'    => 'Acorn',
-                        'icon'        => 'icon-book',
-                        'class'       => 'Acorn\Models\ReportingSetting',
-                        'permissions' => ['acorn.manage_reporting'],
-                        'order'       => 500,
-                        'keywords'    => 'reporting'
-                    ],
-                ]);
-            });
+        SettingsManager::instance()->registerCallback(function ($manager) {
+            $manager->registerSettingItems('Acorn.Module', [
+                'interface' => [
+                    'label'       => 'acorn::lang.settings.interface.menu_label',
+                    'description' => 'acorn::lang.settings.interface.menu_description',
+                    'category'    => 'Acorn',
+                    'icon'        => 'icon-paint-brush',
+                    'class'       => 'Acorn\Models\InterfaceSetting',
+                    'permissions' => ['acorn.manage_interface'],
+                    'order'       => 500,
+                    'keywords'    => 'interface'
+                ],
+                'reporting' => [
+                    'label'       => 'acorn::lang.settings.reporting.menu_label',
+                    'description' => 'acorn::lang.settings.reporting.menu_description',
+                    'category'    => 'Acorn',
+                    'icon'        => 'icon-book',
+                    'class'       => 'Acorn\Models\ReportingSetting',
+                    'permissions' => ['acorn.manage_reporting'],
+                    'order'       => 500,
+                    'keywords'    => 'reporting'
+                ],
+                'phpinfo' => [
+                    'label'       => 'acorn::lang.settings.phpinfo.menu_label',
+                    'description' => 'acorn::lang.settings.phpinfo.menu_description',
+                    'category'    => 'Acorn',
+                    'icon'        => 'icon-chart-simple',
+                    'class'       => 'Acorn\Models\PhpInfo',
+                    'permissions' => ['acorn.manage_reporting'],
+                    'order'       => 500,
+                    'keywords'    => 'reporting'
+                ],
+            ]);
+        });
 
         // Register FormWidgets
-        if (class_exists('WidgetManager'))
-            WidgetManager::instance()->registerFormWidgets(function($manager) {
-                $manager->registerFormWidget('Acorn\FormWidgets\QrScan', [
-                    'label' => 'QR Scan Field',
-                    'code'  => 'qrscan'
-                ]);
-                $manager->registerFormWidget('Acorn\FormWidgets\QrCode', [
-                    'label' => 'QR Generate Field',
-                    'code'  => 'qrcode'
-                ]);
-            });
+        WidgetManager::instance()->registerFormWidgets(function($manager) {
+            $manager->registerFormWidget('Acorn\FormWidgets\QrScan', [
+                'label' => 'QR Scan Field',
+                'code'  => 'qrscan'
+            ]);
+            $manager->registerFormWidget('Acorn\FormWidgets\QrCode', [
+                'label' => 'QR Generate Field',
+                'code'  => 'qrcode'
+            ]);
+        });
     }
 
     // ---------------------------------------- Status helpers

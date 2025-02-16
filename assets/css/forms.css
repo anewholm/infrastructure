@@ -237,8 +237,11 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 }
 
 /* Tab only for the relation with one Model */
-.single-tab > label {
+.form-group.single-tab > label {
     display: none;
+}
+.form-group.single-tab {
+    width: 100%;
 }
 
 /* qrcode field display, no label */
