@@ -7,6 +7,9 @@
 tr.rowlink .nowrap {
     white-space: nowrap;
 }
+.hover-indicator {
+    border-bottom: 1px dashed #d0d0d0; 
+}
 .ajax-new {
     background-color:#ffdddd!important;
     opacity: 1;

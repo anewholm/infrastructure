@@ -19,6 +19,10 @@
             'cube_refresh' => 'Cube refresh strategy',
             'cube_refresh_interval' => 'Cube refresh interval'
         ],
+        'phpinfo' => [
+            'menu_label' => 'PHP Info',
+            'menu_description' => 'Server information',
+        ],
         'infrastructure' => 'Infrastructure',
         'seeding_functions' => 'Seeding functions',
     ],

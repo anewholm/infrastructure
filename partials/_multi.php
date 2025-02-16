@@ -58,32 +58,35 @@ if ($value) {
     $i     = 0;
     print("<ul id='$multiId' class='multi'>");
     $value->each(function ($model) use (&$i, &$limit, $valueFrom, $action, $multiId, $useLinkedPopups) {
-        // A method is used because of Encapsulation
-        $name       = $model->$valueFrom(); // TODO: AA\User and FQN?
         $id         = $model->id();
         $controller = $model->controllerFullyQualifiedClass();
-        $dataRequestData = array(
-            'route'   => "$controller@$action",
-            'params'  => [$id],
-            'dataRequestUpdate' => array('multi' => $multiId),
-        );
-        $nameEscaped = e($name);
-
+        
+        // Name resolution
+        $name = '';
+        if      (method_exists($model, $valueFrom)) $name = $model->$valueFrom();
+        else if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
+        if (!$name) {
+            $name = '&lt;noname&gt;';
+        }
+        
         // Output LI item
         print('<li>');
+        $nameEscaped = e($name);
         if ($useLinkedPopups) {
-            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
-            print(<<<HTML
-            <a
-                data-handler="onPopupRoute"
-                data-request-data="$dataRequestDataEscaped"
-                data-control="popup"
-            >$nameEscaped</a>
-HTML
+            $dataRequestData = array(
+                'route'   => "$controller@$action",
+                'params'  => [$id],
+                'dataRequestUpdate' => array('multi' => $multiId),
             );
-        } else {
-            print($nameEscaped);
+            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
+            print("<a
+                data-handler='onPopupRoute'
+                data-request-data='$dataRequestDataEscaped'
+                data-control='popup'>"
+            );
         }
+        print($nameEscaped);
+        if ($useLinkedPopups) print('</a>');
         print('</li>');
 
         // False exists the loop
@@ -93,6 +96,7 @@ HTML
     print('</ul>');
 
     if ($count > $limit) {
+        // Leave this "more" link to simply open the full record update screen
         $more = e(trans('more...'));
         print("<a class='more'>$more</a>");
     }
