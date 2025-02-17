@@ -243,6 +243,11 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 .form-group.single-tab {
     width: 100%;
 }
+.form-group.highlight-value:has(input[value]:not([value=""])) {
+    border:2px solid #ff5555;
+    background-color: #ffaaaa;
+    border-radius: 5px;
+}
 
 /* qrcode field display, no label */
 .form-group.partial-field[data-field-name=_qrcode] > svg {
