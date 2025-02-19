@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use DB;
 use App;
@@ -17,13 +17,13 @@ use Backend\Classes\WidgetManager;
 use System\Classes\MarkupManager;
 use System\Classes\SettingsManager;
 use Backend\Classes\FormTabs;
-use AcornAssociated\FormWidgets\QrCode;
+use Acorn\FormWidgets\QrCode;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as SimpleSoftwareQrCode;
 use Backend\Widgets\Lists as BackendLists;
 
 use Winter\Storm\Support\ModuleServiceProvider;
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
-use AcornAssociated\Messaging\Console\RunCommand;
+use Acorn\Messaging\Console\RunCommand;
 use \System\Controllers\Updates;
 
 class ServiceProvider extends ModuleServiceProvider
@@ -35,19 +35,19 @@ class ServiceProvider extends ModuleServiceProvider
         // -------------------------------------- Global CSS
         if (self::isDebugAny()) {
             Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
-                $controller->addCss('~/modules/acornassociated/assets/css/debug.css');
-                $controller->addJs( '~/modules/acornassociated/assets/js/debug.js');
+                $controller->addCss('~/modules/acorn/assets/css/debug.css');
+                $controller->addJs( '~/modules/acorn/assets/js/debug.js');
             });
         }
         Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
-            $controller->addCss('~/modules/acornassociated/assets/css/module.css');
-            $controller->addJs('~/modules/acornassociated/assets/js/acornassociated.js');
-            $controller->addJs('~/modules/acornassociated/assets/js/acornassociated.websocket.js', array('type' => 'module'));
-            $controller->addJs('~/modules/acornassociated/assets/js/html5-qrcode.js');
-            $controller->addJs('~/modules/acornassociated/assets/js/findbyqrcode.js');
-            $controller->addJs('~/modules/acornassociated/assets/js/forms.js');
-            $controller->addJs('~/modules/acornassociated/assets/js/tabbing.js');
-            $controller->addJs('~/modules/acornassociated/assets/js/lang/lang.'.App::getLocale().'.js');//Translate JS [en][ar][ku]
+            $controller->addCss('~/modules/acorn/assets/css/module.css');
+            $controller->addJs('~/modules/acorn/assets/js/acorn.js');
+            $controller->addJs('~/modules/acorn/assets/js/acorn.websocket.js', array('type' => 'module'));
+            $controller->addJs('~/modules/acorn/assets/js/html5-qrcode.js');
+            $controller->addJs('~/modules/acorn/assets/js/findbyqrcode.js');
+            $controller->addJs('~/modules/acorn/assets/js/forms.js');
+            $controller->addJs('~/modules/acorn/assets/js/tabbing.js');
+            $controller->addJs('~/modules/acorn/assets/js/lang/lang.'.App::getLocale().'.js');//Translate JS [en][ar][ku]
         });
 
         Event::listen('backend.form.extendFields', function ($widget) {
@@ -73,7 +73,7 @@ class ServiceProvider extends ModuleServiceProvider
             }
         });
 
-        // --------------------------------------------- acornassociated_infrastructure
+        // --------------------------------------------- acorn_infrastructure
         if (!self::$pluginFlags) {
             $results = DB::select('select * from public.system_plugin_versions');
             foreach ($results as $result) self::$pluginFlags[$result->code] = $result;
@@ -82,7 +82,7 @@ class ServiceProvider extends ModuleServiceProvider
         Event::listen('backend.menu.extendItems', function (&$navigationManager) {
             $mainMenuItems = $navigationManager->listMainMenuItems();
             foreach (self::$pluginFlags as $plugin) {
-                if (property_exists($plugin, 'acornassociated_infrastructure') && $plugin->acornassociated_infrastructure) {
+                if (property_exists($plugin, 'acorn_infrastructure') && $plugin->acorn_infrastructure) {
                     foreach ($mainMenuItems as $mainMenu) {
                         if ($plugin->code == $mainMenu->owner) 
                             $navigationManager->removeMainMenuItem($plugin->code, $mainMenu->code);
@@ -94,22 +94,22 @@ class ServiceProvider extends ModuleServiceProvider
         Updates::extendListColumns(function ($widget, $model) {
             // We need to be careful when using the database
             // during migrations, tables may not exist
-            $widget->getController()->addViewPath('modules/acornassociated/partials');
+            $widget->getController()->addViewPath('modules/acorn/partials');
             $widget->addColumns([
-                'acornassociated_infrastructure' => [
-                    'label'   => 'acornassociated::lang.settings.infrastructure',
+                'acorn_infrastructure' => [
+                    'label'   => 'acorn::lang.settings.infrastructure',
                     'type'    => 'partial',
                     'path'    => 'is_infrastructure',
                 ],
-                'acornassociated_seeding' => [
-                    'label'   => 'acornassociated::lang.settings.seeding_functions',
+                'acorn_seeding' => [
+                    'label'   => 'acorn::lang.settings.seeding_functions',
                     'type'    => 'partial',
                     'path'    => 'seeding_functions',
                 ],
             ]);
         });
 
-        parent::boot('acornassociated');
+        parent::boot('acorn');
     }
 
     protected function missingServices(): array
@@ -152,34 +152,34 @@ class ServiceProvider extends ModuleServiceProvider
 
         // Settings placeholders
         SettingsManager::instance()->registerCallback(function ($manager) {
-            $manager->registerSettingItems('AcornAssociated.Module', [
+            $manager->registerSettingItems('Acorn.Module', [
                 'interface' => [
-                    'label'       => 'acornassociated::lang.settings.interface.menu_label',
-                    'description' => 'acornassociated::lang.settings.interface.menu_description',
-                    'category'    => 'AcornAssociated',
+                    'label'       => 'acorn::lang.settings.interface.menu_label',
+                    'description' => 'acorn::lang.settings.interface.menu_description',
+                    'category'    => 'Acorn',
                     'icon'        => 'icon-paint-brush',
-                    'class'       => 'AcornAssociated\Models\InterfaceSetting',
-                    'permissions' => ['acornassociated.manage_interface'],
+                    'class'       => 'Acorn\Models\InterfaceSetting',
+                    'permissions' => ['acorn.manage_interface'],
                     'order'       => 500,
                     'keywords'    => 'interface'
                 ],
                 'reporting' => [
-                    'label'       => 'acornassociated::lang.settings.reporting.menu_label',
-                    'description' => 'acornassociated::lang.settings.reporting.menu_description',
-                    'category'    => 'AcornAssociated',
+                    'label'       => 'acorn::lang.settings.reporting.menu_label',
+                    'description' => 'acorn::lang.settings.reporting.menu_description',
+                    'category'    => 'Acorn',
                     'icon'        => 'icon-book',
-                    'class'       => 'AcornAssociated\Models\ReportingSetting',
-                    'permissions' => ['acornassociated.manage_reporting'],
+                    'class'       => 'Acorn\Models\ReportingSetting',
+                    'permissions' => ['acorn.manage_reporting'],
                     'order'       => 500,
                     'keywords'    => 'reporting'
                 ],
                 'phpinfo' => [
-                    'label'       => 'acornassociated::lang.settings.phpinfo.menu_label',
-                    'description' => 'acornassociated::lang.settings.phpinfo.menu_description',
-                    'category'    => 'AcornAssociated',
+                    'label'       => 'acorn::lang.settings.phpinfo.menu_label',
+                    'description' => 'acorn::lang.settings.phpinfo.menu_description',
+                    'category'    => 'Acorn',
                     'icon'        => 'icon-chart-simple',
-                    'class'       => 'AcornAssociated\Models\PhpInfo',
-                    'permissions' => ['acornassociated.manage_reporting'],
+                    'class'       => 'Acorn\Models\PhpInfo',
+                    'permissions' => ['acorn.manage_reporting'],
                     'order'       => 500,
                     'keywords'    => 'reporting'
                 ],
@@ -188,11 +188,11 @@ class ServiceProvider extends ModuleServiceProvider
 
         // Register FormWidgets
         WidgetManager::instance()->registerFormWidgets(function($manager) {
-            $manager->registerFormWidget('AcornAssociated\FormWidgets\QrScan', [
+            $manager->registerFormWidget('Acorn\FormWidgets\QrScan', [
                 'label' => 'QR Scan Field',
                 'code'  => 'qrscan'
             ]);
-            $manager->registerFormWidget('AcornAssociated\FormWidgets\QrCode', [
+            $manager->registerFormWidget('Acorn\FormWidgets\QrCode', [
                 'label' => 'QR Generate Field',
                 'code'  => 'qrcode'
             ]);

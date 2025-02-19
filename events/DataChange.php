@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated\Events;
+<?php namespace Acorn\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -10,7 +10,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 
-use AcornAssociated\Model;
+use Acorn\Model;
 use \Exception;
 
 // TODO: When queued (ShouldBroadcast) it doesn't work
@@ -82,7 +82,7 @@ class DataChange implements ShouldBroadcast, ShouldBroadcastNow
     public function broadcastOn()
     {
         return [
-            new Channel('acornassociated')
+            new Channel('acorn')
         ];
     }
 

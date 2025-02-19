@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated\Events;
+<?php namespace Acorn\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -45,7 +45,7 @@ class UserNavigation implements ShouldBroadcast, ShouldBroadcastNow
     public function broadcastOn()
     {
         return [
-            new Channel('acornassociated')
+            new Channel('acorn')
         ];
     }
 
