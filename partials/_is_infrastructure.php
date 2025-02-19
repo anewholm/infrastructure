@@ -1,14 +1,14 @@
 <?php 
 if ($this->action == 'manage') {
-    $action = $record->acornassociated_infrastructure ? 'set-acornassociated_infrastructure' : 'unset-acornassociated_infrastructure'; ?>
+    $action = $record->acorn_infrastructure ? 'set-acorn_infrastructure' : 'unset-acorn_infrastructure'; ?>
     <label class="custom-switch" data-check="wn-disable-<?= $record->id ?>" style="margin-bottom:0">
         <input data-request="onBulkAction"
             data-request-data="action: '<?= $action ?>', checked: [<?= $record->id ?>]"
             data-request-update="list_manage_toolbar: '#plugin-toolbar'"
             type="checkbox"
             name="disable_<?= $record->id ?>"
-            value="<?= $record->acornassociated_infrastructure ?>"
-            <?php if ($record->acornassociated_infrastructure): ?>
+            value="<?= $record->acorn_infrastructure ?>"
+            <?php if ($record->acorn_infrastructure): ?>
                 checked="checked"
             <?php endif ?>
             data-stripe-load-indicator

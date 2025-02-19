@@ -39,7 +39,7 @@ $(document).ready(function(){
   });
 });
 
-function acornassociated_popupComplete(context, textStatus, jqXHR) {
+function acorn_popupComplete(context, textStatus, jqXHR) {
   // When the popup closes, this function will set any passed value
   // on the original form popup button, indicated in field_name
   // and then trigger its change

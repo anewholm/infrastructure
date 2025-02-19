@@ -1,7 +1,7 @@
 <?php
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Http\Request;
-use AcornAssociated\Controllers\DB;
+use Acorn\Controllers\DB;
 use BeyondCode\LaravelWebSockets\Dashboard\Http\Controllers\ShowDashboard;
 
 class AuthWrapper
@@ -16,7 +16,7 @@ class AuthWrapper
 }
 
 Event::listen('system.route', function () {
-    Event::fire('acornassociated.beforeRoute');
+    Event::fire('acorn.beforeRoute');
 
     Route::get('/api/datachange', DB::class . '@datachange');
     Route::get('/laravel-dashboard', ShowDashboard::class);
@@ -29,5 +29,5 @@ Event::listen('system.route', function () {
     Route::get( '/api/comment', DB::class . '@comment');
     Route::post('/api/comment', DB::class . '@comment');
 
-    Event::fire('acornassociated.route');
+    Event::fire('acorn.route');
 }, PHP_INT_MIN);

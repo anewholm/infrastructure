@@ -1,4 +1,4 @@
-function acornassociated_debug(){
+function acorn_debug(){
     $('*[debug-pane]').hover(function(){
         if (!$(this).children('div.debug').length) {
             var $debugPane = $($(this).attr('debug-pane'));
@@ -34,5 +34,5 @@ function acornassociated_debug(){
         }
     });
 }
-$(document).ready(acornassociated_debug);
-$(document).on('complete.oc.popup', acornassociated_debug);
+$(document).ready(acorn_debug);
+$(document).on('complete.oc.popup', acorn_debug);

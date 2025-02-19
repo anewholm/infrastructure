@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use Winter\Storm\Database\Model as BaseModel;
 use Winter\Storm\Database\Pivot;
@@ -10,8 +10,8 @@ use Winter\Storm\Support\Facades\Schema;
 use Illuminate\Support\Facades\Redirect;
 
 use Illuminate\Support\Str;
-use AcornAssociated\Builder;
-use AcornAssociated\Collection;
+use Acorn\Builder;
+use Acorn\Collection;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -31,7 +31,7 @@ use InvalidArgumentException;
 
 use Illuminate\Support\Facades\Route;
 use Backend\Classes\BackendController;
-use AcornAssociated\BackendRequestController;
+use Acorn\BackendRequestController;
 
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
@@ -47,16 +47,16 @@ use Backend\Classes\FormField;
 use Backend\Behaviors\FormController;
 use Winter\Storm\Database\TreeCollection;
 use Backend\Widgets\Filter;
-use \AcornAssociated\Backendlocalization\Class\TranslateBackend;
+use \Acorn\Backendlocalization\Class\TranslateBackend;
 
 use Exception;
 use Flash;
 
-use AcornAssociated\Events\UserNavigation;
-use AcornAssociated\Events\DataChange;
-use AcornAssociated\Events\ModelBeforeSave;
-use AcornAssociated\Events\ModelAfterSave;
-use AcornAssociated\Models\Server;
+use Acorn\Events\UserNavigation;
+use Acorn\Events\DataChange;
+use Acorn\Events\ModelBeforeSave;
+use Acorn\Events\ModelAfterSave;
+use Acorn\Models\Server;
 
 /*
 class Saving {
@@ -270,7 +270,7 @@ class Model extends BaseModel
                 $message = $qe->getMessage();
                 switch ($qe->getCode()) {
                     case 23514:
-                        // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acornassociated_finance_invoices" violates check constraint "payee_either_or"
+                        // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acorn_finance_invoices" violates check constraint "payee_either_or"
                         if (preg_match_all('/relation "([^"]+)" violates check constraint "([^"]+)"/', $message, $matches) == 1) {
                             if (count($matches) == 3) {
                                 // TODO: Make this a nice validation Flash message
@@ -282,7 +282,7 @@ class Model extends BaseModel
                         break;
                     case 23502:
                         // NotNullConstraintViolationException
-                        // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acornassociated_finance_receipts" violates not-null constraint
+                        // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acorn_finance_receipts" violates not-null constraint
                         if (preg_match_all('/column "([^"]+)" of relation "([^"]+)"/', $message, $matches) == 1) {
                             if (count($matches) == 3) {
                                 // TODO: Make this a nice validation Flash message
@@ -312,11 +312,11 @@ class Model extends BaseModel
     /*
     public $hasManyDeep = [
         'legalcase_justice_scanned_documents_legalcase' => [
-            \AcornAssociated\Justice\Models\ScannedDocument::class,
+            \Acorn\Justice\Models\ScannedDocument::class,
             'throughRelations'    => ['legalcase', 'justice_scanned_documents_legalcase']
         ],
         'legalcase_justice_legalcase_identifiers_legalcase' => [
-            \AcornAssociated\Justice\Models\LegalcaseIdentifier::class,
+            \Acorn\Justice\Models\LegalcaseIdentifier::class,
             'throughRelations'    => ['legalcase', 'justice_legalcase_identifiers_legalcase']
         ],
     ];
@@ -326,22 +326,22 @@ class Model extends BaseModel
     /*
     public $hasManyDeep = [
         'legalcase_justice_legalcase_legalcase_category_legalcases' => [
-            \AcornAssociated\Justice\Models\LegalcaseCategory::class,
+            \Acorn\Justice\Models\LegalcaseCategory::class,
             'throughRelations'    => ['legalcase', 'justice_legalcase_legalcase_category_legalcases']
         ],
     ];
 
     // This results in the following:
     HasManyDeep(object) {
-        parent:         AcornAssociated\Justice\Models\LegalCase
-        related:        AcornAssociated\Justice\Models\LegalCaseCategory
-        throughParent:  AcornAssociated\Justice\Models\LegalCase
-        farParent:      AcornAssociated\Criminal\Models\LegalCase
+        parent:         Acorn\Justice\Models\LegalCase
+        related:        Acorn\Justice\Models\LegalCaseCategory
+        throughParent:  Acorn\Justice\Models\LegalCase
+        farParent:      Acorn\Criminal\Models\LegalCase
         firstKey:       id
         secondKey:      legalcase_id
         localKey:       legalcase_id
         secondLocalKey: id
-        throughParents: [AcornAssociated\Justice\Models\LegalCase, Pivot(acornassociated_justice_legalcase_legalcase_category)]
+        throughParents: [Acorn\Justice\Models\LegalCase, Pivot(acorn_justice_legalcase_legalcase_category)]
         foreignKeys:    [id, legalcase_id, id]
         localKeys:      [legalcase_id, id, legalcase_category_id]
     }
@@ -436,7 +436,7 @@ class Model extends BaseModel
                 }
 
                 // Create relation object
-                $relationObj = new \AcornAssociated\Relationships\HasManyDeep(
+                $relationObj = new \Acorn\Relationships\HasManyDeep(
                     $query,
                     $farParent, // $this
                     $throughParents, // $parent = $throughParents[0]
@@ -478,7 +478,7 @@ class Model extends BaseModel
     // --------------------------------------------- Querying
     public function newEloquentBuilder($query): Builder
     {
-        // AcornAssociated Builder extensions
+        // Acorn Builder extensions
         // Ensure we remain in the family
         // causes chained queries to always work with our Builder
         return new Builder($query);
@@ -726,7 +726,7 @@ SQL;
         );
 
         // Simple where options
-        // options: AcornAssociated\Lojistiks\Models\ProductInstance::dropdownOptions
+        // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
         //     where:
         //       uses_quantity: false
         if (isset($field->config['where'])) {
@@ -827,12 +827,12 @@ SQL;
             // ----------------------------------- User stateful Url
             if (get('set-url') === '') {
                 if ($user = BackendAuth::user()) {
-                    if (array_key_exists('acornassociated_url', $user->getAttributes())) {
+                    if (array_key_exists('acorn_url', $user->getAttributes())) {
                         $removeQuery = '/\?.*/'; // To avoid a continuous request loop
-                        $user->acornassociated_url = preg_replace($removeQuery, '', Request::getRequestUri());
+                        $user->acorn_url = preg_replace($removeQuery, '', Request::getRequestUri());
                         $user->save();
                         // Raise websockets event
-                        UserNavigation::dispatch($user, $user->acornassociated_url); // channel=acornassociated, user.navigation
+                        UserNavigation::dispatch($user, $user->acorn_url); // channel=acorn, user.navigation
                     }
                 }
             }
@@ -1071,7 +1071,7 @@ SQL;
             }
 
             // ----------------------------------- Extended config options
-            // options: AcornAssociated\Lojistiks\Models\ProductInstance::dropdownOptions
+            // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
             // where:
             //   location: @source_location
             /* TODO: filterFields() live dynamic changes
