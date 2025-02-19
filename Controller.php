@@ -10,10 +10,12 @@ use DB;
 use File;
 use Form;
 use Request;
+use Redirect;
 use ReflectionClass;
 use Flash;
 use \Exception;
 use Str;
+use Winter\Storm\Html\Helper as HtmlHelper;
 
 use Acorn\User\Models\User;
 use Acorn\Events\DataChange;
@@ -27,9 +29,12 @@ class Controller extends BackendController
 {
     use Traits\PathsHelper;
 
+    public const DENEST = TRUE;
+
     // These can appear in Lists and Forms
     // wherever the model is displayed
     // see config_form.yaml
+    // TODO: Not implemented yet. Only Model->actionFunctions is implemented
     public $actionFunctions = array();
 
     public function __construct()
@@ -303,8 +308,18 @@ HTML;
 
     public function onActionFunction(): string
     {
-        $results     = array();
+        // Action functions can:
+        //   - require user input
+        //   - require verification
+        //   - show results
+        // If the parameters are all satisfied, then we run the function
+        // otherwise we will present a form
+        $response    = ''; 
+        $modelId     = post('modelId');
+        $modelClass  = post('model');
         $fnName      = post('name');
+        $postParams  = post('parameters') ?? array();
+        $user        = User::authUser();
         $closeName   = $this->transBackend('close');
         $eventJs     = 'popup';
         $initJs      = "$('body > .control-popup').trigger('$eventJs');";
@@ -313,41 +328,172 @@ HTML;
         $nameParts   = array_slice($fnNameParts, 5);
         $title       = e(trans(Str::title(implode(' ', $nameParts))));
         $modelName   = $this->unqualifiedClassName();
+        
+        if (!$fnName)     throw new \Exception("onActionFunction() had no POST name");
+        if (!$modelId)    throw new \Exception("onActionFunction() had no POST id");
+        if (!$modelClass) throw new \Exception("onActionFunction() had no POST Model class");
+        if (!$user)       throw new \Exception("onActionFunction() requires logged in user with associated User::user");
+        
+        // These will throw their own Exceptions
+        $model          = $modelClass::find($modelId);
+        $actionFunctionDefinition = $model->actionFunctions($fnName);
+        $fnDatabaseName = $actionFunctionDefinition['fnDatabaseName'];
+        $fnParams       = $actionFunctionDefinition['parameters'];
+        $returnType     = $actionFunctionDefinition['returnType'];
+        $title          = trans($actionFunctionDefinition['label']);
+        $resultAction   = $actionFunctionDefinition['resultAction'] ?? NULL;
+        
+        // TODO: SECURITY: Action Function Premissions
 
-        if ($fnName) {
-            if ($parameters = post('parameters')) {
-                if ($id = post('id')) {
-                    if ($user = User::authUser()) {
-                        // TODO: Dynamic parameters. Popup?
-                        foreach ($parameters as $name => $type) {
-                        }
+        // Parameter gathering
+        $paramsMerged      = array();
+        $unsatisfiedParams = array();
+        foreach ($fnParams as $paramName => $paramType) {
+            switch ($paramName) {
+                case 'model_id':
+                    $paramsMerged[$paramName] = array(
+                        'value' => $model->id(),
+                        'type'  => $paramType,
+                    );
+                    break;
+                case 'user_id':
+                    $paramsMerged[$paramName] = array(
+                        'value' => $user->id,
+                        'type'  => $paramType,
+                    );
+                    break;
+                default:
+                    if (isset($postParams[$paramName])) $paramsMerged[$paramName] = array(
+                        'value' => $postParams[$paramName],
+                        'type'  => $paramType,
+                    );
+                    else {
+                        $unsatisfiedParams[$paramName] = array(
+                            'type'  => $paramType,
+                        );
+                    }
+                    break;
+            }
+        }
+            
+        if (count($unsatisfiedParams)) {
+            // ---------------------------------------------------- Show a form
+            // Construct the form configuration
+            $fieldsPath  = $this->modelDirectoryPathRelative('fields.yaml');
+            $modelFields = $this->flattenFields($this->makeConfig($fieldsPath), self::DENEST);
+            $formConfig = array(
+                'model'  => $model,
+                'fields' => array(),
+            );
 
-                        $results = DB::select("select $fnName(?, ?)", array($id, $user->id));
-                    } else throw new \Exception("onActionFunction() requires logged in user with associated User::user");
-                } else throw new \Exception("onActionFunction() had no POST id");
-            } else throw new \Exception("onActionFunction() had no POST parameters");
-        } else throw new \Exception("onActionFunction() had no POST name");
+            // Adopt the main models form field configs if there is one
+            foreach ($unsatisfiedParams as $paramName => $paramType) {
+                $baseParamName       = preg_replace('/_id$/', '', $paramName);
+                $fieldParametersName = "parameters[$paramName]";
+                if (isset($modelFields[$baseParamName])) {
+                    $fieldConfig = $modelFields[$baseParamName];
+                    $fieldConfig['comment'] = '';
+                    $formConfig['fields'][$fieldParametersName] = $fieldConfig;
+                } else {
+                    $formConfig['fields'][$fieldParametersName] = array(
+                        'label' => $paramName,
+                        'type'  => 'text',
+                    );
+                }
+            }
 
-        return <<<HTML
-            <div class="modal-header compact">
-                <button type="button" class="close" data-dismiss="popup">&times;</button>
-                <h4 class="modal-title">
-                    <div class='control-breadcrumb'><ul><li>$modelName</li><li>$title</li>></ul></div>
-                </h4>
-            </div>
-            <div class="modal-body">
-                SUCCESS
-            </div>
-            <div class="modal-footer">
-                <button
-                    type='button'
-                    data-dismiss='popup'
-                    class='btn btn-default'
-                    onclick='$refresh'
-                >$closeName</button>
-                <script>$initJs</script>
-            </div>
+            // Build a Form Widget
+            $form       = new \Backend\Widgets\Form($this, $formConfig);
+            $formOpen   = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
+            $formHtml   = $form->render();
+            $formClose  = Form::close();
+            $cancelName = $this->transBackend('cancel');
+                
+            // TODO: this stuffs
+            $dataRequest           = __FUNCTION__;
+            $dataRequestData       = post();
+            $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));;
+
+            // Render
+            $response = <<<HTML
+                <div class="modal-header compact">
+                    <button type="button" class="close" data-dismiss="popup">&times;</button>
+                    <h4 class="modal-title">
+                        <div class='control-breadcrumb'><ul><li>$title</li></ul></div>
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    $formOpen
+                    $formHtml
+                    $formClose
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type='submit'
+                        data-request='$dataRequest'
+                        data-request-form='.modal-body form'
+                        data-request-data='$dataRequestDataString'
+                        data-hotkey='ctrl+s, cmd+s'
+                        data-load-indicator='$title...'
+                        data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                        data-dismiss='popup'
+                        class='btn btn-primary'
+                    >
+                        $title
+                    </button>
+                    <button type='button' data-dismiss='popup' class='btn btn-default'>$cancelName</button>
+                    <script>$initJs</script>
+                </div>
 HTML;
+        } 
+        
+        else {
+            // ---------------------------------------------------- Run the action function
+            // The order is critical here as they are not named parameters
+            $results      = array();
+            $bindings     = array_pluck($paramsMerged, 'value');
+            $placeholders = implode(',', array_fill(0, count($bindings), '?'));
+            switch ($returnType) {
+                case 'record':
+                    // TODO: runFunction() 
+                    $results = DB::select("select * from $fnDatabaseName($placeholders)", $bindings);
+                    break;
+                default:
+                    $results = DB::select("select $fnDatabaseName($placeholders) as result", $bindings);
+            }
+            
+            // TODO: Respond with an immediate refresh
+            // TODO: configurable responses
+            switch ($resultAction) {
+                case 'model-uuid-redirect':
+                    $newModelId = $results[0]->result;
+                    Redirect::to($newModelId);
+                    break;
+                default:
+                    $response = <<<HTML
+                    <div class="modal-header compact">
+                        <button type="button" class="close" data-dismiss="popup">&times;</button>
+                        <h4 class="modal-title">
+                            <div class='control-breadcrumb'><ul><li>$modelName</li><li>$title</li>></ul></div>
+                        </h4>
+                    </div>
+                    <div class="modal-body">
+                        SUCCESS
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                        type='button'
+                        data-dismiss='popup'
+                        class='btn btn-default'
+                        onclick='$refresh'
+                        >$closeName</button>
+                        <script>$initJs</script>
+                    </div>
+HTML;
+            }
+        }
+
+        return $response;
     }
 
     public function onLoadQrScanPopup()
@@ -489,6 +635,28 @@ HTML;
         }
 
         return $html;
+    }
+
+    public function lastNestedFieldName(string $name): string
+    {
+        $names = HtmlHelper::nameToArray($name);
+        return end($names);
+    }
+
+    public function flattenFields(\stdClass $config, bool $denest = FALSE): array
+    {
+        $flatFields = array();
+        foreach ($config->fields as $name => $field) {
+            if ($denest) $name = $this->lastNestedFieldName($name);
+            $flatFields[$name] = $field;
+        }
+        if (property_exists($config, 'tabs')) {
+            foreach ($config->tabs['fields'] as $name => $field) {
+                if ($denest) $name = $this->lastNestedFieldName($name);
+                $flatFields[$name] = $field;
+            }
+        }
+        return $flatFields;
     }
 
     // -------------------------------------- ViewMaker overrides for debug
