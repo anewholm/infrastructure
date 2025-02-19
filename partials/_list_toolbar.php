@@ -25,6 +25,6 @@
     <a
         href="javascript:print()"
         class="btn btn-primary wn-icon-print">
-        <?= e(trans('acorn::lang.models.general.print')); ?>
+        <?= e(trans('acornassociated::lang.models.general.print')); ?>
     </a>
 </div>

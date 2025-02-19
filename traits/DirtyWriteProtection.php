@@ -1,6 +1,6 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
-use \Acorn\Exception\DirtyWrite;
+use \AcornAssociated\Exception\DirtyWrite;
 
 trait DirtyWriteProtection
 {

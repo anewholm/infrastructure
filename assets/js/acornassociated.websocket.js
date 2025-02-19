@@ -16,7 +16,7 @@ window.Echo   = new Echo({
 if (window.console) console.log(window.Echo);
 
 window.Echo
-    .channel('acorn')
+    .channel('acornassociated')
     .listen('.user.navigation', function(eventObject) {
         let url        = eventObject.url;
         let pathname   = url.replace(/^[a-z]+:\/\/[^/]+|\?.*/g, '');
@@ -24,9 +24,9 @@ window.Echo
     });
 
 
-let acorn_wsConnections = {};
+let acornassociated_wsConnections = {};
 $('[websocket-listen]').each(function(){
-    if (!acorn_wsConnections[location]) {
+    if (!acornassociated_wsConnections[location]) {
         let channel, eventName,
             channelEvent = $(this).attr('websocket-listen').split(':');
 
@@ -35,7 +35,7 @@ $('[websocket-listen]').each(function(){
             window.Echo
                 .channel(channel)
                 .listenToAll(function(_eventName, eventObject) {
-                    acorn_onEvent(channel, _eventName.substring(1), eventObject);
+                    acornassociated_onEvent(channel, _eventName.substring(1), eventObject);
                 });
         } else {
             channel   = channelEvent[0];
@@ -45,11 +45,11 @@ $('[websocket-listen]').each(function(){
             window.Echo
                 .channel(channel)
                 .listen(eventName, function(eventObject) {
-                    acorn_onEvent(channel, eventName.substring(1), eventObject);
+                    acornassociated_onEvent(channel, eventName.substring(1), eventObject);
                 });
         }
         if (window.console) console.info('Listening to websocket channel [' + channel + ']');
-        acorn_wsConnections[location] = true;
+        acornassociated_wsConnections[location] = true;
     }
 });
 
@@ -67,7 +67,7 @@ function removeUserId(attrBase){
     return attrBase;
 }
 
-function acorn_onEvent(channel, eventName, eventObject) {
+function acornassociated_onEvent(channel, eventName, eventObject) {
     if (window.console) console.log(eventObject); // e.g. DataChange
     
     // TODO: This recently changed, so probably broken the Calendar system
@@ -119,7 +119,7 @@ function acorn_onEvent(channel, eventName, eventObject) {
             let request = $(this).attr(requestAttrC) || 'onWebSocket',
                 update  = $(this).attr(updateAttrC),
                 success = $(this).attr(successAttrC),
-                sound   = $(this).attr(soundAttrC)   || '/modules/acorn/assets/sounds/notification.mp3',
+                sound   = $(this).attr(soundAttrC)   || '/modules/acornassociated/assets/sounds/notification.mp3',
                 jUpdate = (update ? JSON.parse('{' + update.replace(/'/g, '"') + '}') : null);
 
             // Send the whole event through, with context

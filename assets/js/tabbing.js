@@ -1,5 +1,5 @@
 // ---------------------------------------------- Tab key navigation
-function acorn_tabbing(){
+function acornassociated_tabbing(){
   $(':input[tab-preshow],.form-group[tab-preshow],.radio-field[tab-preshow]').keydown(function(event){
     if (event.keyCode == 9 && !event.shiftKey) {
       var tabPreShow = $(this).attr('tab-preshow');
@@ -100,11 +100,11 @@ function acorn_tabbing(){
 
   if (window.console) console.info('Tabbing setup');
 }
-$(document).ready(acorn_tabbing);
-$(window).on('ajaxUpdateComplete', acorn_tabbing);
+$(document).ready(acornassociated_tabbing);
+$(window).on('ajaxUpdateComplete', acornassociated_tabbing);
 
 // ---------------------------------------------- Initial Focus
-function acorn_initialFocus(event, jFrom) {
+function acornassociated_initialFocus(event, jFrom) {
   // Initial focusing
   if (!jFrom || !jFrom.length) jFrom = $(document);
   console.log(jFrom.find('form.layout :input:visible').first());
@@ -117,14 +117,14 @@ function acorn_initialFocus(event, jFrom) {
   var jFocus = $(':focus');
   if (jFocus.closest('.callout').length) jFocus.blur();
 };
-$(document).ready(acorn_initialFocus);
+$(document).ready(acornassociated_initialFocus);
 $(document).on('popup', function(event){
   // TODO: Initial focusing on popups does not work...
-  acorn_initialFocus(event, $(event.target));
+  acornassociated_initialFocus(event, $(event.target));
 });
 
 // ---------------------------------------------- Page load tab select
-function acorn_public_tabselect(tabHash, fieldHashClick, fieldHashFocus) {
+function acornassociated_public_tabselect(tabHash, fieldHashClick, fieldHashFocus) {
   // hash bang direct multi-function:
   // #!<tab select>/<field click>/<field highlight>
   // e.g. http://university-acceptance.laptop/backend/university/mofadala/controllerstudent/create#!tabselect/primarytab-universitymofadalalangmofadalacandidacy-intent/Form-field-ModelStudent-attending_the_nomination_examination/Form-field-ModelStudent-candidacy_examination_score

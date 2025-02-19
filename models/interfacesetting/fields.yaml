@@ -6,6 +6,6 @@
 
 fields:
     multi_max_items:
-        label: acorn::lang.settings.interface.multi_max_items
+        label: acornassociated::lang.settings.interface.multi_max_items
         span: auto
         type: number

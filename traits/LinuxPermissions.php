@@ -1,4 +1,4 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
 use BackendAuth;
 use \Illuminate\Auth\Access\AuthorizationException;

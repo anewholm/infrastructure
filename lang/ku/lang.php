@@ -4,7 +4,7 @@
 
 return [
     'module' => [
-        'name' => 'Acorn',
+        'name' => 'AcornAssociated',
         'setup' => 'Setup',
         'reports' => 'Reports',
         'replication_debug' => 'Replication Debug',
