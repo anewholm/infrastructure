@@ -756,6 +756,46 @@ SQL;
         return $list;
     }
 
+    public function actionFunctions(string $fnName = NULL): array {
+        // Direct model action functions
+        $actionFunctions = ($this->actionFunctions ?: array());
+        foreach ($actionFunctions as $name => &$actionFunctionDefinition) {
+            $condition = $actionFunctionDefinition['condition'] ?? NULL; 
+            if (!$condition || $this::where('id', $this->id())->whereRaw($condition)->count() != 0) {
+                // Populate the Model/Id for correct lookup later
+                $actionFunctionDefinition['model']    = get_class($this);
+                $actionFunctionDefinition['model_id'] = $this->id();
+            } else {
+                unset($actionFunctions[$name]);
+            }
+        }
+
+        // Inherit 1to1 BelongsTo relations model action functions
+        foreach ($this->belongsTo as $name => $relationDefinition) {
+            if (isset($relationDefinition['type']) && $relationDefinition['type'] == '1to1') {
+                $this->load($name);
+                if ($relatedModel = $this->getRelation($name)) {
+                    if ($relatedModel->actionFunctions) {
+                        // Existing actions take precedence
+                        // Write the sub-model id
+                        foreach ($relatedModel->actionFunctions as $name => &$actionFunctionDefinition) {
+                            $condition = $actionFunctionDefinition['condition'] ?? NULL;
+                            if (!$condition || $relatedModel::where('id', $relatedModel->id())->whereRaw($condition)->count() != 0) {
+                                // Populate the Model/Id for correct lookup later
+                                $actionFunctionDefinition['model']    = get_class($relatedModel);
+                                $actionFunctionDefinition['model_id'] = $relatedModel->id();
+                                $actionFunctions[$name] = $actionFunctionDefinition;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $fnName ? $actionFunctions[$fnName] : $actionFunctions;
+    }
+
+
     /**
     * Extract the record ID from the URL.
     *

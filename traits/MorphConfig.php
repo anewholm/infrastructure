@@ -3,6 +3,7 @@
 use Acorn\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use \Exception;
+use BackendAuth;
 
 Trait MorphConfig
 {
@@ -16,6 +17,7 @@ Trait MorphConfig
             ? get_class($this->relationModel) 
             : $this->getConfig('modelClass')
         );
+        $user = BackendAuth::user();
 
         if (is_string($configFile) && $configFile) {
             $configFileParts = explode('/', $configFile);
@@ -140,6 +142,46 @@ Trait MorphConfig
                             if (!property_exists($config, 'tertiaryTabs')) $config->tertiaryTabs = array();
                             if (!isset($config->tertiaryTabs['fields']))   $config->tertiaryTabs['fields'] = array();
                             self::processFields($config->tertiaryTabs['fields'], $subConfig->tertiaryTabs['fields'], $fieldName, $subConfig->modelClass);
+                        }
+                    }
+
+                    // ------------------------------------------------- permission-settings
+                    // permission-settings:
+                    //     NOT=legalcases__legalcase_type_id__update@update:
+                    //         field:
+                    //              readOnly: true
+                    //              disabled: true
+                    //              type: dropdown
+                    //         labels:
+                    //              en: My Permission
+                    if (property_exists($config, 'fields')) {
+                        foreach ($config->fields as $fieldName => &$fieldConfig) {
+                            if (isset($fieldConfig['permissionSettings'])) {
+                                foreach ($fieldConfig['permissionSettings'] as $permissionDirective => &$permissionSettings) {
+                                    $typeParts = explode('=', $permissionDirective);
+                                    $negation  = FALSE;
+                                    if (count($typeParts) == 2) {
+                                        if ($typeParts[0] == 'NOT') $negation = TRUE;
+                                        $permissionDirective = $typeParts[1];
+                                    }
+                                    $contextParts = explode('@', $permissionDirective);
+                                    $permContext  = NULL;
+                                    if (count($contextParts) == 2) {
+                                        $permContext         = $contextParts[1];
+                                        $permissionDirective = $contextParts[0];
+                                    }
+                                    $hasAccess = $user->hasAccess($permissionDirective);
+                                    $isContext = (is_null($permContext) || $permContext == $this->context);
+
+                                    if ($isContext && ($negation ? !$hasAccess : $hasAccess)) {
+                                        if (isset($permissionSettings['field'])) {
+                                            foreach ($permissionSettings['field'] as $setting => $value) {
+                                                $fieldConfig[$setting] = $value;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

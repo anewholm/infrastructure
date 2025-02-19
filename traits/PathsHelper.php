@@ -198,11 +198,13 @@ Trait PathsHelper {
         return Str::singular($this->snakeCaseName());
     }
 
-    public function modelDirectoryPathRelative(?Object $object = NULL): string
+    public function modelDirectoryPathRelative(string $file = NULL, ?Object $object = NULL): string
     {
-        $pluginPathRelative = $this->pluginPathRelative();
-        $modelDirectoryName = $this->modelDirectoryName();
-        return "$pluginPathRelative/models/$modelDirectoryName";
+        $pluginPathRelative = $this->pluginPathRelative($object);
+        $modelDirectoryName = $this->modelDirectoryName($object);
+        $path = "$pluginPathRelative/models/$modelDirectoryName";
+        if ($file) $path .= "/$file";
+        return $path;
     }
 
     public function modelClassPathRelative(?Object $object = NULL): string
@@ -214,6 +216,7 @@ Trait PathsHelper {
 
     public function modelClassPathAbsolute(?Object $object = NULL): string
     {
+        $pluginPathRelative     = $this->pluginPathRelative();
         $modelClassPathRelative = $this->modelClassPathRelative();
         return "$pluginPathRelative/$modelClassPathRelative";
     }
