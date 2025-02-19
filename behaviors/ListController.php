@@ -1,4 +1,4 @@
-<?php namespace Acorn\Behaviors;
+<?php namespace AcornAssociated\Behaviors;
 
 use \Backend\Behaviors\ListController as BackendListController;
 use \Exception;
@@ -6,7 +6,7 @@ use Backend\Widgets\Search;
 
 class ListController extends BackendListController
 {
-    use \Acorn\Traits\MorphConfig;
+    use \AcornAssociated\Traits\MorphConfig;
     
     public function __construct($controller)
     {
@@ -15,7 +15,7 @@ class ListController extends BackendListController
         $this->addViewPath('~/modules/backend/behaviors/listcontroller/partials');
 
         Search::extend(function ($widget) {
-            $widget->addViewPath('~/modules/acorn/partials/');
+            $widget->addViewPath('~/modules/acornassociated/partials/');
         });
 
     }

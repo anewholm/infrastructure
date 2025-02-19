@@ -1,11 +1,11 @@
-<?php namespace Acorn\Models;
+<?php namespace AcornAssociated\Models;
 
 use App;
 use Backend;
 use Url;
 use File;
 use Lang;
-use Acorn\Model;
+use AcornAssociated\Model;
 use Cache;
 use Config;
 use Less_Parser;
@@ -33,7 +33,7 @@ class PhpInfo extends Model
     /**
      * @var string Unique code
      */
-    public $settingsCode = 'acorn_phpinfo_settings';
+    public $settingsCode = 'acornassociated_phpinfo_settings';
 
     /**
      * @var mixed Settings form field definitions

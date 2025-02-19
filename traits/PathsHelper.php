@@ -1,4 +1,4 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
 use Str;
 use Exception;
@@ -26,7 +26,7 @@ Trait PathsHelper {
     public function fullyQualifiedClassName(?Object $object = NULL): string
     {
         // Short name for debugging output
-        // Acorn\Lojistiks\Model\Area => Area
+        // AcornAssociated\Lojistiks\Model\Area => Area
         if (is_null($object)) $object = &$this;
         return get_class($object);
     }
@@ -34,7 +34,7 @@ Trait PathsHelper {
     public function unqualifiedClassName(?Object $object = NULL): string
     {
         // Short name for debugging output
-        // Acorn\Lojistiks\Model\Area => Area
+        // AcornAssociated\Lojistiks\Model\Area => Area
         $classParts = explode('\\', $this->fullyQualifiedClassName($object));
         return end($classParts);
     }
@@ -93,14 +93,14 @@ Trait PathsHelper {
     public function translationDomainModel(Model $model, string $name)
     {
         $modelName = $this->lowerCaseName($model);
-        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acornassociated.lojistiks
         return "$authorDotPlugin::lang.models.$modelName.$name";
     }
 
     public function translationDomainPlugin(string $name, ?Model $model = NULL)
     {
         if (is_null($model)) $model = &$this;
-        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acornassociated.lojistiks
         return "$authorDotPlugin::lang.plugin.$name";
     }
 
@@ -339,7 +339,7 @@ Trait PathsHelper {
     // ----------------------------------------- Reverse lookups
     public static function authorPascalCase(string $authorDirName): string
     {
-        return ($authorDirName == 'acorn' ? 'Acorn' : ucfirst($authorDirName));
+        return ($authorDirName == 'acornassociated' ? 'AcornAssociated' : ucfirst($authorDirName));
     }
 
     public static function fullyQualifiedModelClassFromTableName(string $tableName): string

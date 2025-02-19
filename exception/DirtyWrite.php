@@ -1,4 +1,4 @@
-<?php namespace Acorn\Exception;
+<?php namespace AcornAssociated\Exception;
 
 use Exception;
 use Winter\Storm\Exception\ExceptionBase;

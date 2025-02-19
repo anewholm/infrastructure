@@ -1,4 +1,4 @@
-<?php namespace Acorn\Models;
+<?php namespace AcornAssociated\Models;
 
 use App;
 use Backend;
@@ -33,7 +33,7 @@ class ReportingSetting extends Model
     /**
      * @var string Unique code
      */
-    public $settingsCode = 'acorn_reporting_settings';
+    public $settingsCode = 'acornassociated_reporting_settings';
 
     /**
      * @var mixed Settings form field definitions

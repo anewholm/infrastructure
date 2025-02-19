@@ -1,6 +1,6 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
-use Acorn\Behaviors\RelationController;
+use AcornAssociated\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use \Exception;
 use BackendAuth;

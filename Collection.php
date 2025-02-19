@@ -1,12 +1,12 @@
 <?php
 
-namespace Acorn;
+namespace AcornAssociated;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 /**
- * @package acorn\builder
- * @author sz
+ * @package acornassociated\builder
+ * @author Sanchez
  */
 class Collection extends EloquentCollection
 {

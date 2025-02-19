@@ -6,13 +6,13 @@
 
 fields:
     cube_refresh:
-        label: acorn::lang.settings.reporting.cube_refresh
+        label: acornassociated::lang.settings.reporting.cube_refresh
         span: auto
         type: dropdown
         options:
             CR: Cron
             OS: On Save
     cube_refresh_interval:
-        label: acorn::lang.settings.reporting.cube_refresh_interval
+        label: acornassociated::lang.settings.reporting.cube_refresh_interval
         span: auto
         type: number
