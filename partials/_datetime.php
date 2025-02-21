@@ -3,6 +3,7 @@ use System\Helpers\DateTime as DateTimeHelper;
 
 if ($value) {
     if (! $value instanceof \DateTime) $value = new \DateTime($value);
+    $value = Backend::makeCarbon($value); // To set the user / cms timezone preference also
 
     $current       = new \DateTime();
     $currentYear   = $current->format("Y");
@@ -15,6 +16,7 @@ if ($value) {
     $week      = $value->format("w");
     $month     = $value->format("m");
     $monthName = $value->format("M");
+    $timeZone  = $value->format("e P");
     $timeTense = DateTimeHelper::timeTense($value);
 
     $title     = implode(', ', array(
@@ -22,7 +24,8 @@ if ($value) {
         "Day: $dayName ($day)", 
         "Week: $week", 
         "Month: $monthName ($month)", 
-        "Year: $year"
+        "Year: $year",
+        "Timezone: $timeZone"
     ));
 
     $date = ($isCurrentYear ? $value->format("M-d") : $value->format("Y-M-d"));

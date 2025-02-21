@@ -146,6 +146,8 @@ Trait MorphConfig
                     }
 
                     // ------------------------------------------------- permission-settings
+                    // The permission name can be qualified _or_ un-qualified
+                    // If it is un-qualified then the permission is understood as from this plugin
                     // permission-settings:
                     //     NOT=legalcases__legalcase_type_id__update@update:
                     //         field:
@@ -170,6 +172,16 @@ Trait MorphConfig
                                         $permContext         = $contextParts[1];
                                         $permissionDirective = $contextParts[0];
                                     }
+
+                                    // Conditionally qualify the permission name
+                                    // $qualifiedPermissionName = $permissionDirective;
+                                    // $isQualifiedName = (strstr($qualifiedPermissionName, '.') !== FALSE);
+                                    // if (!$isQualifiedName) {
+                                    //     $pluginDotPath = $modelClass::pluginAuthorDotPlugin();
+                                    //     $qualifiedPermissionName = "$pluginDotPath.$qualifiedPermissionName";
+                                    // }
+
+                                    // Check access
                                     $hasAccess = $user->hasAccess($permissionDirective);
                                     $isContext = (is_null($permContext) || $permContext == $this->context);
 
