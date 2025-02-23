@@ -183,7 +183,7 @@ Trait MorphConfig
 
                                     // Check access
                                     $hasAccess = $user->hasAccess($permissionDirective);
-                                    $isContext = (is_null($permContext) || $permContext == $this->context);
+                                    $isContext = (is_null($permContext) || (property_exists($this, 'context') && $permContext == $this->context));
 
                                     if ($isContext && ($negation ? !$hasAccess : $hasAccess)) {
                                         if (isset($permissionSettings['field'])) {
