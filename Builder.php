@@ -195,5 +195,5 @@ class Builder extends BaseBuilder
         }
         
         return $this;
-    }    
+    }   
 }

@@ -4,6 +4,7 @@ use Acorn\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use \Exception;
 use BackendAuth;
+use Str;
 
 Trait MorphConfig
 {
@@ -188,6 +189,8 @@ Trait MorphConfig
                                     if ($isContext && ($negation ? !$hasAccess : $hasAccess)) {
                                         if (isset($permissionSettings['field'])) {
                                             foreach ($permissionSettings['field'] as $setting => $value) {
+                                                $setting = preg_replace('/^field-/', '', $setting);
+                                                $setting = Str::camel($setting);
                                                 $fieldConfig[$setting] = $value;
                                             }
                                         }
