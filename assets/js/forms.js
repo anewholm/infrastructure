@@ -37,6 +37,12 @@ $(document).ready(function(){
       updateViewSelectionLink($(this));
     });
   });
+
+  // Enable read-only for radio buttons
+  // HTML does not accept readonly on radio buttons
+  // So we disable not-allowed options
+  // NOTE: form.css will also gray the labels
+  $('input[readonly]:radio:not(:checked)').attr('disabled', true);
 });
 
 function acorn_popupComplete(context, textStatus, jqXHR) {

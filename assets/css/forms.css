@@ -256,6 +256,14 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 .form-group.partial-field[data-field-name=_qrcode] > label {
     display: none;
 }
+.form-group.radio-field .custom-radio:has(input[readonly]) label {
+    /* NOTE: also forms.js which will disabled these readonly radios */
+    color: #999;
+    cursor: not-allowed;
+}
+.is-owner {
+    font-weight: bold;
+}
 
 /* This is when we want the secondary tabs to look like the primary ones, with:
  * secondary-tabs: cssClass: primary-tabs
