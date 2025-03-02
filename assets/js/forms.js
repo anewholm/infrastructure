@@ -1,4 +1,25 @@
-$(document).ready(function(){
+function acorn_updateViewSelectionLink() {
+  var jInput    = $(this);
+  var modelUuid = jInput.val();
+  var jGotoLink = jInput.closest('.form-group,.custom-checkbox').find('.goto-form-group-selection');
+
+  if (modelUuid && jGotoLink.attr('href')) {
+    // Remove any update/id parts from URL
+    var urlParts = jGotoLink.attr('href').split('/').filter(n => n);
+    if (urlParts[urlParts.length-2] == 'update') {
+      urlParts.splice(urlParts.length-2);
+    }
+    urlParts.push('update');
+    urlParts.push(modelUuid);
+    var updateUrl = '/' + urlParts.join('/');
+    var viewselection = $.wn.lang.get('links.viewselection');
+    jGotoLink.attr('href', updateUrl).text(viewselection).show();
+  } else {
+    jGotoLink.hide();
+  }
+}
+
+function acorn_dynamicElements(){
   // Callouts (hints) close button
   // NOTE: Not using data-dismiss="callout" because we want a cross and a slideUp effect
   $('.callout .close').on('click', function(){
@@ -7,35 +28,30 @@ $(document).ready(function(){
 
   $('.goto-form-group-selection').hide();
 
-  function updateViewSelectionLink(jInput) {
-    var modelUuid = jInput.val();
-    var jGotoLink = jInput.closest('.form-group,.custom-checkbox').find('.goto-form-group-selection');
+  // We do not know what was updated
+  $(':input').each(acorn_updateViewSelectionLink);
 
-    if (modelUuid && jGotoLink.attr('href')) {
-      // Remove any update/id parts from URL
-      var urlParts = jGotoLink.attr('href').split('/').filter(n => n);
-      if (urlParts[urlParts.length-2] == 'update') {
-        urlParts.splice(urlParts.length-2);
-      }
-      urlParts.push('update');
-      urlParts.push(modelUuid);
-      var updateUrl = '/' + urlParts.join('/');
-      var viewselection = $.wn.lang.get('links.viewselection');
-      jGotoLink.attr('href', updateUrl).text(viewselection).show();
-    } else {
-      jGotoLink.hide();
+  // HTML Tooltips
+  // It is possible we have not understood data-toggle="tooltip" documentation
+  $('*:has(> .tooltip)').hover(function(){
+    var jTooltip = $(this).children('.tooltip');
+    jTooltip.addClass('in').fadeIn();
+
+    if (jTooltip.hasClass('top')) {
+      var height = jTooltip.height() + 6;
+      jTooltip.css({marginTop:-height});
     }
-  }
-
-  // Bind updateViewSelectionLinks to all input and change events
-  $(document).on('change', ':input', function (event) {
-    updateViewSelectionLink($(this));
+  }, function(){
+    $(this).children('.tooltip').fadeOut();
   });
-  $(window).on('ajaxUpdateComplete', function (event) {
-    // We do not know what was updated
-    $(':input').each(function (event) {
-      updateViewSelectionLink($(this));
-    });
+
+  // Collapseable tables
+  // Permissions screen
+  $('.permissioneditor > table').addClass('collapsable');
+  $('table.collapsable tr.section').click(function(){
+    var jRows = $(this).nextUntil('tr.section');
+    if (jRows.is(':visible')) jRows.hide();
+    else jRows.show();
   });
 
   // Enable read-only for radio buttons
@@ -43,13 +59,18 @@ $(document).ready(function(){
   // So we disable not-allowed options
   // NOTE: form.css will also gray the labels
   $('input[readonly]:radio:not(:checked)').attr('disabled', true);
-});
+}
+$(document).ready(acorn_dynamicElements);
+$(window).on('ajaxUpdateComplete', acorn_dynamicElements);
+$(document).on('change', ':input', acorn_updateViewSelectionLink);
 
 function acorn_popupComplete(context, textStatus, jqXHR) {
   // When the popup closes, this function will set any passed value
   // on the original form popup button, indicated in field_name
   // and then trigger its change
   // So that other original form fields can dependsOn the results of the popup operation
+  // Called with:
+  //   data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
   var responseId, fieldName;
   if (textStatus == 'success') {
     if (fieldName = context.options.data.field_name) {
@@ -71,7 +92,6 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
   
 +function ($) { "use strict";
   // --------------------------------------- Scrolling popups
-
   $(window).on('complete.oc.popup', function (event, $content, $popup) {
     // Move extra popups in to the main popup
     // NOTE: complete.oc.popup fires x 2!

@@ -261,7 +261,7 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
     color: #999;
     cursor: not-allowed;
 }
-.is-owner {
+.is-owner > span {
     font-weight: bold;
 }
 
@@ -384,6 +384,26 @@ body.slim-container .modal-dialog .modal-header.compact > button {
     height: 96px;
     z-index: 1000;
     transition: 0.3s height;
+}
+
+/* ------------------------------- permissions screen */
+table.collapsable tr {
+    display:none;
+}
+table.collapsable tr.section {
+    display:table-row;
+    cursor: pointer;
+}
+table.collapsable tr.section > th:first-child::before {
+    content: "+";
+    font-weight: bold;
+    border-radius: 8px;
+    border: 1px solid #999;
+    padding: 0px 4px;
+    margin-right: 4px;
+}
+table.collapsable tr.section:hover > th:first-child::before {
+    background-color: #d7d7d7;
 }
 
 /* ------------------------------- fixes */

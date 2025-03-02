@@ -25,6 +25,7 @@ use Winter\Storm\Support\ModuleServiceProvider;
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
 use Acorn\Messaging\Console\RunCommand;
 use \System\Controllers\Updates;
+use Acorn\Models\InterfaceSetting;
 
 class ServiceProvider extends ModuleServiceProvider
 {
@@ -42,12 +43,13 @@ class ServiceProvider extends ModuleServiceProvider
         Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
             $controller->addCss('~/modules/acorn/assets/css/module.css');
             $controller->addJs('~/modules/acorn/assets/js/acorn.js');
-            $controller->addJs('~/modules/acorn/assets/js/acorn.websocket.js', array('type' => 'module'));
             $controller->addJs('~/modules/acorn/assets/js/html5-qrcode.js');
             $controller->addJs('~/modules/acorn/assets/js/findbyqrcode.js');
             $controller->addJs('~/modules/acorn/assets/js/forms.js');
             $controller->addJs('~/modules/acorn/assets/js/tabbing.js');
             $controller->addJs('~/modules/acorn/assets/js/lang/lang.'.App::getLocale().'.js');//Translate JS [en][ar][ku]
+
+            if (InterfaceSetting::get('enable_websockets')) $controller->addJs('~/modules/acorn/assets/js/acorn.websocket.js', array('type' => 'module'));
         });
 
         Event::listen('backend.form.extendFields', function ($widget) {
@@ -162,16 +164,6 @@ class ServiceProvider extends ModuleServiceProvider
                     'permissions' => ['acorn.manage_interface'],
                     'order'       => 500,
                     'keywords'    => 'interface'
-                ],
-                'reporting' => [
-                    'label'       => 'acorn::lang.settings.reporting.menu_label',
-                    'description' => 'acorn::lang.settings.reporting.menu_description',
-                    'category'    => 'Acorn',
-                    'icon'        => 'icon-book',
-                    'class'       => 'Acorn\Models\ReportingSetting',
-                    'permissions' => ['acorn.manage_reporting'],
-                    'order'       => 500,
-                    'keywords'    => 'reporting'
                 ],
                 'phpinfo' => [
                     'label'       => 'acorn::lang.settings.phpinfo.menu_label',

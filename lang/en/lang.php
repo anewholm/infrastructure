@@ -10,14 +10,8 @@
         'interface' => [
             'menu_label' => 'Interface',
             'menu_description' => 'Interface settings',
-            'multi_max_items' => 'Max items in multi-displays'
-        ],
-        'reporting' => [
-            'menu_label' => 'Reporting',
-            'menu_description' => 'OLAP reports settings',
-            'cube' => 'Cube',
-            'cube_refresh' => 'Cube refresh strategy',
-            'cube_refresh_interval' => 'Cube refresh interval'
+            'multi_max_items' => 'Max items in multi-displays',
+            'enable_websockets' => 'Enable WebSockets'
         ],
         'phpinfo' => [
             'menu_label' => 'PHP Info',
@@ -52,7 +46,14 @@
             'find_in_list' => 'Find in list',
             'redirect' => 'Go to record',
             'form_field_complete' => 'Fill out form fields',
-            'view_all' => 'View all'
+            'view_all' => 'View all',
+            'dateformats' => [
+                'day' => 'Day',
+                'weekinyear' => 'Week In Year',
+                'month' => 'Month',
+                'year' => 'Year',
+                'timezone' => 'Timezone',
+            ],        
         ],
         'server' => [
             'label' => 'Server',

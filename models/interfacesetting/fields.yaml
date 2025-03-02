@@ -9,3 +9,7 @@ fields:
         label: acorn::lang.settings.interface.multi_max_items
         span: auto
         type: number
+    enable_websockets:
+        label: acorn::lang.settings.interface.enable_websockets
+        span: auto
+        type: checkbox

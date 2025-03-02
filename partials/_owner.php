@@ -44,13 +44,11 @@ else throw new \Exception("_owner.php requires a User or UserGroup Model");
 // TODO: Translate tooltip
 $valueEscaped = e($value);
 if ($isOwner) print(<<<HTML
-    <div href="javascript:;"
-        data-toggle="tooltip"
-        data-placement="top"
-        data-delay="0"
-        class='is-owner' 
-        title='Grupe te'
-    >
+    <div class="is-owner">
+        <div class="tooltip fade top">
+            <div class="tooltip-arrow"></div>
+            <div class="tooltip-inner">Grupe <i>te</i></div>
+        </div>
         <span class="hover-indicator">$valueEscaped</span>
     </div>
 HTML
