@@ -90,8 +90,9 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Translation
-    public function translationDomainModel(Model $model, string $name)
+    public function translationDomainModel(string $name, ?Model $model = NULL)
     {
+        if (is_null($model)) $model = &$this;
         $modelName = $this->lowerCaseName($model);
         $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
         return "$authorDotPlugin::lang.models.$modelName.$name";
@@ -118,7 +119,7 @@ Trait PathsHelper {
             throw new \Exception("Model [$modelClass] does not have a translationDomainModel() method");
         }
         
-        return trans($this->translationDomainModel($model, $name));
+        return trans($this->translationDomainModel($name, $model));
     }
 
     public function transBackend(string $name)

@@ -55,3 +55,74 @@ tr.rowlink.qrscan-highlight > td:last-child {
     border-right:1px solid #000!important;
     border-radius: 0px 5px 5px 0px;
 }
+
+/* -------------------------------- State_Indicator */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator) > td {
+    border-top: 1px dashed;
+    border-bottom: 1px dashed;
+    width: 0px;
+    overflow: visible;
+}
+table.table.data > tbody > tr.rowlink:has(div.state-indicator) > td:first-child {
+    border-left: 1px dashed;
+    border-right: none;
+    border-radius: 6px 0px 0px 6px;
+}
+table.table.data > tbody > tr.rowlink:has(div.state-indicator) > td:last-child {
+    border-right: 1px dashed;
+    border-left: none;
+    border-radius: 0px 6px 6px 0px;
+}
+
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator {
+    position: relative;
+}
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator > div.state-indicator {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    border-radius: 4px;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    border-top: none;
+    border-bottom: none;
+    background-color: #fff;
+    padding: 0px 8px;
+    box-shadow: 1px 1px 8px #666;
+    white-space: nowrap;
+    font-size:10px;
+}
+
+/* Invalid */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.invalid) > td {
+    border-color: #770000;
+}
+div.state-indicator.invalid {
+    border-color: #770000;
+    color: #770000;
+}
+
+/* Waiting */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.waiting) > td {
+    border-color: #586800;
+}
+div.state-indicator.waiting {
+    border-color: #586800;
+    color: #586800;
+}
+
+/* Valid */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.valid) > td {
+    border: none;
+}
+div.state-indicator.valid {
+    border: none;
+}
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator > div.state-indicator.valid {
+    display: none;
+}
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(div.state-indicator.valid):before {
+    display: block;
+    content: "✓";
+    text-align: center;
+}

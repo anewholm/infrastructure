@@ -12,13 +12,6 @@
             'menu_description' => 'Interface settings',
             'multi_max_items' => 'Max items in multi-displays'
         ],
-        'reporting' => [
-            'menu_label' => 'Reporting',
-            'menu_description' => 'OLAP reports settings',
-            'cube' => 'Cube',
-            'cube_refresh' => 'Cube refresh strategy',
-            'cube_refresh_interval' => 'Cube refresh interval'
-        ],
         'phpinfo' => [
             'menu_label' => 'PHP Info',
             'menu_description' => 'Server information',
