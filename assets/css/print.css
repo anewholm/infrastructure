@@ -1,0 +1,7 @@
+@media print {
+  .help-block,
+  .control-breadcrumb,
+  .field-multilingual > .ml-btn {
+    display: none;
+  }
+}

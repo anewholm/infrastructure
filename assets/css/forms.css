@@ -204,6 +204,7 @@ table.data tr.rowlink .action-functions {
     box-shadow: none;
 }
 table.data tr.rowlink .action-functions > li {
+    display: inline-block;
     margin-bottom: 3px;
     padding: 3px 10px;
     background-color: #fff;

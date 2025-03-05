@@ -3,6 +3,7 @@
 use Str;
 use Exception;
 use Model;
+use Winter\Storm\Html\Helper as HtmlHelper;
 
 Trait PathsHelper {
     // This Trait can be added to either Model or Controller
@@ -366,5 +367,27 @@ Trait PathsHelper {
         $unqualifiedTableName         = preg_replace('/^[^.]+\./', '', $tableName);
         if ($unqualifiedClassTableName != $unqualifiedTableName) throw new Exception("$tableName => $class => $unqualifiedClassTableName does not match");
         return $model;
+    }
+
+    // ----------------------------------------- Column names
+    // TODO: If this gets bigger it should be in its own HtmlHelper
+    public static function backColumnName(string $columnName, bool $throwIfNotName = TRUE): string|null
+    {
+        $backFieldName = NULL;
+        $fieldParts    = HtmlHelper::nameToArray($columnName);
+        $finalField    = array_pop($fieldParts);
+       
+        if ($finalField == 'name') {
+            // Back column name legalcase[owner_user_group]
+            $backFieldName = $fieldParts[0];
+            if (count($fieldParts) > 1) {
+                $fieldNests     = implode('][', array_slice($fieldParts, 1));
+                $backFieldName .= "[$fieldNests]";
+            }
+        } else if ($throwIfNotName) {
+            throw new \Exception("ListColumn field [$columnName] attribute is not name [$finalField] during backColumnName() calc");
+        }
+
+        return $backFieldName;
     }
 }

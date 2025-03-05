@@ -1,4 +1,5 @@
 <?php
+use Acorn\Traits\PathsHelper;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use Backend\Classes\ListColumn;
 use Acorn\User\Models\User;
@@ -12,22 +13,13 @@ if (!isset($user))   throw new \Exception("_owner.php requires an authenticated 
 // The field may well be a text attribute on the last model
 // like legalcase[owner_user_group][name]
 // So $value is a text name, not a Model
+// TODO: Deal with relation: & select: situations
 $model = $value;
 if (!$model instanceof Model) {
-    $columnName = $listColumn->columnName;
-    $fieldParts = HtmlHelper::nameToArray($columnName);
-    $finalField = array_pop($fieldParts);
-    if ($finalField != 'name') throw new \Exception("ListColumn field attribute is not name");
-
-    // Back column name legalcase[owner_user_group]
-    $backFieldName = $fieldParts[0];
-    if (count($fieldParts) > 1) {
-        $fieldNests     = implode('][', array_slice($fieldParts, 1));
-        $backFieldName .= "[$fieldNests]";
+    if ($backColumnName = PathsHelper::backColumnName($listColumn->columnName, FALSE)) {
+        $backColumn     = new ListColumn($backColumnName, '');
+        $model          = $backColumn->getValueFromData($record);
     }
-    $backColumn = new ListColumn($backFieldName, '');
-
-    $model = $backColumn->getValueFromData($record);
 }
 
 // TODO: Should this partial be in User plugin?
@@ -38,7 +30,7 @@ if ($model instanceof UserGroup) {
 else if ($model instanceof User) {
     $isOwner = ($model->is($user));
 }
-else throw new \Exception("_owner.php requires a User or UserGroup Model");
+// else throw new \Exception("_owner.php requires a User or UserGroup Model");
 
 // Output
 // TODO: Translate tooltip

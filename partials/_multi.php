@@ -1,5 +1,24 @@
 <?php
 use Illuminate\Database\Eloquent\Collection;
+use Acorn\Traits\PathsHelper;
+use Backend\Classes\ListColumn;
+use \Carbon\CarbonInterval;
+
+if (!isset($record)) throw new \Exception("_multi.php is a column partial only");
+
+if (is_null($value)) {
+    // This can happen when we have a *Many collection with a [name] valueFrom 
+    // like legalcase[many-somethings][name]
+    // because the back-column legalcase[many-somethings] returns a collection, which has no name attribute
+    // We try to strip the [name] to see what happens
+    // TODO: We need to put more checks in this back-column attempt
+    if ($backColumnName = PathsHelper::backColumnName($column->columnName, FALSE)) {
+        $column         = new ListColumn($backColumnName, '');
+        // If there is a problem this will just return NULL again
+        $value          = $column->getValueFromData($record);
+        if (!$value instanceof Collection) $value = NULL;
+    }
+}
 
 if ($value) {
     $multiId   = "$record->id-$column->columnName";
@@ -24,6 +43,14 @@ if ($value) {
         'name'
     )));
     $relation = $column->relation;
+
+    // Custom multi directives
+    $sum   = FALSE;
+    $total = NULL;
+    if (isset($column->config['multi'])) {
+        $multi = $column->config['multi'];
+        if (isset($multi['sum'])) $sum = new ListColumn($multi['sum'], '');
+    }
 
     // The field name is the name of the Model relation
     // so the relation is automatically used
@@ -55,49 +82,62 @@ if ($value) {
     }
 
     $count = $value->count();
-    $i     = 0;
-    print("<ul id='$multiId' class='multi'>");
-    $value->each(function ($model) use (&$i, &$limit, $valueFrom, $action, $multiId, $useLinkedPopups) {
-        $id         = $model->id();
-        $controller = $model->controllerFullyQualifiedClass();
-        
-        // Name resolution
-        $name = '';
-        if      (method_exists($model, $valueFrom)) $name = $model->$valueFrom();
-        else if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
-        if (!$name) {
-            $name = '&lt;noname&gt;';
-        }
-        
-        // Output LI item
-        print('<li>');
-        $nameEscaped = e($name);
-        if ($useLinkedPopups) {
-            $dataRequestData = array(
-                'route'   => "$controller@$action",
-                'params'  => [$id],
-                'dataRequestUpdate' => array('multi' => $multiId),
-            );
-            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
-            print("<a
-                data-handler='onPopupRoute'
-                data-request-data='$dataRequestDataEscaped'
-                data-control='popup'>"
-            );
-        }
-        print($nameEscaped);
-        if ($useLinkedPopups) print('</a>');
-        print('</li>');
+    if ($count) {
+        $i     = 0;
+        print("<ul id='$multiId' class='multi'>");
+        $value->each(function ($model) use (&$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
+            $id         = $model->id();
+            $controller = $model->controllerFullyQualifiedClass();
+            
+            // Name resolution
+            $name = '';
+            if      (method_exists($model, $valueFrom)) $name = $model->$valueFrom();
+            else if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
+            if (!$name) {
+                $name = '&lt;noname&gt;';
+            }
+            
+            // Output LI item
+            print('<li>');
+            $nameEscaped = e($name);
+            if ($useLinkedPopups) {
+                $dataRequestData = array(
+                    'route'   => "$controller@$action",
+                    'params'  => [$id],
+                    'dataRequestUpdate' => array('multi' => $multiId),
+                );
+                $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
+                print("<a
+                    data-handler='onPopupRoute'
+                    data-request-data='$dataRequestDataEscaped'
+                    data-control='popup'>"
+                );
+            }
+            print($nameEscaped);
+            if ($useLinkedPopups) print('</a>');
+            print('</li>');
 
-        // False exists the loop
-        $continue = (++$i < $limit);
-        return $continue;
-    });
-    print('</ul>');
+            if ($sum) {
+                $sumValue = $sum->getValueFromData($model);
+                if (is_numeric($sumValue)) $total = ($total ?: 0) + $sumValue;
+                else if ($sumValue instanceof CarbonInterval) $total = ($total ?: new CarbonInterval(0))->add($sumValue);
+            }
 
-    if ($count > $limit) {
-        // Leave this "more" link to simply open the full record update screen
-        $more = e(trans('more...'));
-        print("<a class='more'>$more</a>");
+            // False exists the loop
+            // TODO: Continue when $sum
+            $continue = (++$i < $limit);
+            return $continue;
+        });
+        print('</ul>');
+
+        if ($count > $limit) {
+            // Leave this "more" link to simply open the full record update screen
+            $more = e(trans('more...'));
+            print("<a class='more'>$more</a>");
+        } else {
+            if ($sum) print("<div class='multi-total'>$total</div>");
+        }
+    } else {
+        print('-');
     }
-}
+} 

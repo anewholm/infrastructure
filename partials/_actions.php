@@ -11,6 +11,7 @@ else throw new \Exception("Cannot ascertain model for actions operation");
 $formMode        = (isset($formModel) && $model == $formModel);
 $modelArrayName  = $model->unqualifiedClassName();
 $actionFunctions = $model->actionFunctions(); // Includes inherited 1to1 action functions
+$user            = BackendAuth::user();
 
 if (count($actionFunctions) || $formMode || $model->printable) {
     print('<ul class="action-functions">');
@@ -41,13 +42,29 @@ HTML
     }
 
     // --------------------------------- Printing
+    // Can include conditions and permissions
     if ($model->printable) {
-        $print = e(trans('acorn::lang.models.general.print'));
-        $previewLink = $model->controllerUrl('preview', $model->id());
-        print("<li><a 
-            target='_blank'
-            href='$previewLink'
-        >$print</a></li>");
+        $canPrint = TRUE;
+        if (is_array($model->printable)) {
+            if (isset($model->printable['condition'])) {
+                // TODO: condition: for printing
+            }
+            if (isset($model->printable['permissions'])) {
+                $canPrint = FALSE;
+                $permissions = (is_array($model->printable['permissions']) ? $model->printable['permissions'] : array($model->printable['permissions']));
+                foreach ($model->printable['permissions'] as $permission => $config) {
+                    if ($user->hasPermission($permission)) $canPrint = TRUE;
+                }
+            }
+        }
+        if ($canPrint) {
+            $print = e(trans('acorn::lang.models.general.print'));
+            $previewLink = $model->controllerUrl('preview', $model->id());
+            print("<li><a 
+                target='_blank'
+                href='$previewLink'
+            >$print</a></li>");
+        }
     }
 
     // --------------------------------- QR scan
