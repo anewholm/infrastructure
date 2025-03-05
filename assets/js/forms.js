@@ -31,6 +31,17 @@ function acorn_dynamicElements(){
   // We do not know what was updated
   $(':input').each(acorn_updateViewSelectionLink);
 
+  // Hide hide-empty tabs
+  $('.control-tabs .nav-tabs > li').each(function(i){
+    var jTab     = $(this);
+    var jTabPane = $(this).closest('.control-tabs').find('> .tab-content > .tab-pane').eq(i);
+    var noData   = jTabPane.find('> .hide-empty tr.no-data').length;
+    if (noData) {
+      jTab.remove();
+      jTabPane.remove();
+    }
+  });
+
   // HTML Tooltips
   // It is possible we have not understood data-toggle="tooltip" documentation
   $('*:has(> .tooltip)').hover(function(){

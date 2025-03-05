@@ -183,6 +183,27 @@ class RelationController extends RelationControllerBase
         if ($this->toolbarWidget) $this->toolbarWidget->addViewPath('~/modules/acorn/partials');
         $this->addViewPath('~/modules/backend/behaviors/relationcontroller/partials');
         $this->addViewPath('~/modules/acorn/partials');
+
+        // ------------------------------------ Hide the parent model column
+        // TODO: Hide any 1-1 belongsTo off the parent model also
+        if (property_exists($this, 'viewWidget') 
+            && $this->viewWidget 
+            && $this->viewWidget->model
+            && $this->model
+        ) {
+            $parentModel = $this->model;
+            $listModel   = $this->viewWidget->model; // Relation Manager models
+            foreach ($this->viewWidget->columns as $name => &$config) {
+                if (isset($config['relation'])) {
+                    $relationName = $config['relation'];
+                    if ($listModelRelation = $listModel->$relationName()) {
+                        if ($listModelRelation->getRelated() instanceof $parentModel) {
+                            $config['invisible'] = true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     protected function loadModelRelationConfig(Model &$model): void {

@@ -52,4 +52,6 @@ if ($value) {
         </div>
 HTML
     );
+} else {
+    print('-');
 }
