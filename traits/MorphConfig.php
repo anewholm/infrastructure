@@ -2,6 +2,7 @@
 
 use Acorn\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
+use Winter\Storm\Database\Relations\BelongsTo;
 use \Exception;
 use BackendAuth;
 use Str;
@@ -55,12 +56,26 @@ Trait MorphConfig
                                 $model        = $optionsParts[0];
 
                                 if ($model == $parentModel) {
+                                    // Set and hide parentModel
                                     $fieldConfig['cssClass'] .= ' hidden';
                                     $fieldConfig['default']   = $parentModelId;
-                                } else if ($primaryModel && $model == get_class($primaryModel)) {
-                                    $fieldConfig['cssClass'] .= ' hidden';
-                                    $fieldConfig['default']   = $primaryModel->id;
-                                }
+                                } 
+                                else if ($primaryModel) {
+                                    // Set and hide primaryModel
+                                    if ($model == get_class($primaryModel)) {
+                                        $fieldConfig['cssClass'] .= ' hidden';
+                                        $fieldConfig['default']   = $primaryModel->id;
+                                    }
+                                    // Set and hide common singular parent BelongsTo models
+                                    else if ($sameParent = $primaryModel->$fieldName) {
+                                        if ($model == get_class($sameParent)
+                                            && $primaryModel->$fieldName() instanceof BelongsTo
+                                        ) {
+                                            $fieldConfig['cssClass'] .= ' hidden';
+                                            $fieldConfig['default']   = $sameParent->id;
+                                        }
+                                    }
+                                } 
                             }
                         }
                         

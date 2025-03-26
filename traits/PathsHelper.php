@@ -9,7 +9,7 @@ Trait PathsHelper {
     // This Trait can be added to either Model or Controller
     // And helps understand the other and directories
 
-    protected function paths(?Object $object = NULL): array
+    protected function paths(Object $object = NULL): array
     {
         return array(
             'fullyQualifiedClassName' => $this->fullyQualifiedClassName($object),
@@ -24,15 +24,15 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Class & Plugin
-    public function fullyQualifiedClassName(?Object $object = NULL): string
+    public function fullyQualifiedClassName(Object $object = NULL): string
     {
         // Short name for debugging output
         // Acorn\Lojistiks\Model\Area => Area
-        if (is_null($object)) $object = &$this;
+        if (is_null($object)) $object = $this;
         return get_class($object);
     }
 
-    public function unqualifiedClassName(?Object $object = NULL): string
+    public function unqualifiedClassName(Object $object = NULL): string
     {
         // Short name for debugging output
         // Acorn\Lojistiks\Model\Area => Area
@@ -54,7 +54,7 @@ Trait PathsHelper {
         return $fullyQualifiedClassName;
     }
 
-    protected function pluginPathPartAuthorPlugin(?Object $object = NULL): string
+    protected function pluginPathPartAuthorPlugin(Object $object = NULL): string
     {
         $class       = $this->fullyQualifiedClassName();
         $aClass      = explode('\\', $class);
@@ -63,7 +63,7 @@ Trait PathsHelper {
         return "$authorDirName/$pluginDirName";
     }
 
-    public function pluginAuthorDotPlugin(?Object $object = NULL): string
+    public function pluginAuthorDotPlugin(Object $object = NULL): string
     {
         $class       = $this->fullyQualifiedClassName();
         $aClass      = explode('\\', $class);
@@ -72,7 +72,7 @@ Trait PathsHelper {
         return "$authorDirName.$pluginDirName";
     }
 
-    protected function pluginPathRelative(?Object $object = NULL): string
+    protected function pluginPathRelative(Object $object = NULL): string
     {
         $pluginPathPartAuthorPlugin = $this->pluginPathPartAuthorPlugin();
         return "plugins/$pluginPathPartAuthorPlugin";
@@ -83,7 +83,7 @@ Trait PathsHelper {
         return getcwd();
     }
 
-    protected function pluginPathAbsolute(?Object $object = NULL): string
+    protected function pluginPathAbsolute(Object $object = NULL): string
     {
         $docRoot            = $this->docRoot();
         $pluginPathRelative = $this->pluginPathRelative();
@@ -129,22 +129,22 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Case & plurality
-    public function pascalCaseName(?Object $object = NULL): string
+    public function pascalCaseName(Object $object = NULL): string
     {
         return $this->unqualifiedClassName($object);
     }
 
-    public function snakeCaseName(?Object $object = NULL): string
+    public function snakeCaseName(Object $object = NULL): string
     {
         return Str::snake($this->unqualifiedClassName($object));
     }
 
-    public function lowerCaseName(?Object $object = NULL): string
+    public function lowerCaseName(Object $object = NULL): string
     {
         return strtolower($this->unqualifiedClassName($object));
     }
 
-    public function singularClassName(?Object $object = NULL): string
+    public function singularClassName(Object $object = NULL): string
     {
         return (property_exists($this, 'nameSingular') 
             ? Str::studly($this->nameSingular)
@@ -152,31 +152,32 @@ Trait PathsHelper {
         );
     }
 
-    public function pluralClassName(?Object $object = NULL): string
+    public function pluralClassName(Object $object = NULL): string
     {
-        return (property_exists($this, 'namePlural') 
-            ? Str::studly($this->namePlural)
-            : Str::plural($this->unqualifiedClassName())
+        if (is_null($object)) $object = $this;
+        return (property_exists($object, 'namePlural') 
+            ? Str::studly($object->namePlural)
+            : Str::plural($this->unqualifiedClassName($object))
         );
     }
 
-    public function singularLowerCaseName(?Object $object = NULL): string
+    public function singularLowerCaseName(Object $object = NULL): string
     {
         return strtolower($this->singularClassName());
     }
 
-    public function pluralLowerCaseName(?Object $object = NULL): string
+    public function pluralLowerCaseName(Object $object = NULL): string
     {
         return strtolower($this->pluralClassName());
     }
 
     // ----------------------------------------- Models
-    public function modelClassName(?Object $object = NULL): string
+    public function modelClassName(Object $object = NULL): string
     {
         return $this->singularClassName($object);
     }
 
-    public function modelFullyQualifiedClass(?Object $object = NULL): string
+    public function modelFullyQualifiedClass(Object $object = NULL): string
     {
         $fullyQualifiedClassName = $this->fullyQualifiedClassName();
         // Author\Plugin\<Type>\<Name>
@@ -189,12 +190,12 @@ Trait PathsHelper {
         return "$author\\$plugin\\Models\\$name";
     }
 
-    public function modelDirectoryName(?Object $object = NULL): string
+    public function modelDirectoryName(Object $object = NULL): string
     {
         return $this->singularLowerCaseName();
     }
 
-    public function modelForeignFieldName(?Object $object = NULL): string
+    public function modelForeignFieldName(Object $object = NULL): string
     {
         // Without ID
         return Str::singular($this->snakeCaseName());
@@ -209,14 +210,14 @@ Trait PathsHelper {
         return $path;
     }
 
-    public function modelClassPathRelative(?Object $object = NULL): string
+    public function modelClassPathRelative(Object $object = NULL): string
     {
         $pluginPathRelative = $this->pluginPathRelative();
         $modelClassName     = $this->modelClassName();
         return "$pluginPathRelative/models/$modelClassName.php";
     }
 
-    public function modelClassPathAbsolute(?Object $object = NULL): string
+    public function modelClassPathAbsolute(Object $object = NULL): string
     {
         $pluginPathRelative     = $this->pluginPathRelative();
         $modelClassPathRelative = $this->modelClassPathRelative();
@@ -224,7 +225,7 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Database
-    public function tableName(?Object $object = NULL): string
+    public function tableName(Object $object = NULL): string
     {
         if (property_exists($this, 'table')) {
             $tableName = $this->table;
@@ -236,7 +237,7 @@ Trait PathsHelper {
         return $tableName;
     }
 
-    public function tablePrefix(?Object $object = NULL): string
+    public function tablePrefix(Object $object = NULL): string
     {
         $class         = $this->fullyQualifiedClassName();
         $aClass        = explode('\\', $class);
@@ -249,12 +250,12 @@ Trait PathsHelper {
         return $tablePrefix;
     }
 
-    public function tableMask(?Object $object = NULL): string
+    public function tableMask(Object $object = NULL): string
     {
         return $this->tablePrefix() . '%';
     }
 
-    public function functionPrefix(?Object $object = NULL)
+    public function functionPrefix(Object $object = NULL)
     {
         return 'fn_' . $this->tablePrefix();
     }
@@ -271,12 +272,12 @@ Trait PathsHelper {
         return (substr($name, 0, strlen($aggregatePrefix)) == $aggregatePrefix);
     }
 
-    public function aggregatePrefix(?Object $object = NULL)
+    public function aggregatePrefix(Object $object = NULL)
     {
         return 'agg_' . $this->tablePrefix();
     }
 
-    public function triggerPrefix(?Object $object = NULL)
+    public function triggerPrefix(Object $object = NULL)
     {
         return 'tr_' . $this->tablePrefix();
     }
@@ -288,14 +289,14 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Controllers
-    public function controllerClassName(?Object $object = NULL): string
+    public function controllerClassName(Object $object = NULL): string
     {
         return $this->pluralClassName($object);
     }
 
-    public function controllerFullyQualifiedClass(?Object $object = NULL): string
+    public function controllerFullyQualifiedClass(Object $object = NULL): string
     {
-        $fullyQualifiedClassName = $this->fullyQualifiedClassName();
+        $fullyQualifiedClassName = $this->fullyQualifiedClassName($object);
         // Author\Plugin\<Type>\<Name>
         $parts  = explode('\\', $fullyQualifiedClassName);
         $author = $parts[0];
@@ -306,7 +307,7 @@ Trait PathsHelper {
         return "$author\\$plugin\\Controllers\\$name";
     }
 
-    public function controllerDirectoryPathRelative(?Object $object = NULL): string
+    public function controllerDirectoryPathRelative(Object $object = NULL): string
     {
         $pluginPathRelative      = $this->pluginPathRelative();
         $controllerDirectoryName = $this->controllerDirectoryName();
@@ -316,7 +317,7 @@ Trait PathsHelper {
         return $path;
     }
 
-    public function controllerDirectoryName(?Object $object = NULL): string
+    public function controllerDirectoryName(Object $object = NULL): string
     {
         return $this->pluralLowerCaseName();
     }

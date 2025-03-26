@@ -71,6 +71,7 @@ class RelationController extends RelationControllerBase
         $paramField         = post(self::PARAM_FIELD);           // Also used in the parent
         $paramParentModel   = post(self::PARAM_PARENT_MODEL);    // New parameter
         $paramParentModelId = post(self::PARAM_PARENT_MODEL_ID); // New parameter
+        $morphModel         = TRUE;
 
         // Tricky things to understand if we have a column setup|apply call
         // This RelationController initialises before a handler is called
@@ -85,8 +86,11 @@ class RelationController extends RelationControllerBase
                 $this->eventTarget = 'button-setup';
                 break;
             case 'onApplySetup':
+                // onApplySetup needs to load the original controller & model first
+                // we think because the cookie columns are related to the chain
+                // TODO: Can we use $this->relationModel / $this->popupModel instead?
+                //$morphModel = FALSE;
                 $this->eventTarget = 'button-apply';
-                $paramParentModel  = NULL;
                 break;
         }
 
@@ -102,16 +106,26 @@ class RelationController extends RelationControllerBase
                         : new $paramParentModel
                     );
                     if (!$model->is($paramParentModelObj)) {
-                        $model = $paramParentModelObj;
-                        // Send the formModel to _container.php | _manage_list.php
-                        $this->vars['formModel'] = $model;
+                        if ($morphModel) {
+                            $model = $paramParentModelObj;
+                            // Send the formModel to _container.php | _manage_list.php
+                            $this->vars['formModel'] = $model;
+                        }
                         // None of this models config_relation.yaml is present
                         // so we pre-load
-                        $this->loadModelRelationConfig($model);
+                        //
+                        // The $this->make*Widget() instantiations in parent::initRelation() 
+                        // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
+                        // with their bindToController() calls
+                        //   if ($this->toolbarWidget = $this->makeToolbarWidget()) {
+                        //       $this->toolbarWidget->bindToController();
+                        //   }
+                        $this->loadModelRelationConfig($paramParentModelObj);
                     }
                     if ($paramField) {
                         if (!$model->hasRelation($paramField)) {
-                            throw new \Exception("The parent model param [$paramParentModel:$paramParentModelId] does not have the relation [$paramField] being requested");
+                            // This will throw in parent::initRelation(...) if we do not catch it here
+                            // throw new \Exception("The parent model param [$paramParentModel:$paramParentModelId] does not have the relation [$paramField] being requested");
                         }
                     }
                 }
@@ -136,6 +150,10 @@ class RelationController extends RelationControllerBase
                     // Always pre-load the config_relation.yaml 
                     // from the real popup model controller immediately
                     // onto $this (wrong) controller
+                    //
+                    // The $this->make*Widget() instantiations in parent::initRelation() 
+                    // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
+                    // with their bindToController() calls
                     $this->loadModelRelationConfig($this->popupModel);
                 }
             }
@@ -186,6 +204,7 @@ class RelationController extends RelationControllerBase
 
         // ------------------------------------ Hide the parent model column
         // TODO: Hide any 1-1 belongsTo off the parent model also
+        // It will still show if it is selected in the cookies
         if (property_exists($this, 'viewWidget') 
             && $this->viewWidget 
             && $this->viewWidget->model
@@ -210,6 +229,13 @@ class RelationController extends RelationControllerBase
         // Load the config_relation.yaml for a different Controller
         // This expects the config to be in the standard place
         // TODO: Instantiate and ask the assumed Controller
+        //
+        // The $this->make*Widget() instantiations in parent::initRelation() 
+        // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
+        // with their bindToController() calls
+        //   if ($this->toolbarWidget = $this->makeToolbarWidget()) {
+        //       $this->toolbarWidget->bindToController();
+        //   }
         $controllerDir  = $model->controllerDirectoryPathRelative(); // plugins/...
         $relationConfig = "$controllerDir/config_relation.yaml";
         if (File::exists($relationConfig)) {
@@ -252,6 +278,11 @@ class RelationController extends RelationControllerBase
             case 'button-setup':
             case 'button-create':
                 $this->manageId = NULL;
+                break;
+            case 'button-apply':
+                // TODO: runAjaxHandler() will fail because it needs the relation*ViewList widget
+                // for this in-popup columns setup
+                // at the same time as needing widgets setup for the original controller
                 break;
             // New custom eventTargets from overrides below
             case 'button-unlink':
