@@ -26,6 +26,7 @@ use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
 use Acorn\Messaging\Console\RunCommand;
 use \System\Controllers\Updates;
 use Acorn\Models\InterfaceSetting;
+use Acorn\Console\SetConfig;
 
 class ServiceProvider extends ModuleServiceProvider
 {
@@ -151,6 +152,8 @@ class ServiceProvider extends ModuleServiceProvider
     public function register()
     {
         parent::register();
+
+        $this->registerConsoleCommand('acorn.set-config', SetConfig::class);
 
         // Settings placeholders
         SettingsManager::instance()->registerCallback(function ($manager) {

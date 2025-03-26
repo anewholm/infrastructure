@@ -6,6 +6,7 @@ use Backend\Behaviors\ListController;
 use Backend\Classes\FormTabs;
 use Illuminate\Support\Facades\Event;
 use System\Classes\PluginManager;
+use App;
 use DB;
 use File;
 use Form;
@@ -606,7 +607,67 @@ HTML;
         return $handled;
     }
 
+    /*
+    public function run($action = null, $params = []) {
+        // TODO: Early attempt at popup controller redirection for relation managers: REMOVE
+        // This is our first opportunity to intercept the BackendController processing
+        // it has already selected this Controller using:
+        // function BackendController::run($url = null)
+        //   $controllerRequest = $this->getRequestedController($url);
+        //   if (!is_null($controllerRequest)) {
+        //       return $controllerRequest['controller']->run(
+        //           $controllerRequest['action'],
+        //           $controllerRequest['params']
+        //       );
+        //   }
+        // getRequestedController($controller) uses:
+        //   App::make($controller)
+        $post = post();
+        if (   isset($post['column_order']) 
+            && isset($post['_parent_model'])
+            && !isset($params['redirected_controller'])
+        ) {
+            // This is a columns config save request
+            // Redirect to the appropriate controller
+            $parentModel   = $post['_parent_model'];
+            $parentModelId = $post['_parent_model_id'];
+            $parentObj     = $parentModel::find($parentModelId);
+            $controller    = $this->controllerFullyQualifiedClass($parentObj);
+            $controllerObj = App::make($controller);
+            $params['redirected_controller'] = TRUE;
+            $params[0]     = $parentModelId;
+            $response      = $controllerObj->run($action, $params);
+        } else {
+            unset($params['redirected_controller']);
+            $response = parent::run($action, $params);
+        }
+        return $response;
+    }
+    */
+
     // -------------------------------------- Config & Display
+    public function listExtendRecords($records)
+    {
+        // Custom relation scopes based on relations, not SQL
+        // TODO: Use custom filter: relationCondition:
+        if (property_exists($this->widget, 'listFilter')) {
+            foreach ($this->widget->listFilter->getScopes() as $name => $filterScope) {
+                if (isset($filterScope->config['relationCondition']) && $filterScope->value) {
+                    $relationCondition = $filterScope->config['relationCondition'];
+                    foreach ($records as $i => &$record) {
+                        // TODO: This is post SQL fetch so the pagination doesn't work
+                        if ($relatedModels = $record->$relationCondition) {
+                            $ids = $relatedModels->pluck('id')->toArray();
+                            if (!array_intersect(array_keys($filterScope->value), $ids))
+                                unset($records[$i]);
+                        }
+                    }
+                }
+            }
+        }
+        return parent::listExtendRecords($records);
+    }
+
     public function listRender()
     {
         // Automatically listen for updates
