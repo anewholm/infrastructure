@@ -56,15 +56,6 @@ function acorn_dynamicElements(){
     $(this).children('.tooltip').fadeOut();
   });
 
-  // Collapseable tables
-  // Permissions screen
-  $('.permissioneditor > table').addClass('collapsable');
-  $('table.collapsable tr.section').click(function(){
-    var jRows = $(this).nextUntil('tr.section');
-    if (jRows.is(':visible')) jRows.hide();
-    else jRows.show();
-  });
-
   // Enable read-only for radio buttons
   // HTML does not accept readonly on radio buttons
   // So we disable not-allowed options
@@ -74,6 +65,19 @@ function acorn_dynamicElements(){
 $(document).ready(acorn_dynamicElements);
 $(window).on('ajaxUpdateComplete', acorn_dynamicElements);
 $(document).on('change', ':input', acorn_updateViewSelectionLink);
+
+function acorn_ready(){
+  // Permissions screen
+  $('.permissioneditor > table').addClass('collapsable');
+  
+  // Collapseable tables
+  $('table.collapsable tr.section').click(function(){
+    var jRows = $(this).nextUntil('tr.section');
+    if (jRows.is(':visible')) jRows.hide();
+    else jRows.show();
+  });
+}
+$(document).ready(acorn_ready);
 
 function acorn_popupComplete(context, textStatus, jqXHR) {
   // When the popup closes, this function will set any passed value

@@ -27,6 +27,8 @@ use Acorn\Messaging\Console\RunCommand;
 use \System\Controllers\Updates;
 use Acorn\Models\InterfaceSetting;
 use Acorn\Console\SetConfig;
+use Acorn\Console\ConfigPlugin;
+use Acorn\Console\Seed;
 
 class ServiceProvider extends ModuleServiceProvider
 {
@@ -154,6 +156,8 @@ class ServiceProvider extends ModuleServiceProvider
         parent::register();
 
         $this->registerConsoleCommand('acorn.set-config', SetConfig::class);
+        $this->registerConsoleCommand('acorn.config-plugin', ConfigPlugin::class);
+        $this->registerConsoleCommand('acorn.seed', Seed::class);
 
         // Settings placeholders
         SettingsManager::instance()->registerCallback(function ($manager) {
