@@ -32,8 +32,6 @@ use Acorn\Console\Seed;
 
 class ServiceProvider extends ModuleServiceProvider
 {
-    static $pluginFlags = array();
-
     public function boot()
     {
         // -------------------------------------- Global CSS
@@ -79,14 +77,11 @@ class ServiceProvider extends ModuleServiceProvider
         });
 
         // --------------------------------------------- acorn_infrastructure
-        if (!self::$pluginFlags) {
-            $results = DB::select('select * from public.system_plugin_versions');
-            foreach ($results as $result) self::$pluginFlags[$result->code] = $result;
-        }
-
         Event::listen('backend.menu.extendItems', function (&$navigationManager) {
+            // TODO: Maybe we can get pluginFlags from PluginManager
             $mainMenuItems = $navigationManager->listMainMenuItems();
-            foreach (self::$pluginFlags as $plugin) {
+            $pluginFlags   = DB::select('select * from public.system_plugin_versions');
+            foreach ($pluginFlags as $plugin) {
                 if (property_exists($plugin, 'acorn_infrastructure') && $plugin->acorn_infrastructure) {
                     foreach ($mainMenuItems as $mainMenu) {
                         if ($plugin->code == $mainMenu->owner) 
