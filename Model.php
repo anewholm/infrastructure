@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use \Acorn\Relationships\HasManyDeep;
 
 use Illuminate\Database\QueryException;
 use Winter\Storm\Database\QueryBuilder;
@@ -80,6 +81,7 @@ class Model extends BaseModel
     use TranslateBackend {
         __get as protected tb__get;
     }
+    use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
 
     public $printable = FALSE;
 
@@ -306,7 +308,6 @@ class Model extends BaseModel
 
     // --------------------------------------------- New Relations
     // composer require staudenmeir/eloquent-has-many-deep # New Deep relations
-    use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
 
     // New $hasManyDeep 1-1 => 1-X relation examples:
     /*
@@ -348,6 +349,9 @@ class Model extends BaseModel
     */
     public $hasManyDeep = [];
 
+    // TODO: VERSION: Winter 1.2.6=>7 changes the relationTypes format:
+    // https://stackoverflow.com/questions/39034442/preprocessing-like-if-defined-in-php
+    /*
     protected static $relationTypes = [
         'hasOne',
         'hasMany',
@@ -365,8 +369,31 @@ class Model extends BaseModel
         // Ours added
         'hasManyDeep',
     ];
+    */
+    protected static $relationTypes = [
+        'hasOne' => HasOne::class,
+        'hasMany' => HasMany::class,
+        'belongsTo' => BelongsTo::class,
+        'belongsToMany' => BelongsToMany::class,
+        'morphTo' => MorphTo::class,
+        'morphOne' => MorphOne::class,
+        'morphMany' => MorphMany::class,
+        'morphToMany' => MorphToMany::class,
+        'morphedByMany' => MorphToMany::class,
+        'attachOne' => AttachOne::class,
+        'attachMany' => AttachMany::class,
+        'hasOneThrough' => HasOneThrough::class,
+        'hasManyThrough' => HasManyThrough::class,
+        // Ours added
+        'hasManyDeep' => HasManyDeep::class,
+    ];
 
-    protected function handleRelation($relationName)
+    // TODO: VERSION: Winter 1.2.6=>7 change of function signature: 
+    // https://stackoverflow.com/questions/39034442/preprocessing-like-if-defined-in-php
+    //   $addConstraints and Relation return type hint added?
+    //   1.2.6: protected function handleRelation($relationName)
+    //   1.2.7: protected function handleRelation(string $relationName, bool $addConstraints = true): Relation
+    protected function handleRelation(string $relationName, bool $addConstraints = true): Relation
     {
         $relationObj  = NULL;
         $relationType = $this->getRelationType($relationName);
@@ -436,7 +463,7 @@ class Model extends BaseModel
                 }
 
                 // Create relation object
-                $relationObj = new \Acorn\Relationships\HasManyDeep(
+                $relationObj = new HasManyDeep(
                     $query,
                     $farParent, // $this
                     $throughParents, // $parent = $throughParents[0]
@@ -457,7 +484,8 @@ class Model extends BaseModel
                 */
                 break;
             default:
-                $relationObj = parent::handleRelation($relationName);
+                // TODO: VERSION: Winter:1.2.6=>7: + $addConstraints
+                $relationObj = parent::handleRelation($relationName, $addConstraints); 
         }
 
         return $relationObj;

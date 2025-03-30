@@ -24,12 +24,12 @@ class RelationController extends RelationControllerBase
          * thus the config_relation.yaml entries are missing
          * The parent controller is necessary because, in update mode, the first call to this RelationController
          * is to get the values of the primary existing popup model from the relation on the parent controller
-         * 
+         *
          * --- Names
          * parentModel: the model of the calling screen
          * popupModel:  the model behind the popup Relation Managers
          * model:       changing! model depending on type of initiRelation() call
-         * 
+         *
          * --- $_POST
          * post(self::PARAM_FIELD) indicates that this is a Relation Manager popup for $paramField
          * that may have other Relation Managers embedded in the fields.yaml
@@ -37,7 +37,7 @@ class RelationController extends RelationControllerBase
          * --- fields.yaml accepts (but we do not use):
          *   recordUrl:     acorn/criminal/legalcasevictims/update/:id
          *   recordOnClick: $.wn.relationBehavior.clickViewListRecord(':id', 'Legalcases-update-RelationController-criminal_legalcase_victims_legalcase', 'K2AKGIv0ZoqfDRC8t0LUukrRq63B867bURT5wxun')
-         * Which would allow us to change the controller for the popup, _before_ the controller event method is called. 
+         * Which would allow us to change the controller for the popup, _before_ the controller event method is called.
          * However, this would not work because the first call, in update mode, is for the relation on the parent controller/model
          * Probably this would work for create mode.
          *
@@ -45,7 +45,7 @@ class RelationController extends RelationControllerBase
          * partials repeatedly render sub-partials, repeatedly calling validateField($field)
          * validateField($field) comes here if the $field != $this->field
          * so it is important to pass the $field continuously through the partial calls
-         * 
+         *
          * ---- Type of initRelation() call:
          * Call order
          * Primary $form->fields loop is in modules/backend/widgets/form/partials/_form_fields.php
@@ -56,14 +56,14 @@ class RelationController extends RelationControllerBase
          *   is based on $this->eventTarget == button pressed: create|update, and $this->relationType
          *   usually form. list|pivot, usually caused by button-add, indicates a un|link list display operation
          * $this->field is set in initRelation()
-         * 
-         * --- _container.php 
+         *
+         * --- _container.php
          * We have changed this partial to pass the $field through to render() sub-calls
          * In main screen => popup situations we can wait for the relationModel to be indicated
          * on the second initRelation() call
          * and then set it for subsequent RelationManagers in the popup
          * This will then set $model, $this->model and $this->vars[formModel] below
-         * 
+         *
          * For example:
          *   $paramParentModel::find($paramParentModelId)->$paramField
          *   PopupModelInstance->relation for RelationMnager
@@ -77,8 +77,8 @@ class RelationController extends RelationControllerBase
         // This RelationController initialises before a handler is called
         // and crashes because of manageId
         $ajaxHandler = $this->controller->getAjaxHandler();
-        $ajaxMethod  = ($ajaxHandler && strstr($ajaxHandler, '::') 
-            ? last(explode('::', $ajaxHandler)) 
+        $ajaxMethod  = ($ajaxHandler && strstr($ajaxHandler, '::')
+            ? last(explode('::', $ajaxHandler))
             : NULL
         );
         switch ($ajaxMethod) {
@@ -89,7 +89,7 @@ class RelationController extends RelationControllerBase
                 // onApplySetup needs to load the original controller & model first
                 // we think because the cookie columns are related to the chain
                 // TODO: Can we use $this->relationModel / $this->popupModel instead?
-                //$morphModel = FALSE;
+                $morphModel = FALSE;
                 $this->eventTarget = 'button-apply';
                 break;
         }
@@ -97,11 +97,11 @@ class RelationController extends RelationControllerBase
         if ($paramField) {
             if (!$this->popupModel) {
                 if ($paramParentModel) {
-                    // Explicitly sent from _container.php data-request-data call 
+                    // Explicitly sent from _container.php data-request-data call
                     // to onRelationClickViewList()
                     // to override the popupModel for this controller
                     // will only set the main $model below if it does not have the requested field
-                    $paramParentModelObj = ($paramParentModelId 
+                    $paramParentModelObj = ($paramParentModelId
                         ? $paramParentModel::find($paramParentModelId)
                         : new $paramParentModel
                     );
@@ -114,13 +114,15 @@ class RelationController extends RelationControllerBase
                         // None of this models config_relation.yaml is present
                         // so we pre-load
                         //
-                        // The $this->make*Widget() instantiations in parent::initRelation() 
+                        // The $this->make*Widget() instantiations in parent::initRelation()
                         // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
                         // with their bindToController() calls
                         //   if ($this->toolbarWidget = $this->makeToolbarWidget()) {
                         //       $this->toolbarWidget->bindToController();
                         //   }
-                        $this->loadModelRelationConfig($paramParentModelObj);
+                        // TODO: ... this sends the wrong model for the ViewWidgets
+                        // but post does not have it either!
+                        $this->loadModelRelationConfig($paramParentModelObj, !$morphModel);
                     }
                     if ($paramField) {
                         if (!$model->hasRelation($paramField)) {
@@ -129,7 +131,7 @@ class RelationController extends RelationControllerBase
                         }
                     }
                 }
-                
+
                 if ($this->relationModel) { // An empty Model
                     // relationModel has been completed on the second call, so we can now use it
                     // as our new model == popupModel for subsequent in-popup RelationManagers
@@ -145,13 +147,13 @@ class RelationController extends RelationControllerBase
                         $this->popupModel = $this->relationModel;
                     }
                 }
-                
+
                 if ($this->popupModel) {
-                    // Always pre-load the config_relation.yaml 
+                    // Always pre-load the config_relation.yaml
                     // from the real popup model controller immediately
                     // onto $this (wrong) controller
                     //
-                    // The $this->make*Widget() instantiations in parent::initRelation() 
+                    // The $this->make*Widget() instantiations in parent::initRelation()
                     // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
                     // with their bindToController() calls
                     $this->loadModelRelationConfig($this->popupModel);
@@ -205,8 +207,8 @@ class RelationController extends RelationControllerBase
         // ------------------------------------ Hide the parent model column
         // TODO: Hide any 1-1 belongsTo off the parent model also
         // It will still show if it is selected in the cookies
-        if (property_exists($this, 'viewWidget') 
-            && $this->viewWidget 
+        if (property_exists($this, 'viewWidget')
+            && $this->viewWidget
             && $this->viewWidget->model
             && $this->model
         ) {
@@ -225,12 +227,12 @@ class RelationController extends RelationControllerBase
         }
     }
 
-    protected function loadModelRelationConfig(Model &$model): void {
+    protected function loadModelRelationConfig(Model &$model, bool $makeWidgets = FALSE): void {
         // Load the config_relation.yaml for a different Controller
         // This expects the config to be in the standard place
         // TODO: Instantiate and ask the assumed Controller
         //
-        // The $this->make*Widget() instantiations in parent::initRelation() 
+        // The $this->make*Widget() instantiations in parent::initRelation()
         // create themselves in $controller->widget->relation*ViewList|ManageForm|Toolbar|...
         // with their bindToController() calls
         //   if ($this->toolbarWidget = $this->makeToolbarWidget()) {
@@ -238,11 +240,30 @@ class RelationController extends RelationControllerBase
         //   }
         $controllerDir  = $model->controllerDirectoryPathRelative(); // plugins/...
         $relationConfig = "$controllerDir/config_relation.yaml";
+
         if (File::exists($relationConfig)) {
             $config = $this->makeConfig($relationConfig);
             foreach ($config as $field => $fieldConfig) {
-                if (!property_exists($this->originalConfig, $field)) 
+                if (!property_exists($this->originalConfig, $field)) {
                     $this->originalConfig->$field = $fieldConfig;
+                    if ($makeWidgets && isset($fieldConfig['view']['list'])) {
+                        // TODO: runAjaxHandler() will fail because it needs the relation*ViewList widget
+                        //   $handler = $this->controller->getAjaxHandler()
+                        //   list($widgetName, $handlerName) = explode('::', $handler);
+                        // for this in-popup columns setup
+                        // at the same time as needing widgets setup for the original controller
+                        // If we didn't $morphModel, then the associated widgets will not have been created
+
+                        // Copied from parent::makeViewWidget()
+                        $configPath     = $fieldConfig['view']['list'];
+                        $configViewList = $this->makeConfig($configPath);
+                        $configViewList->model  = $model;
+                        $configViewList->alias  = camel_case('relation ' . $field);
+                        $configViewList->alias .= 'ViewList';
+                        $viewWidget = $this->makeWidget('Backend\Widgets\Lists', $configViewList);
+                        $viewWidget->bindToController();
+                    }
+                }
             }
         }
     }
@@ -280,9 +301,6 @@ class RelationController extends RelationControllerBase
                 $this->manageId = NULL;
                 break;
             case 'button-apply':
-                // TODO: runAjaxHandler() will fail because it needs the relation*ViewList widget
-                // for this in-popup columns setup
-                // at the same time as needing widgets setup for the original controller
                 break;
             // New custom eventTargets from overrides below
             case 'button-unlink':
@@ -305,7 +323,7 @@ class RelationController extends RelationControllerBase
                     break;
             }
         }
-        
+
         return $manageMode;
     }
 

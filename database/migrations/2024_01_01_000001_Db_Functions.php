@@ -25,7 +25,7 @@ SQL
 
       $this->createExtension('http');
       $this->createFunction('fn_acorn_new_replicated_row', [], 'trigger', [
-          'domain varchar(1024)',
+          'server_domain varchar(1024)',
           'plugin_path varchar(1024)',
           'action varchar(2048)',
           'params varchar(2048)',
@@ -33,19 +33,19 @@ SQL
           'res public.http_response',
         ], <<<SQL
             -- https://www.postgresql.org/docs/current/plpgsql-trigger.html
-            select domain into domain from acorn_servers where hostname = hostname();
-            if domain is null then
+            select "domain" into server_domain from acorn_servers where hostname = hostname();
+            if server_domain is null then
               new.response = 'No domain specified';
             else
-              plugin_path = '/api';
-              action = '/datachange';
-              params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
-              url = concat('http://', domain, plugin_path, action, '?', params);
-  
-              res = public.http_get(url);
-              new.response = concat(res.status, ' ', res.content);
+                    plugin_path = '/api';
+                    action = '/datachange';
+                    params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
+                    url = concat('http://', server_domain, plugin_path, action, '?', params);
+        
+                    res = public.http_get(url);
+                    new.response = concat(res.status, ' ', res.content);
             end if;
-            
+
             return new;
 SQL
       );

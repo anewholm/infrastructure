@@ -1,5 +1,7 @@
 <?php 
-// Seeding functions
+// TODO: Rationalise this with the Acorn module Seed.php Command
+
+// ---------------------------- Seeding db functions
 $slugSnake      = str_replace('-', '_', $record->slug);
 $dbFunctionBase = "fn_${slugSnake}_seed";
 $dbSubFunction  = "${dbFunctionBase}_%";
@@ -16,7 +18,7 @@ try {
     $results = array();
 }
 
-// Seeding files
+// ---------------------------- Seeding files
 $slugDir      = str_replace('-', '/', $record->slug);
 $seedPath     = "plugins/$slugDir/updates/seed.sql";
 if (File::exists($seedPath)) {
@@ -27,6 +29,7 @@ if (File::exists($seedPath)) {
     ));
 }
 
+// ---------------------------- Output
 print('<ul>');
 foreach ($results as $result) {
     $name   = $result->name;
