@@ -296,6 +296,18 @@ SQL
         DB::unprepared("create extension if not exists $name;");
     }
 
+    public function createView(string $name, string $body)
+    {
+        $BODY = '$BODY$';
+        DB::unprepared(<<<SQL
+            create or replace view $name
+            as $BODY
+            $body
+            $BODY;
+SQL
+        );
+    }
+
     public function createFunction(string $name, array $parameters, string $returnType, array $declares, string $body, ?string $language = 'plpgsql', ?array $modifiers = [])
     {
         // Function name must start with fn_<author>_<plugin>_
