@@ -19,7 +19,7 @@ Event::listen('system.route', function () {
     Event::fire('acorn.beforeRoute');
 
     Route::get('/api/datachange', DB::class . '@datachange');
-    Route::get('/laravel-dashboard', ShowDashboard::class);
+    // TODO: Route::get('/laravel-dashboard', ShowDashboard::class);
 
     Route::match(
         ['get', 'post'], '/broadcasting/auth',
