@@ -1,0 +1,16 @@
+{
+  "name": "acorn/acorn",
+  "type": "winter-module",
+  "require": {
+    "composer/installers": "~1.0",
+    "php": "^8"
+  },
+  "autoload": {
+    "psr-4": {
+      "Acorn\\": "",
+      "Acorn\\Traits\\": "traits",
+      "Acorn\\Behaviors\\": "behaviors",
+      "Acorn\\Relationships\\": "relationships"
+    }
+  }
+}

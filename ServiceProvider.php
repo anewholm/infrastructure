@@ -109,7 +109,7 @@ class ServiceProvider extends ModuleServiceProvider
             ]);
         });
 
-        parent::boot('acorn');
+        parent::boot(); // VERSION: Winter 1.2.6: 'acorn');
     }
 
     protected function missingServices(): array
@@ -215,7 +215,7 @@ class ServiceProvider extends ModuleServiceProvider
         return $isDebugAny;
     }
 
-    static public function isDebug(string $type): bool
+    static public function isDebug(string $type = ''): bool
     {
         return (env('APP_DEBUG') && (isset($_GET["debug-$type"]) || isset($_GET['debug-all'])));
     }

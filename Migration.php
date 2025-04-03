@@ -4,6 +4,7 @@ use Winter\Storm\Database\Updates\Migration as StormMigration;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 use DB;
+use Doctrine\DBAL\Schema\View;
 use Exception;
 
 class Migration extends StormMigration
@@ -83,7 +84,7 @@ class Migration extends StormMigration
     public function tableCounts(?string $tableMask = NULL): array
     {
         if (!$tableMask) $tableMask = $this->tableMask();
-        return DB::select("select * from fn_acorn_table_counts('public') where \"table\" like('$tablePrefix')");
+        return DB::select("select * from fn_acorn_table_counts('public') where \"table\" like('$tableMask')");
     }
 
     public function tableNames(?string $tabletableMask = NULL): array
@@ -298,14 +299,7 @@ SQL
 
     public function createView(string $name, string $body)
     {
-        $BODY = '$BODY$';
-        DB::unprepared(<<<SQL
-            create or replace view $name
-            as $BODY
-            $body
-            $BODY;
-SQL
-        );
+        DB::getDoctrineSchemaManager()->createView(new View($name, $body));
     }
 
     public function createFunction(string $name, array $parameters, string $returnType, array $declares, string $body, ?string $language = 'plpgsql', ?array $modifiers = [])
