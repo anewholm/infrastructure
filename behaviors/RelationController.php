@@ -1,16 +1,16 @@
-<?php namespace Acorn\Behaviors;
+<?php namespace AcornAssociated\Behaviors;
 
 use Backend\Behaviors\RelationController as RelationControllerBase;
-use Acorn\Relationships\HasManyDeep;
+use AcornAssociated\Relationships\HasManyDeep;
 use Winter\Storm\Database\Pivot;
 use Log;
 use Str;
 use File;
-use Acorn\Model;
+use AcornAssociated\Model;
 
 class RelationController extends RelationControllerBase
 {
-    use \Acorn\Traits\MorphConfig;
+    use \AcornAssociated\Traits\MorphConfig;
 
     public const PARAM_PARENT_MODEL = '_parent_model';
     public const PARAM_PARENT_MODEL_ID = '_parent_model_id';
@@ -35,7 +35,7 @@ class RelationController extends RelationControllerBase
          * that may have other Relation Managers embedded in the fields.yaml
          *
          * --- fields.yaml accepts (but we do not use):
-         *   recordUrl:     acorn/criminal/legalcasevictims/update/:id
+         *   recordUrl:     acornassociated/criminal/legalcasevictims/update/:id
          *   recordOnClick: $.wn.relationBehavior.clickViewListRecord(':id', 'Legalcases-update-RelationController-criminal_legalcase_victims_legalcase', 'K2AKGIv0ZoqfDRC8t0LUukrRq63B867bURT5wxun')
          * Which would allow us to change the controller for the popup, _before_ the controller event method is called.
          * However, this would not work because the first call, in update mode, is for the relation on the parent controller/model
@@ -200,9 +200,9 @@ class RelationController extends RelationControllerBase
         parent::initRelation($model, $field); // Initializes widgets on controller
 
         // Point to the parent view path
-        if ($this->toolbarWidget) $this->toolbarWidget->addViewPath('~/modules/acorn/partials');
+        if ($this->toolbarWidget) $this->toolbarWidget->addViewPath('~/modules/acornassociated/partials');
         $this->addViewPath('~/modules/backend/behaviors/relationcontroller/partials');
-        $this->addViewPath('~/modules/acorn/partials');
+        $this->addViewPath('~/modules/acornassociated/partials');
 
         // ------------------------------------ Hide the parent model column
         // TODO: Hide any 1-1 belongsTo off the parent model also

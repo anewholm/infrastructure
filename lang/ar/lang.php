@@ -2,7 +2,7 @@
 
 return [
     'module' => [
-        'name' => 'Acorn',
+        'name' => 'AcornAssociated',
         'setup' => 'تثبيت',
         'reports' => 'التقارير',
         'replication_debug' => 'تصحيح أخطاء التكرار',

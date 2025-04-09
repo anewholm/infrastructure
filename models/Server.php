@@ -1,8 +1,8 @@
 <?php
 
-namespace Acorn\Models;
+namespace AcornAssociated\Models;
 
-use Acorn\Model;
+use AcornAssociated\Model;
 
 /**
  * server Model
@@ -14,7 +14,7 @@ class Server extends Model
     /**
      * @var string The database table used by the model.
      */
-    public $table = 'acorn_servers';
+    public $table = 'acornassociated_servers';
 
     /**
      * @var array Guarded fields

@@ -2,6 +2,10 @@
     <?= $this->makePartial('popup_qrscan'); ?>
 </div>
 
+<div class="search-global-scope-selectors-container">
+    <?= $this->makePartial('global_scope_selectors'); ?>
+</div>
+
 <div class="loading-indicator-container size-input-text">
     <input
         placeholder="<?= $placeholder ?>"

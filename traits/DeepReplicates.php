@@ -1,4 +1,4 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
 trait DeepReplicates
 {

@@ -20,11 +20,11 @@ if ($value) {
     $timeTense = DateTimeHelper::timeTense($value);
 
     // Translations
-    $dayLabel        = e(trans('acorn::lang.models.general.dateformats.day'));
-    $weekInYearLabel = e(trans('acorn::lang.models.general.dateformats.weekinyear'));
-    $monthLabel      = e(trans('acorn::lang.models.general.dateformats.month'));
-    $yearLabel       = e(trans('acorn::lang.models.general.dateformats.year'));
-    $timezoneLabel   = e(trans('acorn::lang.models.general.dateformats.timezone'));
+    $dayLabel        = e(trans('acornassociated::lang.models.general.dateformats.day'));
+    $weekInYearLabel = e(trans('acornassociated::lang.models.general.dateformats.weekinyear'));
+    $monthLabel      = e(trans('acornassociated::lang.models.general.dateformats.month'));
+    $yearLabel       = e(trans('acornassociated::lang.models.general.dateformats.year'));
+    $timezoneLabel   = e(trans('acornassociated::lang.models.general.dateformats.timezone'));
 
     // Title
     $title     = implode('<br/>', array(

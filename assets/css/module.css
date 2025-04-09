@@ -1,9 +1,22 @@
-@import '/modules/acorn/assets/css/forms.css';
-@import '/modules/acorn/assets/css/tabbing.css';
-@import '/modules/acorn/assets/css/menus.css';
-@import '/modules/acorn/assets/css/lists.css';
-@import '/modules/acorn/assets/css/qrcode-printing.css';
-@import '/modules/acorn/assets/css/html5-qrcode.css';
-@import '/modules/acorn/assets/css/print.css';
+@import '/modules/acornassociated/assets/css/forms.css';
+@import '/modules/acornassociated/assets/css/tabbing.css';
+@import '/modules/acornassociated/assets/css/menus.css';
+@import '/modules/acornassociated/assets/css/lists.css';
+@import '/modules/acornassociated/assets/css/qrcode-printing.css';
+@import '/modules/acornassociated/assets/css/html5-qrcode.css';
+@import '/modules/acornassociated/assets/css/print.css';
 
 
+/* Plugin README.md */
+.plugin-details-content h2 {
+    margin-top:30px;
+    padding: 10px 0px 0px 10px;
+    background-color: #ddd;
+}
+.plugin-details-content h3 {
+    color: #777;
+    margin-left:4px;
+}
+.plugin-details-content pre.prettyprint {
+    margin:0px;
+}

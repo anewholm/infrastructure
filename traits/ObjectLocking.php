@@ -1,9 +1,9 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
 use BackendAuth;
 use \Backend\Models\User;
 use \Backend\Models\UserGroup;
-use \Acorn\Exception\ObjectIsLocked;
+use \AcornAssociated\Exception\ObjectIsLocked;
 
 trait ObjectLocking
 {

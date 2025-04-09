@@ -134,3 +134,9 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
     content: "✓";
     text-align: center;
 }
+.search-global-scope-selectors-container {
+    float: left;
+    margin-right: 10px;
+    margin-top: -4px;
+    font-size: 12px; /* Override .control-toolbar */
+}

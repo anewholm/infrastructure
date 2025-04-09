@@ -1,5 +1,5 @@
 {
-  "name": "acorn/acorn",
+  "name": "acornassociated/acornassociated",
   "type": "winter-module",
   "require": {
     "composer/installers": "~1.0",
@@ -7,10 +7,10 @@
   },
   "autoload": {
     "psr-4": {
-      "Acorn\\": "",
-      "Acorn\\Traits\\": "traits",
-      "Acorn\\Behaviors\\": "behaviors",
-      "Acorn\\Relationships\\": "relationships"
+      "AcornAssociated\\": "",
+      "AcornAssociated\\Traits\\": "traits",
+      "AcornAssociated\\Behaviors\\": "behaviors",
+      "AcornAssociated\\Relationships\\": "relationships"
     }
   }
 }

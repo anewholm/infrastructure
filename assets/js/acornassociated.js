@@ -3,13 +3,13 @@ if (!String.prototype.plural) String.prototype.plural = function plural() {
     return this + 's';
 };
 
-function acorn_hashbangCommands() {
+function acornassociated_hashbangCommands() {
     var path, parts, command, hashbang = document.location.hash;
     if (hashbang && hashbang.substr(0,2) == '#!') {
         if (path = hashbang.substr(2)) {
             parts   = path.replace(/^\/+|\/+$/g, '').split('/');
             // SECURITY: we are allowing running of functions based on URL input
-            command = 'acorn_public_' + parts[0];
+            command = 'acornassociated_public_' + parts[0];
             if (window[command] instanceof Function) {
                 // We timeout in case handlers need to be attached
                 setTimeout(function(){
@@ -22,7 +22,7 @@ function acorn_hashbangCommands() {
     }
 }
 
-$(document).ready(acorn_hashbangCommands);
+$(document).ready(acornassociated_hashbangCommands);
 
 String.prototype.toUCFirst = function(){
     return this.charAt(0).toUpperCase() + this.replace(/[^a-z]+/gi, '').slice(1);

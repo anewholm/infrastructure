@@ -1,4 +1,4 @@
-<?php namespace Acorn;
+<?php namespace AcornAssociated;
 
 use Request;
 use Config;
