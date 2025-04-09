@@ -1,4 +1,4 @@
-<?php namespace Acorn\Traits;
+<?php namespace AcornAssociated\Traits;
 
 trait PostGreSQLFieldTypeUtilities {
     static protected function dec2binArray(int $dec)

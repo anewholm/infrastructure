@@ -8,4 +8,4 @@ fields:
     cube_refresh_interval:
         span: full
         type: partial
-        path: modules/acorn/partials/_phpinfo.php
+        path: modules/acornassociated/partials/_phpinfo.php

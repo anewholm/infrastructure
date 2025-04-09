@@ -1,4 +1,4 @@
-<?php namespace Acorn;
+<?php namespace AcornAssociated;
 
 use BackendMenu;
 use Backend\Classes\Controller as BackendController;
@@ -12,16 +12,17 @@ use File;
 use Form;
 use Request;
 use Redirect;
+use Session;
 use ReflectionClass;
 use Flash;
 use \Exception;
 use Str;
 use Winter\Storm\Html\Helper as HtmlHelper;
 
-use Acorn\User\Models\User;
-use Acorn\Events\DataChange;
-use Acorn\Events\UserNavigation;
-use Acorn\ServiceProvider;
+use AcornAssociated\User\Models\User;
+use AcornAssociated\Events\DataChange;
+use AcornAssociated\Events\UserNavigation;
+use AcornAssociated\ServiceProvider;
 
 /**
  * Computer Product Backend Controller
@@ -42,7 +43,7 @@ class Controller extends BackendController
     {
         parent::__construct();
 
-        $this->addViewPath('~/modules/acorn/partials');
+        $this->addViewPath('~/modules/acornassociated/partials');
 
         Event::listen('backend.page.beforeDisplay', function($controller, $action, $params) {
             // Files commonly get loaded in popups, so we always include this widget
@@ -66,12 +67,12 @@ class Controller extends BackendController
         // Files commonly get loaded in popups, so we always include this widget
         // TODO: Hardcoded testing to be removed
         /*
-        if (class_exists('\Acorn\Justice\Models\ScannedDocument')) {
+        if (class_exists('\AcornAssociated\Justice\Models\ScannedDocument')) {
             // Users controller goes in to a loop for some reason
-            if (!$this instanceof \Acorn\User\Controllers\Users) {
+            if (!$this instanceof \AcornAssociated\User\Controllers\Users) {
                 $config = array(
                     'valueFrom' => 'document',
-                    'model'     => new \Acorn\Justice\Models\ScannedDocument,
+                    'model'     => new \AcornAssociated\Justice\Models\ScannedDocument,
                 );
                 $pseudoUpload = new \Backend\Classes\FormField('ScannedDocument[document]', 'Document');
                 $pseudoUpload->displayAs('text', $config);
@@ -204,7 +205,7 @@ class Controller extends BackendController
                 $parentId = $this->params[0];
                 $this->update($parentId);
                 $parentModel      = $this->widget->form->config->model; // Legalcase
-                $parentModelClass = get_class($parentModel);            // Acorn/Criminal/Models/Legalcase
+                $parentModelClass = get_class($parentModel);            // AcornAssociated/Criminal/Models/Legalcase
 
                 // We are looking for a popup model relation that points to our parent page Model
                 $popupFieldNameToParentModel = NULL;
@@ -230,7 +231,7 @@ class Controller extends BackendController
         $this->addCss('/plugins/winter/translate/assets/css/multilingual.css?v2.1.6');
 
         // ------------------------------- Render
-        $postUrl = $controller->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
+        $postUrl = $controller->controllerUrl($popupAction); // /backend/acornassociated/finance/invoices/create
         $closeName      = $this->transBackend('close');
         $actionName     = $this->transBackend($popupAction);
         $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label', $model) : last(explode('\\', get_class($model))));
@@ -281,7 +282,7 @@ class Controller extends BackendController
                     data-request-update='$dataRequestUpdateString'
                     data-hotkey='ctrl+s, cmd+s'
                     data-load-indicator='$popupTitle...'
-                    data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                    data-request-success='acornassociated_popupComplete(context, textStatus, jqXHR);'
                     data-dismiss='popup'
                     class='btn btn-primary'
                 >
@@ -436,7 +437,7 @@ HTML;
                         data-request-data='$dataRequestDataString'
                         data-hotkey='ctrl+s, cmd+s'
                         data-load-indicator='$title...'
-                        data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                        data-request-success='acornassociated_popupComplete(context, textStatus, jqXHR);'
                         data-dismiss='popup'
                         class='btn btn-primary'
                     >
@@ -509,13 +510,13 @@ HTML;
         $actions        = post('actions');
         $eventJs        = 'popup';
         $actionsList    = '';
-        $translationBaseKey = 'acorn::lang.models.general';
+        $translationBaseKey = 'acornassociated::lang.models.general';
         foreach ($actions as $action) {
             $actionKey = str_replace('-', '_', $action);
             if ($actionsList) $actionsList .= ' | ';
             $actionsList .= e(trans("$translationBaseKey.$actionKey")); // str_replace('-', ' ', Str::title($action));
         }
-        $scanQrCode     = e(trans('acorn::lang.models.general.scan_qrcode'));
+        $scanQrCode     = e(trans('acornassociated::lang.models.general.scan_qrcode'));
         $breadcrumbHTML = "<li>$scanQrCode</li><li>$actionsList</li>";
         ///modal genreal scan_qrcode
         $closeName      = $this->transBackend('close');
@@ -546,7 +547,7 @@ HTML;
         if (is_array($eventData) && isset($eventData['eventClass'])) {
             $eventClass = $eventData['eventClass']; // Fully Qualified
             $event      = $eventClass::fromArray($eventData); // DataChange, UserNavigation
-            $context    = (object) post('context'); // [acorn, data, change]
+            $context    = (object) post('context'); // [acornassociated, data, change]
 
             // Actually only necessary for partials with 'list'
             // Request::header('X_WINTER_REQUEST_PARTIALS')
@@ -591,7 +592,7 @@ HTML;
                 case UserNavigation::class:
                     $user = BackendAuth::user();
                     if ($event->isFor($user)) {
-                        // TODO: Acorn\\Events\\UserNavigation return a Redirect command
+                        // TODO: AcornAssociated\\Events\\UserNavigation return a Redirect command
                     }
                     $handled = TRUE;
                     break;
@@ -646,6 +647,17 @@ HTML;
     */
 
     // -------------------------------------- Config & Display
+    public function onGlobalScopeChange()
+    {
+        foreach (post() as $setting => $value) {
+            $settingParts = explode('::', $setting);
+            if (isset($settingParts[1]) && $settingParts[1] == 'globalScope') 
+                Session::put($setting, $value);
+        }
+        // TODO: Refresh the list view only
+        return Redirect::refresh();
+    }
+
     public function listExtendRecords($records)
     {
         // Custom relation scopes based on relations, not SQL
@@ -671,7 +683,7 @@ HTML;
     public function listRender()
     {
         // Automatically listen for updates
-        $html  = '<div id="ListWidgetContainer" websocket-listen="acorn" websocket-onacorn-data-change-update="\'list\': \'#ListWidgetContainer\'">';
+        $html  = '<div id="ListWidgetContainer" websocket-listen="acornassociated" websocket-onacornassociated-data-change-update="\'list\': \'#ListWidgetContainer\'">';
         $html .= parent::listRender();
         $html .= '</div>';
         return $html;

@@ -1,10 +1,10 @@
 <?php 
-// TODO: Rationalise this with the Acorn module Seed.php Command
+// TODO: Rationalise this with the AcornAssociated module Seed.php Command
 
 // ---------------------------- Seeding db functions
 $slugSnake      = str_replace('-', '_', $record->slug);
-$dbFunctionBase = "fn_${slugSnake}_seed";
-$dbSubFunction  = "${dbFunctionBase}_%";
+$dbFunctionBase = "fn_{$slugSnake}_seed";
+$dbSubFunction  = "{$dbFunctionBase}_%";
 try {
     $results = DB::select("select 
         proname as name, 'function' as type, proargnames as parameters, proargtypes as types, oid, obj_description(oid) as comment
@@ -18,12 +18,34 @@ try {
     $results = array();
 }
 
-// ---------------------------- Seeding files
+// ---------------------------- Create-system Seeding file
 $slugDir      = str_replace('-', '/', $record->slug);
 $seedPath     = "plugins/$slugDir/updates/seed.sql";
 if (File::exists($seedPath)) {
     array_push($results, (object)array(
         'name'    => 'seed.sql',
+        'type'    => 'file',
+        'comment' => '',
+    ));
+}
+
+// ---------------------------- Root Seeding file(s)
+$slugDir      = str_replace('-', '/', $record->slug);
+$seedPath     = "plugins/$slugDir/updates/seed*.php";
+foreach (glob($seedPath) as $filepath) {
+    array_push($results, (object)array(
+        'name'    => basename($filepath),
+        'type'    => 'file',
+        'comment' => '',
+    ));
+}
+
+// ---------------------------- Version.yaml Seeding file(s)
+$slugDir      = str_replace('-', '/', $record->slug);
+$seedPath     = "plugins/$slugDir/updates/*/seed*.php";
+foreach (glob($seedPath) as $filepath) {
+    array_push($results, (object)array(
+        'name'    => basename($filepath),
         'type'    => 'file',
         'comment' => '',
     ));

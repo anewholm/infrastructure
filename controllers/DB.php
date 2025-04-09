@@ -1,9 +1,9 @@
-<?php namespace Acorn\Controllers;
+<?php namespace AcornAssociated\Controllers;
 
 use BackendMenu;
-use Acorn\Controller; // extends Backend\Classes\Controller
-use Acorn\Migration;
-use Acorn\Events\DataChange;
+use AcornAssociated\Controller; // extends Backend\Classes\Controller
+use AcornAssociated\Migration;
+use AcornAssociated\Events\DataChange;
 use \Exception;
 
 /**
@@ -14,9 +14,9 @@ class DB extends Controller
     public function datachange()
     {
         // TODO: What about /laravel-websockets/event?
-        // e.g. /api/datachange?TG_NAME=tr_acorn_lojistiks_new_replicated_row&TG_OP=INSERT&TG_TABLE_SCHEMA=product&TG_TABLE_NAME=acorn_lojistiks_products&ID=1
+        // e.g. /api/datachange?TG_NAME=tr_acornassociated_lojistiks_new_replicated_row&TG_OP=INSERT&TG_TABLE_SCHEMA=product&TG_TABLE_NAME=acornassociated_lojistiks_products&ID=1
         // Process:
-        //   Database trigger function: fn_acorn_new_replicated_row()
+        //   Database trigger function: fn_acornassociated_new_replicated_row()
         //   with http_get('/api/datachange') pg_http extension
         //   passes in parameters on the query String $_GET
         //   routes.php: API route /api/datachange
@@ -45,7 +45,7 @@ class DB extends Controller
         $response = 'Not understood';
 
         if ($dbLangPath = post('dbLangPath')) {
-            // dbLangPath: tables.public.acorn.criminal.legalcase_defendants.foreignkeys.legalcase_id
+            // dbLangPath: tables.public.acornassociated.criminal.legalcase_defendants.foreignkeys.legalcase_id
             $dbPath = explode('.', $dbLangPath);
             if ($comment = post('comment')) {
                 // Update request

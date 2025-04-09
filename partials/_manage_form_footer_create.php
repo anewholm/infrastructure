@@ -1,5 +1,5 @@
 <?php
-use Acorn\Behaviors\RelationController;
+use AcornAssociated\Behaviors\RelationController;
 
 print($this->makePartial('actions'));
 
@@ -16,7 +16,7 @@ if (post($PARAM_PARENT_MODEL)) {
 }
 
 // To view all records of this type
-$viewAll = trans('acorn::lang.models.general.view_all');
+$viewAll = trans('acornassociated::lang.models.general.view_all');
 $href    = $formModel->controllerUrl();
 print("<a class='view-all' href='$href' target='_blank'>$viewAll</a>");
 

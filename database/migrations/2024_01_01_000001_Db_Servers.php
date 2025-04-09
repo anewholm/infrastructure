@@ -1,13 +1,13 @@
 <?php
 
 use Winter\Storm\Database\Schema\Blueprint;
-use Acorn\Migration;
+use AcornAssociated\Migration;
 
 class DbServers extends Migration
 {
     public function up()
     {
-        $table = 'acorn_servers';
+        $table = 'acornassociated_servers';
         Schema::create($table, function (Blueprint $table) {
             $table->engine = 'InnoDB';
             $table->uuid('id')->unique()->primaryKey();
@@ -24,7 +24,7 @@ class DbServers extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('acorn_servers');
+        Schema::dropIfExists('acornassociated_servers');
     }
 }
 

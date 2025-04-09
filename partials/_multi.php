@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Database\Eloquent\Collection;
-use Acorn\Traits\PathsHelper;
+use AcornAssociated\Traits\PathsHelper;
 use Backend\Classes\ListColumn;
 use \Carbon\CarbonInterval;
 
