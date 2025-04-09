@@ -1,10 +1,10 @@
-<?php namespace AcornAssociated\Relationships;
+<?php namespace Acorn\Relationships;
 
 use \Staudenmeir\EloquentHasManyDeep\HasManyDeep as StaudenmeirHasManyDeep;
-use AcornAssociated\Collection;
-use AcornAssociated\Collection as CollectionBase;
-use AcornAssociated\Model;
-use AcornAssociated\Builder;
+use Acorn\Collection;
+use Acorn\Collection as CollectionBase;
+use Acorn\Model;
+use Acorn\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 class HasManyDeep extends StaudenmeirHasManyDeep

@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated;
+<?php namespace Acorn;
 
 use Winter\Storm\Database\Updates\Migration as StormMigration;
 use Symfony\Component\HttpFoundation\File\File;
@@ -52,13 +52,13 @@ class Migration extends StormMigration
 
     public function truncateDatabase(string $tablePrefix): bool
     {
-        DB::unprepared("select fn_acornassociated_truncate_database('%', '$tablePrefix%')");
+        DB::unprepared("select fn_acorn_truncate_database('%', '$tablePrefix%')");
         return TRUE;
     }
 
     public function resetSequences(string $tablePrefix): bool
     {
-        DB::unprepared("select fn_acornassociated_reset_sequences('%', '$tablePrefix%')");
+        DB::unprepared("select fn_acorn_reset_sequences('%', '$tablePrefix%')");
         return TRUE;
     }
 
@@ -84,7 +84,7 @@ class Migration extends StormMigration
     public function tableCounts(?string $tableMask = NULL): array
     {
         if (!$tableMask) $tableMask = $this->tableMask();
-        return DB::select("select * from fn_acornassociated_table_counts('public') where \"table\" like('$tableMask')");
+        return DB::select("select * from fn_acorn_table_counts('public') where \"table\" like('$tableMask')");
     }
 
     public function tableNames(?string $tabletableMask = NULL): array
@@ -94,7 +94,7 @@ class Migration extends StormMigration
 
     public function refreshSubscriptionTo(array|string $subscriberInfo): bool
     {
-        // TODO: ALTER SUBSCRIPTION sub_acornassociated_lojistiks_all_tables REFRESH PUBLICATION WITH (COPY_DATA=false);
+        // TODO: ALTER SUBSCRIPTION sub_acorn_lojistiks_all_tables REFRESH PUBLICATION WITH (COPY_DATA=false);
         throw new Exception('Not complete');
         return TRUE;
     }
@@ -108,8 +108,8 @@ class Migration extends StormMigration
             'connection'   => $subscriberInfo,
         ];
         // Programmatic sub/pub naming
-        if (!isset($subscriberInfo['table_prefix'])) $subscriberInfo['table_prefix'] = $tablePrefix; // acornassociated_lojistiks_
-        if (!isset($subscriberInfo['publication']))  $subscriberInfo['publication']  = "pub_$subscriberInfo[table_prefix]tables"; // pub_acornassociated_lojistiks_tables
+        if (!isset($subscriberInfo['table_prefix'])) $subscriberInfo['table_prefix'] = $tablePrefix; // acorn_lojistiks_
+        if (!isset($subscriberInfo['publication']))  $subscriberInfo['publication']  = "pub_$subscriberInfo[table_prefix]tables"; // pub_acorn_lojistiks_tables
         if (!isset($subscriberInfo['subscription'])) $subscriberInfo['subscription'] = "sub_$subscriberInfo[table_prefix]tables";
         if (!isset($subscriberInfo['slotname']))     $subscriberInfo['slotname']     = "slot_$subscriberInfo[table_prefix]tables_$hostname";
         if (!isset($subscriberInfo['copy_data']))    $subscriberInfo['copy_data']    = true;
@@ -192,11 +192,11 @@ SQL;
         // print("\t\t\t\tCreating subscription on $subscriberInfo[connection]\n");
         $SQL = <<<SQL
             CREATE SUBSCRIPTION $subscriberInfo[subscription]
-            CONNECTION 'host=192.168.88.252 port=5433 dbname=acornlojistiks user=sanchez password=xxxxxx sslmode=disable'
+            CONNECTION 'host=192.168.88.252 port=5433 dbname=acornlojistiks user=sz password=xxxxxx sslmode=disable'
             PUBLICATION $subscriberInfo[publication]
             WITH (
                 streaming = 'True',
-                slot_name = 'sub_acornassociated_lojistiks_all_tables_laptop',
+                slot_name = 'sub_acorn_lojistiks_all_tables_laptop',
                 copy_data = false,
             );
 SQL;
@@ -275,7 +275,7 @@ SQL
     }
 
     // ------------------------------------------ Extended table management
-    // TODO: Make these methods on an AcornAssociated Table Class
+    // TODO: Make these methods on an Acorn Table Class
     public function dropIfExistsCascade($table)
     {
         DB::unprepared("drop table if exists $table cascade");
@@ -379,7 +379,7 @@ SQL
     }
 
     // ------------------------------------------ Extended Fields
-    // TODO: Make these methods on an AcornAssociated Table Class
+    // TODO: Make these methods on an Acorn Table Class
     public function setFunctionDefault(string $table, string $column, string $function)
     {
         DB::unprepared("alter table \"$table\" alter column \"$column\" set default $function()");

@@ -1,4 +1,4 @@
-function acornassociated_updateViewSelectionLink() {
+function acorn_updateViewSelectionLink() {
   var jInput    = $(this);
   var modelUuid = jInput.val();
   var jGotoLink = jInput.closest('.form-group,.custom-checkbox').find('.goto-form-group-selection');
@@ -19,7 +19,7 @@ function acornassociated_updateViewSelectionLink() {
   }
 }
 
-function acornassociated_dynamicElements(){
+function acorn_dynamicElements(){
   // Callouts (hints) close button
   // NOTE: Not using data-dismiss="callout" because we want a cross and a slideUp effect
   $('.callout .close').on('click', function(){
@@ -29,7 +29,7 @@ function acornassociated_dynamicElements(){
   $('.goto-form-group-selection').hide();
 
   // We do not know what was updated
-  $(':input').each(acornassociated_updateViewSelectionLink);
+  $(':input').each(acorn_updateViewSelectionLink);
 
   // Hide hide-empty tabs
   $('.control-tabs .nav-tabs > li').each(function(i){
@@ -62,11 +62,11 @@ function acornassociated_dynamicElements(){
   // NOTE: form.css will also gray the labels
   $('input[readonly]:radio:not(:checked)').attr('disabled', true);
 }
-$(document).ready(acornassociated_dynamicElements);
-$(window).on('ajaxUpdateComplete', acornassociated_dynamicElements);
-$(document).on('change', ':input', acornassociated_updateViewSelectionLink);
+$(document).ready(acorn_dynamicElements);
+$(window).on('ajaxUpdateComplete', acorn_dynamicElements);
+$(document).on('change', ':input', acorn_updateViewSelectionLink);
 
-function acornassociated_ready(){
+function acorn_ready(){
   // Permissions screen
   $('.permissioneditor > table').addClass('collapsable');
   
@@ -77,15 +77,15 @@ function acornassociated_ready(){
     else jRows.show();
   });
 }
-$(document).ready(acornassociated_ready);
+$(document).ready(acorn_ready);
 
-function acornassociated_popupComplete(context, textStatus, jqXHR) {
+function acorn_popupComplete(context, textStatus, jqXHR) {
   // When the popup closes, this function will set any passed value
   // on the original form popup button, indicated in field_name
   // and then trigger its change
   // So that other original form fields can dependsOn the results of the popup operation
   // Called with:
-  //   data-request-success='acornassociated_popupComplete(context, textStatus, jqXHR);'
+  //   data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
   var responseId, fieldName;
   if (textStatus == 'success') {
     if (fieldName = context.options.data.field_name) {

@@ -1,7 +1,7 @@
 <?php
 
 use Winter\Storm\Database\Schema\Blueprint;
-use AcornAssociated\Migration;
+use Acorn\Migration;
 
 class DbFunctions extends Migration
 {
@@ -9,7 +9,7 @@ class DbFunctions extends Migration
     {
       // Useful for replication initiation
       // string $name, array $parameters, string $returnType, array $declares, string $body, ?string $language = 'plpgsql'
-      $this->createFunction('fn_acornassociated_truncate_database', ['schema_like character varying', 'table_like character varying'], 'void', ['reset_query varchar(32596)'], <<<SQL
+      $this->createFunction('fn_acorn_truncate_database', ['schema_like character varying', 'table_like character varying'], 'void', ['reset_query varchar(32596)'], <<<SQL
         reset_query = (SELECT 'TRUNCATE TABLE '
               || string_agg(format('%I.%I', schemaname, tablename), ', ')
               || ' CASCADE'
@@ -24,7 +24,7 @@ SQL
       );
 
       $this->createExtension('http');
-      $this->createFunction('fn_acornassociated_new_replicated_row', [], 'trigger', [
+      $this->createFunction('fn_acorn_new_replicated_row', [], 'trigger', [
           'server_domain varchar(1024)',
           'plugin_path varchar(1024)',
           'action varchar(2048)',
@@ -33,7 +33,7 @@ SQL
           'res public.http_response',
         ], <<<SQL
             -- https://www.postgresql.org/docs/current/plpgsql-trigger.html
-            select "domain" into server_domain from acornassociated_servers where hostname = hostname();
+            select "domain" into server_domain from acorn_servers where hostname = hostname();
             if server_domain is null then
               new.response = 'No domain specified';
             else
@@ -50,9 +50,9 @@ SQL
 SQL
       );
 
-      $this->createFunction('fn_acornassociated_add_websockets_triggers', ['schema character varying', 'table_prefix character varying'], 'void', [], <<<SQL
+      $this->createFunction('fn_acorn_add_websockets_triggers', ['schema character varying', 'table_prefix character varying'], 'void', [], <<<SQL
         -- SELECT * FROM information_schema.tables;
-        -- This assumes that fn_acornassociated_new_replicated_row() exists
+        -- This assumes that fn_acorn_new_replicated_row() exists
         -- Trigger on replpica also: ENABLE ALWAYS
         execute (
           SELECT string_agg(concat(
@@ -61,7 +61,7 @@ SQL
                 BEFORE INSERT
                 ON ', table_schema, '.', table_name, '
                 FOR EACH ROW
-                EXECUTE FUNCTION public.fn_acornassociated_new_replicated_row();',
+                EXECUTE FUNCTION public.fn_acorn_new_replicated_row();',
             'ALTER TABLE IF EXISTS ', table_schema, '.', table_name, ' ENABLE ALWAYS TRIGGER tr_', table_name, '_new_replicated_row;'
           ), ' ')
           FROM information_schema.tables
@@ -73,7 +73,7 @@ SQL
 SQL
       );
 
-      $this->createFunction('fn_acornassociated_reset_sequences', ['schema_like character varying', 'table_like character varying'], 'void', ['reset_query varchar(32596)'], <<<SQL
+      $this->createFunction('fn_acorn_reset_sequences', ['schema_like character varying', 'table_like character varying'], 'void', ['reset_query varchar(32596)'], <<<SQL
         reset_query = (SELECT string_agg(
                 concat('SELECT SETVAL(''',
               PGT.schemaname, '.', S.relname,
@@ -100,7 +100,7 @@ SQL
 SQL
       );
 
-      $this->createFunction('fn_acornassociated_table_counts', ['_schema character varying'], 'TABLE("table" text, count bigint)', [], <<<SQL
+      $this->createFunction('fn_acorn_table_counts', ['_schema character varying'], 'TABLE("table" text, count bigint)', [], <<<SQL
           -- SELECT * FROM information_schema.tables;
           return query execute (select concat(
           'select "table", "count" from (',
@@ -120,11 +120,11 @@ SQL
       );
 
       $this->createExtension('hostname');
-      $this->createFunction('fn_acornassociated_server_id', [], 'trigger', ['pid uuid'], <<<SQL
+      $this->createFunction('fn_acorn_server_id', [], 'trigger', ['pid uuid'], <<<SQL
         if new.server_id is null then
-          select "id" into pid from acornassociated_servers where hostname = hostname();
+          select "id" into pid from acorn_servers where hostname = hostname();
           if pid is null then
-            insert into acornassociated_servers(hostname) values(hostname()) returning id into pid;
+            insert into acorn_servers(hostname) values(hostname()) returning id into pid;
           end if;
           new.server_id = pid;
         end if;
@@ -134,8 +134,8 @@ SQL
 
       // Useful aggregates
       // string $baseName, array $parameters, string $body, ?array $declares, ?string $parameterType, ?string $parallel, ?string $language, ?array $modifiers
-      $this->createFunctionAndAggregate('acornassociated_first', ['anyelement', 'anyelement'], 'SELECT $1;');
-      $this->createFunctionAndAggregate('acornassociated_last',  ['anyelement', 'anyelement'], 'SELECT $2;');
+      $this->createFunctionAndAggregate('acorn_first', ['anyelement', 'anyelement'], 'SELECT $1;');
+      $this->createFunctionAndAggregate('acorn_last',  ['anyelement', 'anyelement'], 'SELECT $2;');
     }
 
     public function down()

@@ -1,9 +1,9 @@
 <?php
-use AcornAssociated\Traits\PathsHelper;
+use Acorn\Traits\PathsHelper;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use Backend\Classes\ListColumn;
-use AcornAssociated\User\Models\User;
-use AcornAssociated\User\Models\UserGroup;
+use Acorn\User\Models\User;
+use Acorn\User\Models\UserGroup;
 
 $user = User::authUser();
 

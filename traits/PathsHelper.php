@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated\Traits;
+<?php namespace Acorn\Traits;
 
 use Str;
 use Exception;
@@ -27,7 +27,7 @@ Trait PathsHelper {
     public function fullyQualifiedClassName(Object $object = NULL): string
     {
         // Short name for debugging output
-        // AcornAssociated\Lojistiks\Model\Area => Area
+        // Acorn\Lojistiks\Model\Area => Area
         if (is_null($object)) $object = $this;
         return get_class($object);
     }
@@ -36,13 +36,13 @@ Trait PathsHelper {
     {
         $fqn        = $this->fullyQualifiedClassName($object);
         $classParts = explode('\\', $this->fullyQualifiedClassName($object));
-        return ($classParts[0] == 'AcornAssociated');
+        return ($classParts[0] == 'Acorn');
     }
 
     public function unqualifiedClassName(Object $object = NULL): string
     {
         // Short name for debugging output
-        // AcornAssociated\Lojistiks\Model\Area => Area
+        // Acorn\Lojistiks\Model\Area => Area
         $classParts = explode('\\', $this->fullyQualifiedClassName($object));
         return end($classParts);
     }
@@ -102,14 +102,14 @@ Trait PathsHelper {
     {
         if (is_null($model)) $model = &$this;
         $modelName = $this->lowerCaseName($model);
-        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acornassociated.lojistiks
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
         return "$authorDotPlugin::lang.models.$modelName.$name";
     }
 
     public function translationDomainPlugin(string $name, ?Model $model = NULL)
     {
         if (is_null($model)) $model = &$this;
-        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acornassociated.lojistiks
+        $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
         return "$authorDotPlugin::lang.plugin.$name";
     }
 
@@ -349,7 +349,7 @@ Trait PathsHelper {
     // ----------------------------------------- Reverse lookups
     public static function authorPascalCase(string $authorDirName): string
     {
-        return ($authorDirName == 'acornassociated' ? 'AcornAssociated' : ucfirst($authorDirName));
+        return ($authorDirName == 'acorn' ? 'Acorn' : ucfirst($authorDirName));
     }
 
     public static function fullyQualifiedModelClassFromTableName(string $tableName): string

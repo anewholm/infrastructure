@@ -1,6 +1,6 @@
 <?php return [
     'module' => [
-        'name' => 'AcornAssociated',
+        'name' => 'Acorn',
         'setup' => 'Setup',
         'reports' => 'Reports',
         'replication_debug' => 'Replication Debug',

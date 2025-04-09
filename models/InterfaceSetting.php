@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated\Models;
+<?php namespace Acorn\Models;
 
 use App;
 use Backend;
@@ -33,7 +33,7 @@ class InterfaceSetting extends Model
     /**
      * @var string Unique code
      */
-    public $settingsCode = 'acornassociated_interface_settings';
+    public $settingsCode = 'acorn_interface_settings';
 
     /**
      * @var mixed Settings form field definitions

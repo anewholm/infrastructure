@@ -1,6 +1,6 @@
 <?php
 
-namespace AcornAssociated\Console;
+namespace Acorn\Console;
 
 use Config;
 use Winter\Storm\Console\Command;

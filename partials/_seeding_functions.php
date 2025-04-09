@@ -1,5 +1,5 @@
 <?php 
-// TODO: Rationalise this with the AcornAssociated module Seed.php Command
+// TODO: Rationalise this with the Acorn module Seed.php Command
 
 // ---------------------------- Seeding db functions
 $slugSnake      = str_replace('-', '_', $record->slug);
