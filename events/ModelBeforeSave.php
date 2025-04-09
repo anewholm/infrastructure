@@ -1,7 +1,7 @@
-<?php namespace AcornAssociated\Events;
+<?php namespace Acorn\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
-use AcornAssociated\Model;
+use Acorn\Model;
 
 class ModelBeforeSave
 {

@@ -1,5 +1,5 @@
 <?php
-use AcornAssociated\Scopes\GlobalChainScope;
+use Acorn\Scopes\GlobalChainScope;
 
 // Only works for lists at the moment
 if (isset($this->controller->widget->list->model)) {

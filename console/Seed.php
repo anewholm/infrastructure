@@ -1,6 +1,6 @@
 <?php
 
-namespace AcornAssociated\Console;
+namespace Acorn\Console;
 
 use Winter\Storm\Console\Command;
 use System\Models\PluginVersion;
@@ -20,7 +20,7 @@ class Seed extends Command
      * @var string The name and signature of this command.
      */
     protected $signature = 'acorn:seed
-        {plugin? : The qualified Plugin name like AcornAssociated.Lojistiks}
+        {plugin? : The qualified Plugin name like Acorn.Lojistiks}
         {--i|interactive : Ask before each function|file is run.}';
 
     /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace AcornAssociated\Console;
+namespace Acorn\Console;
 
 use Winter\Storm\Console\Command;
 use System\Models\PluginVersion;
@@ -17,7 +17,7 @@ class ConfigPlugin extends Command
      * @var string The name and signature of this command.
      */
     protected $signature = 'acorn:config-plugin
-        {plugin : The qualified Plugin name like AcornAssociated.Lojistiks}
+        {plugin : The qualified Plugin name like Acorn.Lojistiks}
         {config : The config name, like infrastructure}
         {value=true : The new value like true|false. Defaults to true}';
 
@@ -37,7 +37,7 @@ class ConfigPlugin extends Command
         $valueStr = $this->argument('value');
      
         // Normalimze config name and value
-        if (!preg_match('/$acornassociated_/', $config)) $config = "acornassociated_$config";
+        if (!preg_match('/$acorn_/', $config)) $config = "acorn_$config";
         $value = json_decode($valueStr);
 
         // PluginVersion inherits Model

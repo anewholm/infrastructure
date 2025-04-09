@@ -1,12 +1,12 @@
-<?php namespace AcornAssociated\FormWidgets;
+<?php namespace Acorn\FormWidgets;
 
 use Backend\Classes\FormWidgetBase;
 
 /**
  * QRManager for genrate and scan 
  *
- * @package Acornassociated\QrCode
- * @author Acornassociated
+ * @package Acorn\QrCode
+ * @author Acorn
  */
 class QrScan extends FormWidgetBase
 {
@@ -32,7 +32,7 @@ class QrScan extends FormWidgetBase
     public function render()
     {   
         $this->prepareVars();
-        return $this->makePartial('~/modules/acornassociated/partials/_qrscan');
+        return $this->makePartial('~/modules/acorn/partials/_qrscan');
     }
 
     /**
@@ -52,11 +52,11 @@ class QrScan extends FormWidgetBase
      */
     public function loadAssets()
     {
-        $this->addCss('/modules/acornassociated/assets/css/forms.css');
-        $this->addCss('/modules/acornassociated/assets/css/qrcode-printing.css');
-        $this->addCss('/modules/acornassociated/assets/css/html5-qrcode.css');
-        $this->addJs('/modules/acornassociated/assets/js/findbyqrcode.js');
-        $this->addJs('/modules/acornassociated/assets/js/html5-qrcode.js');
+        $this->addCss('/modules/acorn/assets/css/forms.css');
+        $this->addCss('/modules/acorn/assets/css/qrcode-printing.css');
+        $this->addCss('/modules/acorn/assets/css/html5-qrcode.css');
+        $this->addJs('/modules/acorn/assets/js/findbyqrcode.js');
+        $this->addJs('/modules/acorn/assets/js/html5-qrcode.js');
     }
 
     /**

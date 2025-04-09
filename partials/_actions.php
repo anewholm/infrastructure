@@ -60,7 +60,7 @@ if (method_exists($model, 'actionFunctions')) {
                 }
             }
             if ($canPrint) {
-                $print = e(trans('acornassociated::lang.models.general.print'));
+                $print = e(trans('acorn::lang.models.general.print'));
                 $previewLink = $model->controllerUrl('preview', $model->id());
                 print("<li><a 
                     target='_blank'

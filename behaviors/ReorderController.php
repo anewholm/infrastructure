@@ -1,4 +1,4 @@
-<?php namespace AcornAssociated\Behaviors;
+<?php namespace Acorn\Behaviors;
 
 use Backend\Behaviors\ReorderController as BackendReorderController;
 
