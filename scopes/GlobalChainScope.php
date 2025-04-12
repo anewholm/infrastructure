@@ -33,7 +33,8 @@ class GlobalChainScope implements Scope
                 $model = $relation->getRelated();
             }
         }
-        array_push($globalScopeClasses, $model);
+        if (property_exists($model, 'globalScope') && $model::$globalScope)
+            array_push($globalScopeClasses, $model);
 
         return $globalScopeClasses;
     }

@@ -200,8 +200,13 @@ class Model extends BaseModel
         return $this->id;
     }
 
-    public function name() {
-        $name = NULL;
+    public function getNameAttribute(): string
+    {
+        return $this->name();
+    }
+
+    public function name(): string {
+        $name = '';
 
         if ($this->hasAttribute('name') && $this->name) $name = $this->name;
         else {

@@ -80,13 +80,13 @@ class Server extends Model
         return $server;
     }
 
-    public function getNameAttribute()
+    public function getNameAttribute(): string
     {
         $isLocal = ($this->replicated() ? '*' : '');
         return "$this->hostname$isLocal";
     }
 
-    public function name()
+    public function name(): string
     {
         return $this->name;
     }
