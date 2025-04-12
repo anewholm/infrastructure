@@ -8,12 +8,14 @@ if (isset($this->controller->widget->list->model)) {
     
     if ($globalScopeClasses) {
         // TODO: Translation
-        $none = 'None';
         foreach ($globalScopeClasses as $model) {
-            $class       = get_class($model);
-            $settingName = "$class::globalScope";
+            $classFQN    = get_class($model);
+            $classParts  = explode('\\', $classFQN);
+            $class       = end($classParts);
+            $settingName = "$classFQN::globalScope";
             $setting     = Session::get($settingName);
-
+            $none        = "No $class";
+            
             // <select>or
             print(<<<HTML
                 <form><select name="$settingName"
@@ -22,7 +24,7 @@ if (isset($this->controller->widget->list->model)) {
 HTML
             );
             print("<option value=''>$none</option>");
-            foreach ($class::withoutGlobalScopes()->get() as $model) {
+            foreach ($classFQN::withoutGlobalScopes()->get() as $model) {
                 $selected = ($setting == $model->id ? 'selected' : '');
                 print("<option value='$model->id' $selected>$model->name</option>");
             }
