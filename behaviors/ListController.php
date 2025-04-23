@@ -7,6 +7,8 @@ use Backend\Widgets\Search;
 class ListController extends BackendListController
 {
     use \Acorn\Traits\MorphConfig;
+
+    public $readOnly = FALSE;
     
     public function __construct($controller)
     {
@@ -17,6 +19,5 @@ class ListController extends BackendListController
         Search::extend(function ($widget) {
             $widget->addViewPath('~/modules/acorn/partials/');
         });
-
     }
 }

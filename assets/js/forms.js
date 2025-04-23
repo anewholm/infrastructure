@@ -56,6 +56,16 @@ function acorn_dynamicElements(){
     $(this).children('.tooltip').fadeOut();
   });
 
+  // list-editable
+  $(':input.list-editable').change(function(){
+    var isDirty = $(this).attr('original') != $(this).val();
+    if (isDirty) $(this).closest('tr.rowlink').addClass('dirty');
+    else         $(this).closest('tr.rowlink').removeClass('dirty');
+  });
+  $(':input.list-editable').click(function(event){
+    event.stopPropagation();
+  });
+
   // Enable read-only for radio buttons
   // HTML does not accept readonly on radio buttons
   // So we disable not-allowed options

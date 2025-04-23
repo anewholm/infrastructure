@@ -87,6 +87,8 @@ class Model extends BaseModel
     public $printable = FALSE;
     public static $globalScope;
 
+    public $readOnly = FALSE; // For VIEWS
+
     // --------------------------------------------- Translation
     public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = ['name', 'description'];
@@ -125,7 +127,7 @@ class Model extends BaseModel
             static::addGlobalScope(new static::$globalScope());
     }
 
-    // --------------------------------------------- Encapuslation and Standard Accessors
+    /* This was an attempt to enforce Encapsulation and accessors in a learning environment
     protected function checkFrameworkCallerEncapsulation($attributeName)
     {
         if (env('APP_DEBUG') && FALSE) { // TODO: checkFrameworkCallerEncapsulation()
@@ -176,62 +178,37 @@ class Model extends BaseModel
             }
         }
     }
+    */
 
-    public function __get($name)
-    {
-        $this->checkFrameworkCallerEncapsulation($name);
-        // Pass through to TranslateBackend trait
-        return $this->tb__get($name);
-    }
-
-    public function __set($name, $value)
-    {
-        $this->checkFrameworkCallerEncapsulation($name);
-        return parent::__set($name, $value);
-    }
-
-    // --------------------------------------------- Standard fields
-    // These are standard accessors
-    // to allow Encapsulated access
-    // avoiding checkFrameworkCallerEncapsulation() above
-    public function id()
-    {
-        // Allow id checks, override in Derived Class if necessary
-        return $this->id;
-    }
-
-    public function getNameAttribute(): string
-    {
-        return $this->name();
-    }
-
-    public function name(): string {
-        $name = '';
-
-        if ($this->hasAttribute('name') && $this->name) $name = $this->name;
-        else {
-            // We allow 1-1 relations to define the name
-            foreach ($this->belongsTo as $relation => &$belongsTo) {
-                if (is_array($belongsTo) && isset($belongsTo['name']) && $belongsTo['name'] === TRUE) {
-                    $this->load($relation);
-                    $relatedObject = $this->$relation;
-                    if ($relatedObject) {
-                        if (!$relatedObject->hasAttribute('name')) {
-                            $unqualifiedClassName = $this->unqualifiedClassName();
-                            throw new Exception("Name relation on $unqualifiedClassName::belongsTo[$relation] does not have a name attribute");
-                        }
-                        $name = $relatedObject->name;
-                        break;
-                    }
+    public function getNameModel(bool $checkHasNameAttribute = FALSE): Model {
+        $model = $this;
+        
+        do {
+            // 1-1 name relation support, including hasManyDeep 1-1 name
+            $nameObjectRelation = NULL;
+            $relations1to1Name  = array_merge($model->hasManyDeep, $model->belongsTo);
+            foreach ($relations1to1Name as $relationName => &$relationConfig) {
+                $isNameRelation = (is_array($relationConfig) 
+                    && isset($relationConfig['name']) 
+                    && $relationConfig['name'] === TRUE
+                );
+                if ($isNameRelation) {
+                    $nameObjectRelation = $model->$relationName();
+                    $model              = $nameObjectRelation->sole(); 
+                    // There may be multiple, but we take the first
+                    // ordered by HasManyDeep first
+                    break;
                 }
             }
-        }
-        if (is_null($name) && $this->hasAttribute('id')) $name = $this->id;
+        } while ($nameObjectRelation);
 
-        return $name;
+        if ($checkHasNameAttribute && !$model->hasAttribute('name')) {
+            $unqualifiedClassName = $this->unqualifiedClassName();
+            throw new Exception("Name relation on $unqualifiedClassName does not have a name attribute");
+        }
+
+        return $model;
     }
-    public function fullyQualifiedName() {return $this->name();}
-    protected function getFullyQualifiedNameAttribute() {return $this->fullyQualifiedName();}
 
     /*
     protected $dispatchesEvents = [
@@ -255,6 +232,12 @@ class Model extends BaseModel
         return parent::delete();
     }
 
+    public function isListEditable(): bool
+    {
+        // TODO: isListEditable()
+        return FALSE;
+    }
+
     public function save(?array $options = [], $sessionKey = null)
     {
         // Useful for auto-completing auto-relations
@@ -263,7 +246,7 @@ class Model extends BaseModel
 
         // TODO: This should be only done with triggers and pg_hostname
         if ($this->hasAttribute('server_id') && !$this->server_id) {
-            $this->server_id = Server::singleton()->id();
+            $this->server_id = Server::singleton()->id;
         }
 
         // Object locking
@@ -446,8 +429,10 @@ class Model extends BaseModel
                     $customEagerConstraintsCallback,
                     $customEagerMatchingCallback
                 ]          = $this->hasOneOrManyDeepFromRelations($throughRelationObjects);
-                $query     = $this->newRelatedInstance($finalModelClass)->newQuery();
                 $farParent = $this;
+                // This may return an AA Builder or a Winter Builder
+                // depending on the Model being passed in
+                $query     = $this->newRelatedInstance($finalModelClass)->newQuery();
 
                 // Translate strings to EMPTY Models or Pivot->setTable()s
                 // Pivot->setTable() is used when the intermediate table has no associated Model
@@ -738,7 +723,7 @@ SQL;
     public function getParentId()
     {
         $this->load('parent');
-        return $this->parent?->id();
+        return $this->parent?->id;
     }
 
     public function getChildren()
@@ -822,10 +807,10 @@ SQL;
         $actionFunctions = ($this->actionFunctions ?: array());
         foreach ($actionFunctions as $name => &$actionFunctionDefinition) {
             $condition = $actionFunctionDefinition['condition'] ?? NULL; 
-            if (!$condition || $this::where('id', $this->id())->whereRaw($condition)->count() != 0) {
+            if (!$condition || $this::where('id', $this->id)->whereRaw($condition)->count() != 0) {
                 // Populate the Model/Id for correct lookup later
                 $actionFunctionDefinition['model']    = get_class($this);
-                $actionFunctionDefinition['model_id'] = $this->id();
+                $actionFunctionDefinition['model_id'] = $this->id;
             } else {
                 unset($actionFunctions[$name]);
             }
@@ -841,10 +826,10 @@ SQL;
                         // Write the sub-model id
                         foreach ($relatedModel->actionFunctions as $name => &$actionFunctionDefinition) {
                             $condition = $actionFunctionDefinition['condition'] ?? NULL;
-                            if (!$condition || $relatedModel::where('id', $relatedModel->id())->whereRaw($condition)->count() != 0) {
+                            if (!$condition || $relatedModel::where('id', $relatedModel->id)->whereRaw($condition)->count() != 0) {
                                 // Populate the Model/Id for correct lookup later
                                 $actionFunctionDefinition['model']    = get_class($relatedModel);
-                                $actionFunctionDefinition['model_id'] = $relatedModel->id();
+                                $actionFunctionDefinition['model_id'] = $relatedModel->id;
                                 $actionFunctions[$name] = $actionFunctionDefinition;
                             }
                         }
@@ -944,7 +929,7 @@ SQL;
                                 $qrClass = get_class( $model );
                                 $qrClassShort = class_basename( $model );
                                 // Short class name for messages
-                                $qrObjectName = ( method_exists( $model, 'name' ) ? $model->name() : $model->id() );
+                                $qrObjectName = $model->name;
                                 // names => classes
                                 $fieldsRelations = array_merge( $this->hasOne, $this->belongsTo, $this->hasMany, $this->belongsToMany );
                                 $qrObjectRelations = array_merge( $model->hasOne, $model->belongsTo, $model->hasMany, $model->belongsToMany );
@@ -986,7 +971,7 @@ SQL;
 
                                 if ( $relevantObject ) {
                                     // Set the field value
-                                    $id = $relevantObject->id();
+                                    $id = $relevantObject->id;
                                     if ( is_array( $field->value ) ) array_push( $field->value, $id );
                                     else                             $field->value = $id;
                                     // Response

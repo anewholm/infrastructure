@@ -340,7 +340,7 @@ Trait PathsHelper {
         $url = "/backend/$pluginPathPartAuthorPlugin/$controllerDirectoryName";
         if ($action) {
             $url .= "/$action";
-            if (is_null($id) && method_exists($this, 'id')) $id = $this->id();
+            if (is_null($id)) $id = $this->id;
             if ($id) $url .= "/$id";
         }
         return $url;

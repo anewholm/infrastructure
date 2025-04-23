@@ -15,7 +15,10 @@ class GlobalChainScope implements Scope
 
         $relationConfigs = $model->belongsTo + $model->hasMany;
         foreach ($relationConfigs as $relationName => $relationConfig) {
-            if (isset($relationConfig['global_scope']) && $relationConfig['global_scope'] && isset($relationConfig[0])) {
+            if (isset($relationConfig['global_scope']) 
+                && $relationConfig['global_scope'] 
+                && isset($relationConfig[0])
+            ) {
                 $globalScopeRelations[$relationName] = $model->$relationName();
             }
         }
@@ -56,37 +59,51 @@ class GlobalChainScope implements Scope
         return $chainScopes;
     }
 
-    public static function applySession(Builder $builder, Model $model) {
+    public static function applySession(Builder $builder, Model $model): bool 
+    {
+        // Usually called with an apply() override:
+        // public function apply(Builder $builder, Model $model): bool {
+        //     return self::applySession($builder, $model);
+        // }
+        // Returing TRUE causes the scope chain to be recursively applied
         $class       = get_class($model);
         $settingName = "$class::globalScope";
         $setting     = Session::get($settingName);
         if ($setting)
             $builder->where("$model->table.id", '=', $setting);
+        return !is_null($setting);
     }
 
-    public function apply(Builder $builder, Model $model) {
+    public function apply(Builder $builder, Model $model): bool {
         // Follow global_scope => TRUE relation(s)
+        $apply = FALSE;
         $globalScopeRelations = self::globalScopeRelations($model);
         foreach ($globalScopeRelations as $relation) {
-            // $relation->setQuery($builder);
-            // TODO: $relation->addConstraints();
-            // TODO: At least $relation->getQualifiedForeignKeyName()
-            $relatedModel = $relation->getRelated();
-            $reverse      = ($relation instanceof BelongsTo);
-            $key          = $relation->getForeignKeyName();
-            $columnFrom   = ($reverse ? $key : 'id');
-            $columnTo     = ($reverse ? 'id' : $key);
-            $fqTableFrom  = "$model->table.$columnFrom";
-            $fqTableTo    = "$relatedModel->table.$columnTo";
-            $builder->join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
-            
             // Chain all global_scope relations
             // For calling class
-            $chainScopes = self::chainScopes($relatedModel);
+            $relatedModel = $relation->getRelated();
+            $chainScopes  = self::chainScopes($relatedModel);
             foreach ($chainScopes as $chainScope) {
                 // Inherit your Scope from GlobalChainScope to activate this chain
-                $chainScope->apply($builder, $relatedModel);
+                $apply = $chainScope->apply($builder, $relatedModel);
+            }
+
+            // We conditionally apply the contraints afterwards 
+            // in case there is no setting at the end of the chain
+            if ($apply) {
+                // TODO: $relation->addConstraints();
+                // TODO: At least $relation->getQualifiedForeignKeyName()
+                // $relation->setQuery($builder);
+                $reverse      = ($relation instanceof BelongsTo);
+                $key          = $relation->getForeignKeyName();
+                $columnFrom   = ($reverse ? $key : 'id');
+                $columnTo     = ($reverse ? 'id' : $key);
+                $fqTableFrom  = "$model->table.$columnFrom";
+                $fqTableTo    = "$relatedModel->table.$columnTo";
+                $builder->join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
             }
         }
+
+        return $apply;
     }
 }

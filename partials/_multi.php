@@ -86,7 +86,6 @@ if ($value) {
         $i     = 0;
         print("<ul id='$multiId' class='multi'>");
         $value->each(function ($model) use (&$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
-            $id         = $model->id();
             $controller = $model->controllerFullyQualifiedClass();
             
             // Name resolution
@@ -103,7 +102,7 @@ if ($value) {
             if ($useLinkedPopups) {
                 $dataRequestData = array(
                     'route'   => "$controller@$action",
-                    'params'  => [$id],
+                    'params'  => [$model->id],
                     'dataRequestUpdate' => array('multi' => $multiId),
                 );
                 $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));

@@ -12,7 +12,7 @@ $classParts = explode('\\', $class);
 $author     = strtolower($classParts[0]);
 $plugin     = strtolower($classParts[1]);
 $modelName  = strtolower(Str::plural($classParts[3]));
-$id         = $model->id();
+$id         = $model->id;
 
 // We default to the current URL that the QR code is displaying on
 // this will therefore be different for preview or edit

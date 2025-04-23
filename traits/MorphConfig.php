@@ -6,16 +6,22 @@ use Winter\Storm\Database\Relations\BelongsTo;
 use \Exception;
 use BackendAuth;
 use Str;
+// For debug output
+use Yaml;
+use File;
 
 Trait MorphConfig
 {
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
-        $config        = parent::makeConfig($configFile, $requiredConfig);
-        $parentModel   = post(RelationController::PARAM_PARENT_MODEL);
-        $parentModelId = post(RelationController::PARAM_PARENT_MODEL_ID);
-        $primaryModel  = @$this->controller->widget->form->model;
-        $modelClass    = ($this instanceof RelationController && $this->relationModel
+        $debugOutput     = FALSE;
+        $config          = parent::makeConfig($configFile, $requiredConfig);
+        $controllerModel = @$this->controller->widget->form->model;
+        // Popup situations, with parent model context
+        $parentModel     = post(RelationController::PARAM_PARENT_MODEL);
+        $parentModelId   = post(RelationController::PARAM_PARENT_MODEL_ID);
+        // RelationManager aware
+        $modelClass      = ($this instanceof RelationController && $this->relationModel
             ? get_class($this->relationModel) 
             : $this->getConfig('modelClass')
         );
@@ -52,24 +58,24 @@ Trait MorphConfig
                                 && isset($fieldConfig['options'])
                             ) {
                                 // Only works for create-system standard drop-down specification
-                                $optionsParts = explode('::', $fieldConfig['options']);
-                                $model        = $optionsParts[0];
+                                $optionsParts  = explode('::', $fieldConfig['options']);
+                                $dropDownModel = $optionsParts[0];
 
-                                if ($model == $parentModel) {
+                                if ($dropDownModel == $parentModel) {
                                     // Set and hide parentModel
                                     $fieldConfig['cssClass'] .= ' hidden';
                                     $fieldConfig['default']   = $parentModelId;
                                 } 
-                                else if ($primaryModel) {
-                                    // Set and hide primaryModel
-                                    if ($model == get_class($primaryModel)) {
+                                else if ($controllerModel) {
+                                    // Set and hide controllerModel
+                                    if ($dropDownModel == get_class($controllerModel)) {
                                         $fieldConfig['cssClass'] .= ' hidden';
-                                        $fieldConfig['default']   = $primaryModel->id;
+                                        $fieldConfig['default']   = $controllerModel->id;
                                     }
                                     // Set and hide common singular parent BelongsTo models
-                                    else if ($sameParent = $primaryModel->$fieldName) {
-                                        if ($model == get_class($sameParent)
-                                            && $primaryModel->$fieldName() instanceof BelongsTo
+                                    else if ($sameParent = $controllerModel->$fieldName) {
+                                        if ($dropDownModel == get_class($sameParent)
+                                            && $controllerModel->$fieldName() instanceof BelongsTo
                                         ) {
                                             $fieldConfig['cssClass'] .= ' hidden';
                                             $fieldConfig['default']   = $sameParent->id;
@@ -124,20 +130,20 @@ Trait MorphConfig
                     $subConfigs = array();
                     foreach ($config->fields as $fieldName => &$fieldConfig) {
                         if (isset($fieldConfig['include'])) {
-                            $path       = NULL;
-                            $modelClass = NULL;
+                            $path              = NULL;
+                            $includeModelClass = NULL;
                             
                             if (     isset($fieldConfig['path'])) $path = $fieldConfig['path'];
                             else if (isset($fieldConfig['includeModel'])) {
-                                $modelClass = $fieldConfig['includeModel'];
-                                $model      = new $modelClass;
+                                $includeModelClass = $fieldConfig['includeModel'];
+                                $model      = new $includeModelClass;
                                 $modelDir   = $model->modelDirectoryPathRelative();
                                 $path       = "$modelDir/$configFileName";
                             }
                             
                             if ($path) $subConfigs[$fieldName] = $this->makeConfig($path, $requiredConfig);
                             else throw new Exception("Include directive without path or model in [$fieldName]");
-                            $subConfigs[$fieldName]->modelClass = $modelClass;
+                            $subConfigs[$fieldName]->modelClass = $includeModelClass;
                         }
                     }
 
@@ -159,6 +165,7 @@ Trait MorphConfig
                             if (!isset($config->tertiaryTabs['fields']))   $config->tertiaryTabs['fields'] = array();
                             self::processFields($config->tertiaryTabs['fields'], $subConfig->tertiaryTabs['fields'], $fieldName, $subConfig->modelClass);
                         }
+                        $debugOutput = TRUE;
                     }
 
                     // ------------------------------------------------- permission-settings
@@ -242,11 +249,12 @@ Trait MorphConfig
                     $subConfigs = array();
                     foreach ($config->columns as $fieldName => &$fieldConfig) {
                         if (isset($fieldConfig['include'])) {
-                            $path       = NULL;
-                            $modelClass = NULL;
+                            $path              = NULL;
+                            $includeModelClass = NULL;
+
                             if (isset($fieldConfig['includeModel'])) {
-                                $modelClass = $fieldConfig['includeModel'];
-                                $model      = new $modelClass;
+                                $includeModelClass = $fieldConfig['includeModel'];
+                                $model      = new $includeModelClass;
                                 $modelDir   = $model->modelDirectoryPathRelative();
                                 $path       = "$modelDir/$configFileName";
                             }
@@ -255,7 +263,7 @@ Trait MorphConfig
                             else throw new Exception("Include directive without path or model in [$fieldName]");
 
                             // Stamp the modelClass on the fields
-                            $subConfigs[$fieldName]->modelClass = $modelClass;
+                            $subConfigs[$fieldName]->modelClass = $includeModelClass;
                         }
                     }
 
@@ -313,6 +321,7 @@ Trait MorphConfig
                     
                                     // Insert before $fieldName
                                     self::array_insert($config->columns, $fieldName, array($nestedFieldName => $subFieldConfig));
+                                    $debugOutput = TRUE;
                                 }
                             }
                         }
@@ -323,6 +332,41 @@ Trait MorphConfig
 
                     //if (count($subConfigs)) dd($configFile, $config);
                     break;
+            }
+        }
+
+        if (env('APP_DEBUG') && \is_string($configFile) && $debugOutput) {
+            // Copied from parent::makeConfig()
+            if (isset($this->controller) && method_exists($this->controller, 'getConfigPath')) {
+                $configFile = $this->controller->getConfigPath($configFile);
+            }
+            else {
+                $configFile = $this->getConfigPath($configFile);
+            }
+
+            $configFile = str_replace('.yaml', '_morphed.yaml', $configFile);
+            try {
+                File::put($configFile, Yaml::render((array)$config));
+            } catch (Exception $ex) {}
+
+            // Debug checks, e.g. relation validity
+            if ($modelClass) {
+                $model = new $modelClass(); 
+                $validRelations = array_merge($model->belongsTo, $model->hasMany);
+                if (property_exists($model, 'hasManyDeep')) 
+                    $validRelations = array_merge($validRelations, $model->hasManyDeep);
+                $fieldList = array();
+                if (property_exists($config, 'columns')) $fieldList = $config->columns;
+                if (property_exists($config, 'fields'))  $fieldList = $config->fields;
+                foreach ($fieldList as $fieldName => $fieldConfig) {
+                    if (isset($fieldConfig['relation'])) {
+                        $relationName = $fieldConfig['relation'];
+                        if (strstr($relationName, '[') !== FALSE)
+                            throw new Exception("[$modelClass] config contains a [$relationName] nested syntax relation name");
+                        if (!isset($validRelations[$relationName]))
+                            throw new Exception("[$modelClass] class does not have a [$relationName] relation");
+                    }
+                }
             }
         }
 
