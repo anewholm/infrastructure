@@ -94,7 +94,7 @@ class Controller extends BackendController
         $modelClass = $this->modelFullyQualifiedClass();
         $model      = $modelClass::findOrFail($id);
         if (method_exists($model, 'getLeafTypeModel') && ($leaf = $model->getLeafTypeModel())) {
-            if ($url = $leaf->controllerUrl($this->action, $leaf->id())) {
+            if ($url = $leaf->controllerUrl($this->action, $leaf->id)) {
                 header("Location: $url");
                 exit(0);
             }
@@ -137,7 +137,7 @@ class Controller extends BackendController
         if (is_null($result)) $result = array();
         if (is_array($result)) {
             $model = $this->widget->form->model;
-            $result['id'] = (method_exists($model, 'id') ? $model->id() : $model->id);
+            $result['id'] = $model->id;
         }
 
         return $result;
@@ -152,6 +152,7 @@ class Controller extends BackendController
         $dataRequestUpdate  = post('dataRequestUpdate'); // Array
 
         $popupParams = (post('params') ?: array());
+        $paramString = implode(',', $popupParams);
         list($controllerClass, $popupAction) = explode('@', $popupRoute);
         if (!$popupAction) $popupAction = 'create';
 
@@ -354,7 +355,7 @@ HTML;
             switch ($paramName) {
                 case 'model_id':
                     $paramsMerged[$paramName] = array(
-                        'value' => $model->id(),
+                        'value' => $model->id,
                         'type'  => $paramType,
                     );
                     break;
@@ -571,7 +572,7 @@ HTML;
                         if (get_class($listModel) == get_class($eventModel)) {
                             // Highlight the new change in list displays
                             $listWidget->bindEvent('list.injectRowClass', function ($record) use (&$event) {
-                                if ($record->id() == $event->id()) {
+                                if ($record->id == $event->id) {
                                     return 'ajax-new';
                                 }
                             });
@@ -581,7 +582,7 @@ HTML;
                     // Flash
                     $unqualifiedClassName = $eventModel->unqualifiedClassName();
                     $operation            = $event->operation();
-                    $updateUrl            = ''; // $eventModel->controllerUrl('update', $event->id());
+                    $updateUrl            = ''; // $eventModel->controllerUrl('update', $event->id);
                     $viewHTML             = ''; // TODO: "<a target='_blank' href='$updateUrl'>view</a>";
                     $flash                = "A new $unqualifiedClassName has been $operation. $viewHTML";
                     Flash::success($flash);
@@ -692,7 +693,7 @@ HTML;
     public function formGetRedirectUrl($context = NULL, $model = NULL)
     {
         $action = post('action');
-        $id     = ($model && method_exists($model, 'id') ? $model->id() : NULL);
+        $id     = ($model ? $model->id : NULL);
         return ($action && !is_null($id) ? "$action/$id" : parent::formGetRedirectUrl($context, $model));
     }
 

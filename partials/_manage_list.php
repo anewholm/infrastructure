@@ -5,7 +5,7 @@
 <div id="relationManagePopup" data-request-data="
         _relation_field: '<?= $relationField ?>', _relation_mode: 'list',
         _parent_model: '<?= str_replace('\\', '\\\\', e(get_class($formModel))); ?>',
-        _parent_model_id: '<?= $formModel->id(); ?>'
+        _parent_model_id: '<?= $formModel->id; ?>'
     ">
     <?= Form::open() ?>
         <div class="modal-header">

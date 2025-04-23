@@ -140,3 +140,8 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
     margin-top: -4px;
     font-size: 12px; /* Override .control-toolbar */
 }
+
+/* list-editable */
+tr.rowlink.dirty > td {
+    background-color:#ffdddd!important;
+}

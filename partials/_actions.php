@@ -61,7 +61,7 @@ if (method_exists($model, 'actionFunctions')) {
             }
             if ($canPrint) {
                 $print = e(trans('acorn::lang.models.general.print'));
-                $previewLink = $model->controllerUrl('preview', $model->id());
+                $previewLink = $model->controllerUrl('preview', $model->id);
                 print("<li><a 
                     target='_blank'
                     href='$previewLink'

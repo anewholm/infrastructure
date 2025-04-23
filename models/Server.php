@@ -86,11 +86,6 @@ class Server extends Model
         return "$this->hostname$isLocal";
     }
 
-    public function name(): string
-    {
-        return $this->name;
-    }
-
     public function getReplicatedAttribute()
     {
         return (gethostname() != $this->hostname);

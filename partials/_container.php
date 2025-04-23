@@ -8,7 +8,7 @@
         _relation_field: '<?= $relationField ?>',
         _relation_extra_config: '<?= e(base64_encode(json_encode($relationExtraConfig))) ?>',
         _parent_model: '<?= str_replace('\\', '\\\\', e(get_class($formModel))); ?>',
-        _parent_model_id: '<?= $formModel->id(); ?>'
+        _parent_model_id: '<?= $formModel->id; ?>'
         "
     class="relation-behavior relation-view-<?= $relationViewMode ?>">
 
