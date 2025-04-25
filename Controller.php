@@ -662,7 +662,8 @@ HTML;
     public function listExtendRecords($records)
     {
         // Custom relation scopes based on relations, not SQL
-        // TODO: Use custom filter: relationCondition:
+        // relationCondition => <the name of the relevant relation>, e.g. belongsTo['language']
+        // Filters the listed models based on a filtered: of selected related models
         if (property_exists($this->widget, 'listFilter')) {
             foreach ($this->widget->listFilter->getScopes() as $name => $filterScope) {
                 if (isset($filterScope->config['relationCondition']) && $filterScope->value) {
