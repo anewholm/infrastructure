@@ -79,9 +79,7 @@ class Model extends BaseModel
     use Traits\ObjectLocking;
     use Traits\PostGreSQLFieldTypeUtilities;
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
-    use TranslateBackend {
-        __get as protected tb__get;
-    }
+    use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
 
     public $printable = FALSE;
@@ -120,11 +118,10 @@ class Model extends BaseModel
 
     protected static function booted()
     {
+        // Use locally defined GlobalScope classes, e.g. YearScope
+        if (static::$globalScope) static::addGlobalScope(new static::$globalScope());
         // Follow all global_scope=>TRUE relations
-        static::addGlobalScope(new GlobalChainScope());
-        // Use locally defined GlobalScope classes
-        if (static::$globalScope) 
-            static::addGlobalScope(new static::$globalScope());
+        else                      static::addGlobalScope(new GlobalChainScope());
     }
 
     /* This was an attempt to enforce Encapsulation and accessors in a learning environment
@@ -181,6 +178,8 @@ class Model extends BaseModel
     */
 
     public function getNameModel(bool $checkHasNameAttribute = FALSE): Model {
+        // Not currently necessary 
+        // as the name 1-1 relation is hardcoded in to fields|columns.yaml
         $model = $this;
         
         do {
