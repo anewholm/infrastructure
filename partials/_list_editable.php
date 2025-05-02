@@ -1,5 +1,6 @@
 <?php
-$classParts   = explode('\\', get_class($record));
+$classFQN     = get_class($record);
+$classParts   = explode('\\', $classFQN);
 $class        = end($classParts);
 $column       = $column->getName();
 $maxlength    = (isset($column->config['max'])           ? $column->config['max']           : 255 );
@@ -7,7 +8,7 @@ $type         = (isset($column->config['type-editable']) ? $column->config['type
 $required     = (isset($column->config['required'])      ? $column->config['required']      : FALSE );
 $placeholder  = (isset($column->config['placeholder'])   ? $column->config['placeholder']   : '' );
 $pattern      = (isset($column->config['pattern'])       ? $column->config['pattern']       : '' );
-
+$id           = $record->id;
 $valueEscaped = htmlentities($value);
 
 switch ($type) {
@@ -18,7 +19,7 @@ switch ($type) {
 }
 
 print(<<<HTML
-<input type="$type" step="any" name="{$class}[$column]" 
+<input type="$type" step="any" name="ListEditable[{$classFQN}][$id][$column]" 
     id="Form-field-$class-$column" value="$valueEscaped" original="$valueEscaped"
     placeholder="$placeholder" class="form-control list-editable" autocomplete="off" 
     pattern="$pattern" maxlength="$maxlength" required="$required">

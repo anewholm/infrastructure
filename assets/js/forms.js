@@ -57,11 +57,21 @@ function acorn_dynamicElements(){
   });
 
   // list-editable
-  $(':input.list-editable').change(function(){
-    var isDirty = $(this).attr('original') != $(this).val();
-    if (isDirty) $(this).closest('tr.rowlink').addClass('dirty');
-    else         $(this).closest('tr.rowlink').removeClass('dirty');
-  });
+  var fCheckDirty = function(event){
+    var isDirty  = ($(this).attr('original') != $(this).val());
+    var jRowLink = $(this).closest('tr.rowlink');
+    var jCheck   = jRowLink.children('td.list-checkbox').first().find(':input');
+    
+    if (isDirty) {
+      jRowLink.addClass('dirty');
+      jCheck.attr('checked', 1);
+    } else {
+      jRowLink.removeClass('dirty');
+      jCheck.removeAttr('checked');
+    }
+  };
+  $(':input.list-editable').change(fCheckDirty);
+  $(':input.list-editable').keydown(fCheckDirty);
   $(':input.list-editable').click(function(event){
     event.stopPropagation();
   });
@@ -79,10 +89,18 @@ $(document).on('change', ':input', acorn_updateViewSelectionLink);
 function acorn_ready(){
   // Permissions screen
   $('.permissioneditor > table').addClass('collapsable');
+  // README.md screen
+  $('.plugin-details-content > h1').addClass('collapsable');
   
-  // Collapseable tables
+  // Collapseable <table>s
   $('table.collapsable tr.section').click(function(){
     var jRows = $(this).nextUntil('tr.section');
+    if (jRows.is(':visible')) jRows.hide();
+    else jRows.show();
+  });
+  // Collapseable sibling <pre>s
+  $('h1.collapsable').click(function(){
+    var jRows = $(this).next('pre');
     if (jRows.is(':visible')) jRows.hide();
     else jRows.show();
   });

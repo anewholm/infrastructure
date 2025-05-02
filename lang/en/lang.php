@@ -24,6 +24,7 @@
         'general' => [
             'id' => 'ID',
             'name' => 'Name',
+            'noname' => 'no name',
             'description' => 'Notes',
             'notes' => 'Notes',
             'type' => 'Type',

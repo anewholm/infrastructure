@@ -3,7 +3,8 @@
 use \Staudenmeir\EloquentHasManyDeep\HasManyDeep as StaudenmeirHasManyDeep;
 use Acorn\Collection;
 use Acorn\Collection as CollectionBase;
-use Acorn\Model;
+// use Acorn\Model;
+use Winter\Storm\Database\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 // We must accept a Winter Builder because the finalClass might be a Winter Model
 //use Acorn\Builder;
