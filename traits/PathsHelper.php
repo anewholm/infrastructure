@@ -98,7 +98,7 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Translation
-    public function translationDomainModel(string $name, ?Model $model = NULL)
+    public function translationDomainModel(string $name, Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
         $modelName = $this->lowerCaseName($model);
@@ -106,31 +106,31 @@ Trait PathsHelper {
         return "$authorDotPlugin::lang.models.$modelName.$name";
     }
 
-    public function translationDomainPlugin(string $name, ?Model $model = NULL)
+    public function translationDomainPlugin(string $name, Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
         $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
         return "$authorDotPlugin::lang.plugin.$name";
     }
 
-    public function translationDomainBackend(string $name)
+    public function translationDomainBackend(string $name): string
     {
         if ($name == 'update') $name = 'save';
         return "backend::lang.form.$name";
     }
 
-    public function translateModelKey(string $name = 'label', ?Model $model = NULL)
+    public function translateModelKey(string $name = 'label', Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
         if (!method_exists($this, 'translationDomainModel')) {
             $modelClass = get_class($model);
-            throw new \Exception("Model [$modelClass] does not have a translationDomainModel() method");
+            throw new Exception("Model [$modelClass] does not have a translationDomainModel() method");
         }
         
         return trans($this->translationDomainModel($name, $model));
     }
 
-    public function transBackend(string $name)
+    public function transBackend(string $name): string
     {
         return trans($this->translationDomainBackend($name));
     }
@@ -320,7 +320,7 @@ Trait PathsHelper {
         $controllerDirectoryName = $this->controllerDirectoryName();
         $path = "$pluginPathRelative/controllers/$controllerDirectoryName";
         if (!is_dir($path)) 
-            throw new \Exception("Path [$path] does not exist");
+            throw new Exception("Path [$path] does not exist");
         return $path;
     }
 
@@ -331,6 +331,7 @@ Trait PathsHelper {
 
     public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL): string
     {
+        // TODO: Use $controller->actionUrl($action, $path)
         $pluginPathPartAuthorPlugin  = $this->pluginPathPartAuthorPlugin();
         $controllerDirectoryName     = $this->controllerDirectoryName();
 
@@ -393,7 +394,7 @@ Trait PathsHelper {
                 $backFieldName .= "[$fieldNests]";
             }
         } else if ($throwIfNotName) {
-            throw new \Exception("ListColumn field [$columnName] attribute is not name [$finalField] during backColumnName() calc");
+            throw new Exception("ListColumn field [$columnName] attribute is not name [$finalField] during backColumnName() calc");
         }
 
         return $backFieldName;

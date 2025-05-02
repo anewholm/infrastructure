@@ -81,6 +81,7 @@ class Model extends BaseModel
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
+    use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
 
     public $printable = FALSE;
     public static $globalScope;
@@ -177,9 +178,9 @@ class Model extends BaseModel
     }
     */
 
-    public function getNameModel(bool $checkHasNameAttribute = FALSE): Model {
-        // Not currently necessary 
-        // as the name 1-1 relation is hardcoded in to fields|columns.yaml
+    public function getNameModel(bool $checkHasNameAttribute = FALSE): Model|NULL
+    {
+        // Returns $this if no relation with ['name' => TRUE]
         $model = $this;
         
         do {
@@ -200,11 +201,6 @@ class Model extends BaseModel
                 }
             }
         } while ($nameObjectRelation);
-
-        if ($checkHasNameAttribute && !$model->hasAttribute('name')) {
-            $unqualifiedClassName = $this->unqualifiedClassName();
-            throw new Exception("Name relation on $unqualifiedClassName does not have a name attribute");
-        }
 
         return $model;
     }
@@ -294,6 +290,22 @@ class Model extends BaseModel
                         break;
                 }
                 if ($message) throw new Exception($message);
+            }
+        }
+
+        if (!isset($options['list-editable']) || $options['list-editable']) {
+            if ($listEditable = post('ListEditable')) {
+                $checked = post('checked');
+                foreach ($listEditable as $modelName => $models) {
+                    foreach ($models as $id => $columns) {
+                        if (!$checked || in_array($id, $checked)) {
+                            $model = $modelName::find($id);
+                            $model->fill($columns);
+                            if ($model->isDirty()) 
+                                $model->save(['list-editable' => FALSE]);
+                        }
+                    }
+                }
             }
         }
 
@@ -402,7 +414,7 @@ class Model extends BaseModel
                 // check that the chain arrived at the same final model in $relationConfig[0]
                 $finalModelClass = get_class($throughRelationInstance);
                 if ($relatedModel && $finalModelClass != $relatedModel) {
-                    throw new Exception("Final relation model [$finalModelClass] does not yield the stated Model[$relatedModel]");
+                    throw new Exception("Final HasManyDeep relation [$relationName] final model [$finalModelClass] does not yield the stated config Model [$relatedModel]");
                 }
 
                 // Assemble parameters for HasManyDeep __constructor()
@@ -436,11 +448,14 @@ class Model extends BaseModel
                 // Translate strings to EMPTY Models or Pivot->setTable()s
                 // Pivot->setTable() is used when the intermediate table has no associated Model
                 $throughParents = [];
-                foreach ($through as $throughEntry) {
+                foreach ($through as $i => $throughEntry) {
                     // This just creates an new empty Model() or a Pivot($table)
                     $model = $this->newRelatedDeepThroughInstance($throughEntry);
                     // TODO: For now, we turn timestamps OFF for AA Pivot situations
                     if ($model instanceof Pivot) $model->timestamps = FALSE;
+                    // Aliases to prevent repeating model table duplication in the SQL from clause
+                    if (method_exists($model, 'setAlias')) 
+                        $model->setAlias("{$model->table}_$i");
                     array_push($throughParents, $model);
                 }
 
@@ -793,7 +808,6 @@ SQL;
             $treeCollection = new TreeCollection($models);
             $nested = $treeCollection->toNested(FALSE);
             $list   = $treeCollection->listsNested($name, 'id', $indentationString);
-            if (strstr(static::class, 'Defendant')) dd(static::class, $hierarchical, $list, $name, $models, $field->config, $models->first()?->hasMany['children']);
         } else {
             $list = $models->lists($name, 'id');
         }

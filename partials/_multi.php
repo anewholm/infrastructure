@@ -90,10 +90,10 @@ if ($value) {
             
             // Name resolution
             $name = '';
-            if      (method_exists($model, $valueFrom)) $name = $model->$valueFrom();
-            else if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
+            if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
             if (!$name) {
-                $name = '&lt;noname&gt;';
+                $noname = trans('acorn::lang.models.general.noname');
+                $name   = "&lt;$noname&gt;";
             }
             
             // Output LI item

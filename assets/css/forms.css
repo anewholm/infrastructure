@@ -407,6 +407,26 @@ table.collapsable tr.section:hover > th:first-child::before {
     background-color: #d7d7d7;
 }
 
+/* ------------------------------- README screen */
+h1.collapsable+pre {
+    display:none;
+}
+body h1.collapsable {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: normal;
+}
+h1.collapsable::before {
+    content: "+";
+    font-weight: bold;
+    font-size: 13px!important;
+    border-radius: 8px;
+    border: 1px solid #999;
+    padding: 0px 4px;
+    margin-right: 4px;
+    background-color: #d7d7d7;
+}
+
 /* ------------------------------- fixes */
 .is-rtl button.pika-prev, button.pika-next {
     /* Not sure why Storm button is overriding this */ 
