@@ -1,3 +1,15 @@
+$.fn.requestData = function(){
+  // data-request-data JSON API
+  // JQuery param(), serialize() and serializeArray() require a <form>
+  var obj = {};
+  $(this).find(':input').each(function(){
+    var name = $(this).attr('name');
+    var val  = $(this).val();
+    if (name) obj[name] = val;
+  });
+  return obj;
+}
+
 function acorn_updateViewSelectionLink() {
   var jInput    = $(this);
   var modelUuid = jInput.val();
@@ -58,20 +70,31 @@ function acorn_dynamicElements(){
 
   // list-editable
   var fCheckDirty = function(event){
-    var isDirty  = ($(this).attr('original') != $(this).val());
-    var jRowLink = $(this).closest('tr.rowlink');
-    var jCheck   = jRowLink.children('td.list-checkbox').first().find(':input');
-    
-    if (isDirty) {
-      jRowLink.addClass('dirty');
-      jCheck.attr('checked', 1);
-    } else {
-      jRowLink.removeClass('dirty');
-      jCheck.removeAttr('checked');
-    }
+    var jSave = $("button[data-request=onListEditableSave]");
+    jSave.attr('disabled', 1);
+
+    $(this).children('tbody').children('tr').each(function(){
+      var jCheck   = $(this).children('td.list-checkbox').first().find(':input');
+      var isDirty  = false;
+      $(this).find(':input.list-editable').each(function(){
+        if ($(this).attr('original') != $(this).val()) isDirty = true;
+      });
+      
+      if (isDirty) {
+        $(this).addClass('dirty');
+        jCheck.attr('checked', 1);
+        jSave.removeAttr('disabled');
+      } else {
+        $(this).removeClass('dirty');
+        jCheck.removeAttr('checked');
+      }
+    });
   };
-  $(':input.list-editable').change(fCheckDirty);
-  $(':input.list-editable').keydown(fCheckDirty);
+  // Catch at row level so we can check all values
+  $('table:has(:input.list-editable)')
+    .change(fCheckDirty)
+    .keyup(fCheckDirty);
+  // Catch in the input because row should still be clickable
   $(':input.list-editable').click(function(event){
     event.stopPropagation();
   });

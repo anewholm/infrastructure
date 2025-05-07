@@ -55,6 +55,8 @@
                 'year' => 'Year',
                 'timezone' => 'Timezone',
             ],        
+            'children' => 'Children',
+            'parent' => 'Parent',
         ],
         'server' => [
             'label' => 'Server',

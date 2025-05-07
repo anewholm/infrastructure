@@ -127,6 +127,8 @@ Trait MorphConfig
                     // RECURSIVE!
                     // Scan for include directives
                     // only allowed in the main fields collection
+                    // TODO: Remove include: 1to1, it is superceeded by create-system
+                    /*
                     $subConfigs = array();
                     foreach ($config->fields as $fieldName => &$fieldConfig) {
                         if (isset($fieldConfig['include'])) {
@@ -167,6 +169,11 @@ Trait MorphConfig
                         }
                         $debugOutput = TRUE;
                     }
+
+                    // Remove include directives
+                    foreach ($subConfigs as $fieldName => $subConfig) unset($config->fields[$fieldName]);
+                    //if (count($subConfigs)) dd($config);
+                    */
 
                     // ------------------------------------------------- permission-settings
                     // The permission name can be qualified _or_ un-qualified
@@ -222,9 +229,6 @@ Trait MorphConfig
                         }
                     }
 
-                    // Remove include directives
-                    foreach ($subConfigs as $fieldName => $subConfig) unset($config->fields[$fieldName]);
-                    //if (count($subConfigs)) dd($config);
                     break;
 
                 case 'columns':
@@ -246,6 +250,8 @@ Trait MorphConfig
                     // RECURSIVE!
                     // Scan for include directives
                     // only allowed in the main fields collection
+                    // TODO: Remove include: 1to1, it is superceeded by create-system
+                    /*
                     $subConfigs = array();
                     foreach ($config->columns as $fieldName => &$fieldConfig) {
                         if (isset($fieldConfig['include'])) {
@@ -329,8 +335,8 @@ Trait MorphConfig
 
                     // Remove include directives
                     foreach ($subConfigs as $fieldName => $subConfig) unset($config->columns[$fieldName]);
-
                     //if (count($subConfigs)) dd($configFile, $config);
+                    */
                     break;
             }
         }

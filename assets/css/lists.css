@@ -142,6 +142,20 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
 }
 
 /* list-editable */
-tr.rowlink.dirty > td {
+tr.dirty > td {
     background-color:#ffdddd!important;
+}
+td.list-cell-type-partial > .list-editable-container > input.list-editable {
+    width: 80px;
+    padding: 0px 4px;
+}
+td.list-cell-type-partial > .list-editable-container > label {
+    font-size: 13px;
+    color: rgb(102, 102, 102); /* Storm field value */
+    padding: 0px 0px 4px 0px;
+    margin: 0px;
+}
+td.list-cell-type-partial > .list-editable-container {
+    float: left;
+    margin-right: 6px;
 }

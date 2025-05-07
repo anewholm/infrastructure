@@ -23,20 +23,23 @@
             data-stripe-load-indicator>
             <?= e(trans('backend::lang.list.delete_selected')); ?>
         </button>
+    <?php endif ?>
 
-        <?php if ($model && method_exists($model, 'isListEditable') && $model->isListEditable()): ?>
-            <button
-                class="btn btn-primary"
-                disabled="disabled"
-                onclick="$(this).data('request-data', { checked: $('.control-list').listWidget('getChecked') })"
-                data-request="onListEditableSave"
-                data-request-success="$(this).prop('disabled', 'disabled')"
-                data-hotkey="ctrl+s, cmd+s"
-                data-load-indicator="<?= e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')])); ?>"
-                class="btn btn-primary">
-                <?= e(trans('backend::lang.form.save')); ?>
-            </button>
-        <?php endif ?>
+    <?php if ($model && method_exists($model, 'isListEditable') && $model->isListEditable()): 
+        $save   = e(trans('backend::lang.form.save'));
+        $fields = implode(', ', $model->listEditable)
+        ?>
+        <button
+            class="btn btn-primary"
+            disabled="disabled"
+            onclick="$(this).data('request-data', $('.control-list').requestData())"
+            data-request="onListEditableSave"
+            data-request-success="$(this).prop('disabled', 'disabled')"
+            data-hotkey="ctrl+s, cmd+s"
+            data-load-indicator="<?= e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')])); ?>"
+            class="btn btn-primary">
+            <?= "$save $fields"; ?>
+        </button>
     <?php endif ?>
 
     <a
