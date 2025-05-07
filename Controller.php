@@ -309,6 +309,12 @@ HTML;
         return $controller->$onSave(...$popupParams);
     }
 
+    public function onListEditableSave(): string
+    {
+        $changes = Model::listEditableSave();
+        return Redirect::refresh();
+    }
+
     public function onActionFunction(): string
     {
         // Action functions can:

@@ -3,8 +3,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Acorn\Traits\PathsHelper;
 use Backend\Classes\ListColumn;
 use \Carbon\CarbonInterval;
+use Exception;
 
-if (!isset($record)) throw new \Exception("_multi.php is a column partial only");
+if (!isset($record)) throw new Exception("_multi.php is a column partial only");
 
 if (is_null($value)) {
     // This can happen when we have a *Many collection with a [name] valueFrom 
@@ -78,7 +79,7 @@ if ($value) {
     // Check that the value is now a collection
     if (!$value instanceof Collection) {
         $valueType = (is_object($value) ? get_class($value) : gettype($value));
-        throw new \Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
+        throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
     }
 
     $count = $value->count();
@@ -86,8 +87,6 @@ if ($value) {
         $i     = 0;
         print("<ul id='$multiId' class='multi'>");
         $value->each(function ($model) use (&$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
-            $controller = $model->controllerFullyQualifiedClass();
-            
             // Name resolution
             $name = '';
             if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
@@ -98,6 +97,7 @@ if ($value) {
             
             // Output LI item
             print('<li>');
+            $controller  = $model->controllerFullyQualifiedClass();
             $nameEscaped = e($name);
             if ($useLinkedPopups) {
                 $dataRequestData = array(

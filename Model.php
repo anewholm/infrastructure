@@ -229,8 +229,7 @@ class Model extends BaseModel
 
     public function isListEditable(): bool
     {
-        // TODO: isListEditable()
-        return FALSE;
+        return (bool) $this->listEditable;
     }
 
     public function save(?array $options = [], $sessionKey = null)
@@ -294,19 +293,7 @@ class Model extends BaseModel
         }
 
         if (!isset($options['list-editable']) || $options['list-editable']) {
-            if ($listEditable = post('ListEditable')) {
-                $checked = post('checked');
-                foreach ($listEditable as $modelName => $models) {
-                    foreach ($models as $id => $columns) {
-                        if (!$checked || in_array($id, $checked)) {
-                            $model = $modelName::find($id);
-                            $model->fill($columns);
-                            if ($model->isDirty()) 
-                                $model->save(['list-editable' => FALSE]);
-                        }
-                    }
-                }
-            }
+            self::listEditableSave();
         }
 
         // Useful for auto-completing auto-relations
@@ -314,6 +301,64 @@ class Model extends BaseModel
         ModelAfterSave::dispatch($this);
 
         return $result;
+    }
+    
+    public static function nextNewModelId(): int
+    {
+        static $nextNewModelId = 0;
+        return $nextNewModelId++;
+    }
+    
+    public static function listEditableSave(): bool
+    {
+        static $processed = FALSE;
+        $changes = FALSE;
+
+        if ($listEditable = post('ListEditable')) {
+            if (!$processed) {
+                $processed = TRUE;
+
+                $checked   = post('checked');
+                foreach ($listEditable as $modelName => $models) {
+                    foreach ($models as $id => $columns) {
+                        if (!$checked || in_array($id, $checked)) {
+                            // Int|NULL id indicates that the model is new
+                            // Existing models use string UUIDs
+                            $model = (is_null($id) || is_int($id) 
+                                ? new $modelName() 
+                                : $modelName::find($id)
+                            );
+
+                            if ($model) { // Con-currency check
+                                // Process, fill and validate
+                                // TODO: Why not use try {$model->validate()}?
+                                $model->fill($columns);
+                                $valid = TRUE;
+                                foreach ($columns as $name => &$value) {
+                                    if ($value === "") $value = NULL;
+                                    if (is_null($value) && $model->isAttributeRequired($name)) 
+                                        $valid = FALSE;
+                                }
+
+                                // Save, delete or noop
+                                if ($model->isDirty() && $valid) {
+                                    // Save valid dirty models
+                                    $model->save(['list-editable' => FALSE]);
+                                    $changes = TRUE;
+                                } else if (!$valid && $model->exists) {
+                                    // Delete models where the data has become invalid
+                                    // this is usually because the score=NULL
+                                    $model->delete();
+                                    $changes = TRUE;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $changes;
     }
 
     // --------------------------------------------- New Relations
@@ -407,7 +452,8 @@ class Model extends BaseModel
                     // then traverse the Models only
                     // This is to ensure that $parent is set on the throughRelations for save()ing
                     $throughRelationInstance = $throughRelationInstance->$throughRelationName;
-                    if (! $throughRelationInstance instanceof Model) $throughRelationInstance  = $throughRelationObject->getRelated();
+                    if (! $throughRelationInstance instanceof BaseModel) 
+                        $throughRelationInstance  = $throughRelationObject->getRelated();
                 }
 
                 // If we have the optional double-check configuration clause then
