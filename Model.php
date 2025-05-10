@@ -8,6 +8,7 @@ use \Backend\Models\UserGroup;
 use ApplicationException;
 use Winter\Storm\Support\Facades\Schema;
 use Illuminate\Support\Facades\Redirect;
+use Winter\Storm\Exception\ValidationException;
 
 use Illuminate\Support\Str;
 use Acorn\Builder;
@@ -82,6 +83,8 @@ class Model extends BaseModel
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
+
+    public const LE_DELETE_ON_NULL = 2;
 
     public $printable = FALSE;
     public static $globalScope;
@@ -254,51 +257,73 @@ class Model extends BaseModel
         // This would error on create new
         if (!property_exists($this, 'timestamps') || $this->timestamps) $this->updated_at = NULL;
 
+        $qe     = NULL;
+        $result = NULL;
         try {
             $result = parent::save($options, $sessionKey);
         } 
         // Last chance error formatting for some presentable & understandable SQL problems
         catch (QueryException $qe) {
-            if (env('APP_DEBUG')) {
-                throw $qe;
-            } else {
-                $message = $qe->getMessage();
-                switch ($qe->getCode()) {
-                    case 23514:
-                        // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acorn_finance_invoices" violates check constraint "payee_either_or"
-                        if (preg_match_all('/relation "([^"]+)" violates check constraint "([^"]+)"/', $message, $matches) == 1) {
-                            if (count($matches) == 3) {
-                                // TODO: Make this a nice validation Flash message
-                                $table   = $matches[1][0];
-                                $check   = $matches[2][0];
-                                $message = "Check $check is required";
-                            }
+            $messageAdvanced = $qe->getMessage();
+            $messageNice     = NULL;
+
+            switch ($qe->getCode()) {
+                case 23514:
+                    // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acorn_finance_invoices" violates check constraint "payee_either_or"
+                    if (preg_match_all('/relation "([^"]+)" violates check constraint "([^"]+)"/', $messageAdvanced, $matches) == 1) {
+                        if (count($matches) == 3) {
+                            $check       = $matches[2][0];
+                            $title       = Str::headline($check);
+                            $messageNice = trans('acorn::lang.errors.sql.23514', ['check' => $title]);
                         }
-                        break;
-                    case 23502:
-                        // NotNullConstraintViolationException
-                        // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acorn_finance_receipts" violates not-null constraint
-                        if (preg_match_all('/column "([^"]+)" of relation "([^"]+)"/', $message, $matches) == 1) {
-                            if (count($matches) == 3) {
-                                // TODO: Make this a nice validation Flash message
-                                $column  = $matches[1][0];
-                                $table   = $matches[2][0];
-                                $message = "$column is required";
-                            }
+                    }
+                    break;
+                case 23502:
+                    // NotNullConstraintViolationException
+                    // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acorn_finance_receipts" violates not-null constraint
+                    if (preg_match_all('/ERROR:  null value in column "([^"]+)" of relation "([^"]+)"/', $messageAdvanced, $matches) == 1) {
+                        if (count($matches) == 3) {
+                            $column      = $matches[1][0];
+                            $messageNice = trans('acorn::lang.errors.sql.23502', ['column' => $column]);
                         }
-                        break;
+                    }
+                    break;
+                case 23505:
+                    // SQLSTATE[23505]: Unique violation: 7 ERROR: duplicate key value violates unique constraint "course_semester_year_academic_year_material"
+                    // DETAIL: Key (course_id, semester_year_id, academic_year_id, material_id)=(66d3ca90-1b6c-11f0-90cc-a77dd8e640be, 9c6e1d20-2bd1-11f0-8119-93a057070d34, 5afc781c-2b47-11f0-bc2a-0bdc97d6ed09, cdc800ae-28be-11f0-a8a6-334555029afd) already exists.
+                    if (preg_match_all('/ERROR: +duplicate key value violates unique constraint +"([^"]+)"/', $messageAdvanced, $matches) == 1) {
+                        if (count($matches) == 2) {
+                            // Data %constraint is not unique
+                            $constraint  = $matches[1][0];
+                            $title       = Str::headline($constraint);
+                            $messageNice = trans('acorn::lang.errors.sql.23505', ['constraint' => $title]); 
+                        }
+                    }
+                    break;
+            }
+
+            if ($messageNice) {
+                if (env('APP_DEBUG')) {
+                    $messageNice .= "\nAdvanced: \n";
+                    $messageNice .= $messageAdvanced;  
                 }
-                if ($message) throw new Exception($message);
+                throw new ValidationException(['error' => $messageNice]);
+            } else {
+                // Completely unhandled
+                // Throw original in dev and live env
+                throw $qe;
             }
         }
 
-        if (!isset($options['list-editable']) || $options['list-editable']) {
-            self::listEditableSave();
-        }
+        if (!$qe) {
+            if (!isset($options['list-editable']) || $options['list-editable']) {
+                self::listEditableSave();
+            }
 
-        // Useful for auto-completing auto-relations
-        // like created_by_user and created_by_event
-        ModelAfterSave::dispatch($this);
+            // Useful for auto-completing auto-relations
+            // like created_by_user and created_by_event
+            ModelAfterSave::dispatch($this);
+        }
 
         return $result;
     }
@@ -330,26 +355,30 @@ class Model extends BaseModel
                             );
 
                             if ($model) { // Con-currency check
-                                // Process, fill and validate
-                                // TODO: Why not use try {$model->validate()}?
-                                $model->fill($columns);
-                                $valid = TRUE;
+                                // Process inputs into model
+                                $delete = FALSE;
                                 foreach ($columns as $name => &$value) {
-                                    if ($value === "") $value = NULL;
-                                    if (is_null($value) && $model->isAttributeRequired($name)) 
-                                        $valid = FALSE;
+                                    // Mode: TRUE|FALSE|Model::LE_DELETE_ON_NULL
+                                    $mode = (isset($model->listEditable[$name]) ? $model->listEditable[$name] : TRUE);
+                                    if ($value === "") {
+                                        $value = NULL;
+                                        if ($mode === self::LE_DELETE_ON_NULL) $delete = TRUE;
+                                    }
                                 }
 
-                                // Save, delete or noop
-                                if ($model->isDirty() && $valid) {
-                                    // Save valid dirty models
-                                    $model->save(['list-editable' => FALSE]);
-                                    $changes = TRUE;
-                                } else if (!$valid && $model->exists) {
-                                    // Delete models where the data has become invalid
+                                if ($delete) {
+                                    // Delete models with NULL data
                                     // this is usually because the score=NULL
                                     $model->delete();
                                     $changes = TRUE;
+                                } else {
+                                    $model->fill($columns);
+                                    if ($model->isDirty()) {
+                                        // Validate
+                                        $model->validate(); // Will throw
+                                        $model->save(['list-editable' => FALSE]);
+                                        $changes = TRUE;
+                                    }
                                 }
                             }
                         }
@@ -909,13 +938,14 @@ SQL;
     */
     protected function extractRecordIdFromUrl( string $url ): int|string {
 
+        // Support for Integer and UUID record IDs
         $segments = explode( '/', $url );
         $recordId = end( $segments );
 
-        //if it is integer return int
         if ( is_numeric( $recordId ) ) {
             $recordId = ( int ) $recordId;
         }
+
         return $recordId;
     }
 
@@ -930,6 +960,8 @@ SQL;
 
         if ($is_update || $is_create) {
             // ----------------------------------- User stateful Url
+            // So that other devices can follow activity
+            // for example, when a phone is used to scan a QR code, the desktop can follow it
             if (get('set-url') === '') {
                 if ($user = BackendAuth::user()) {
                     if (array_key_exists('acorn_url', $user->getAttributes())) {
@@ -1039,16 +1071,16 @@ SQL;
 
                                 } else {
                                     $notFoundOnForm = __( 'not found on form' );
-                                    Flash::error( " $qrClassShort $notFoundOnForm" );
+                                    throw new ValidationException(['error' => "$qrClassShort $notFoundOnForm"]);
                                 }
                             } else {
-                                Flash::error( "Model [$recordId] " . __( 'not found for the given QR code' ) );
+                                throw new ValidationException(['error' => "Model [$recordId] " . __( 'not found for the given QR code' )]);
                             }
                         } else {
-                            Flash::error( __( 'Controller does not implement FormController behavior' ) );
+                            throw new Exception( __( 'Controller does not implement FormController behavior' ) );
                         }
                     } else {
-                        Flash::error( __( 'Unable to resolve the controller for ' ) . $newQrcodeUrl );
+                        throw new Exception( __( 'Unable to resolve the controller for ' ) . $newQrcodeUrl );
                     }
                 }
             } else {
@@ -1062,6 +1094,8 @@ SQL;
             // Using config
             //   from: _product_instance
             //   to: product_instances
+            // TODO: This is not used anymore, relationmanagers handle this
+            /*
             $thisModelClass = $this->fullyQualifiedClassName();
             foreach ($fields as $name => &$buttonField) {
                 if (isset($buttonField->config['path']) && $buttonField->config['path'] == 'add_button'
@@ -1174,6 +1208,7 @@ SQL;
                     }
                 }
             }
+            */
 
             // ----------------------------------- Extended config options
             // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Session;
 use Exception;
+use Flash;
 
 class GlobalChainScope implements Scope
 {
@@ -80,7 +81,7 @@ class GlobalChainScope implements Scope
                 $shouldApply = $chainScope->shouldApply($builder, $relatedModel);
             }
         }
-
+        
         return $shouldApply;
     }
 
@@ -114,6 +115,8 @@ class GlobalChainScope implements Scope
 
     public function apply(Builder $builder, Model $model): void {
         // Follow global_scope => TRUE relation(s)
+        // This is overridden by
+        //   YearScope::apply(...)
         if ($this->shouldApply($builder, $model)) 
             $this->applyRecursive($builder, $model);
     }
@@ -138,7 +141,7 @@ class GlobalChainScope implements Scope
             $chainScopes  = self::chainScopes($relatedModel);
             foreach ($chainScopes as $chainScope) {
                 // Inherit your Scope from GlobalChainScope to activate this chain
-                $chainScope->applyRecursive($builder, $relatedModel);
+                $chainScope->apply($builder, $relatedModel);
             }
         }
     }

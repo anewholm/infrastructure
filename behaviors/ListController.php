@@ -15,6 +15,7 @@ class ListController extends BackendListController
         parent::__construct($controller);
 
         $this->addViewPath('~/modules/backend/behaviors/listcontroller/partials');
+        $this->addViewPath('~/modules/acorn/behaviors/listcontroller/partials');
 
         Search::extend(function ($widget) {
             $widget->addViewPath('~/modules/acorn/partials/');
