@@ -23,6 +23,7 @@ use Acorn\User\Models\User;
 use Acorn\Events\DataChange;
 use Acorn\Events\UserNavigation;
 use Acorn\ServiceProvider;
+use Illuminate\Http\RedirectResponse;
 
 /**
  * Computer Product Backend Controller
@@ -312,7 +313,20 @@ HTML;
     public function onListEditableSave(): string
     {
         $changes = Model::listEditableSave();
+        if ($changes) Flash::info(trans('acorn::lang.models.general.row_changes_saved'));
         return Redirect::refresh();
+    }
+
+    public function onSaveAndAddNew(): string
+    {
+        // Actually we do not refresh the page here
+        // so the created values are left the same
+        // to create more similar objects
+        $response = $this->create_onSave();
+        return ($response instanceof RedirectResponse
+            ? ''
+            : $response
+        );
     }
 
     public function onActionFunction(): string
@@ -661,7 +675,6 @@ HTML;
             if (isset($settingParts[1]) && $settingParts[1] == 'globalScope') 
                 Session::put($setting, $value);
         }
-        // TODO: Refresh the list view only
         return Redirect::refresh();
     }
 

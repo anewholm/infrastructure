@@ -35,6 +35,7 @@
             'save_and_print' => 'Save and Print',
             'correct_and_print' => 'Save correction and print',
             'print' => 'Print',
+            'create_and_add_new' => 'Create and add New',
             'backend_user_group' => 'Group',
             'backend_user' => 'Person',
             'from_backend_user_group' => 'From Group',
@@ -48,6 +49,7 @@
             'redirect' => 'Go to record',
             'form_field_complete' => 'Fill out form fields',
             'view_all' => 'View all',
+            'row_changes_saved' => 'Row changes saved',
             'dateformats' => [
                 'day' => 'Day',
                 'weekinyear' => 'Week In Year',
@@ -65,6 +67,13 @@
             'replicated' => 'Replicated',
             'replicated_source' => 'Replication Source'
         ]
+    ],
+    'errors' => [
+        'sql' => [
+            '23505' => 'Data :constraint is not unique',
+            '23502' => 'The :column field is required.',
+            '23514' => 'Check :check failed',
+        ],
     ],
     'helpblock' => [
         'view_add' => 'View / Add'

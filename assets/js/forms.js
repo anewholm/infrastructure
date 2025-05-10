@@ -1,15 +1,3 @@
-$.fn.requestData = function(){
-  // data-request-data JSON API
-  // JQuery param(), serialize() and serializeArray() require a <form>
-  var obj = {};
-  $(this).find(':input').each(function(){
-    var name = $(this).attr('name');
-    var val  = $(this).val();
-    if (name) obj[name] = val;
-  });
-  return obj;
-}
-
 function acorn_updateViewSelectionLink() {
   var jInput    = $(this);
   var modelUuid = jInput.val();

@@ -42,6 +42,10 @@ body .field-multilingual .ml-btn {
     width: 100%;
 }
 
+.control-breadcrumb .counter {
+    position: inherit;
+}
+
 /* ------------------------------------- Sidebar */
 .form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {
     border-bottom: none!important;

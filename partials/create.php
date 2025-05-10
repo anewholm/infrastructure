@@ -3,10 +3,14 @@
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $controllerListUrl = $this->actionUrl('');
+$count             = (isset($formModel) ? $formModel::menuItemCount() : NULL);
 
 Block::put('breadcrumb') ?>
     <ul>
-        <li><a href="<?= $controllerListUrl ?>"><?= e($modelsLabelKey); ?></a></li>
+        <li>
+            <a href="<?= $controllerListUrl ?>"><?= e($modelsLabelKey); ?></a>
+            <span class="counter"><?= $count; ?></span>
+        </li>
         <li><?= e($this->pageTitle) ?></li>
     </ul>
 <?php Block::endPut() ?>
@@ -29,6 +33,13 @@ Block::put('breadcrumb') ?>
                     data-load-indicator="<?= e(trans('backend::lang.form.creating_name', ['name' => $modelLabelKey])); ?>"
                     class="btn btn-primary">
                     <?= e(trans('backend::lang.form.create')); ?>
+                </button>
+                <button
+                    type="button"
+                    data-request="onSaveAndAddNew"
+                    data-load-indicator="<?= e(trans('backend::lang.form.creating_name', ['name' => $modelLabelKey])); ?>"
+                    class="btn btn-default">
+                    <?= e(trans('acorn::lang.models.general.create_and_add_new')); ?>
                 </button>
                 <button
                     type="button"

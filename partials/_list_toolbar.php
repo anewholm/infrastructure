@@ -27,13 +27,13 @@
 
     <?php if ($model && method_exists($model, 'isListEditable') && $model->isListEditable()): 
         $save   = e(trans('backend::lang.form.save'));
-        $fields = implode(', ', $model->listEditable)
+        $fields = implode(', ', array_keys($model->listEditable));
         ?>
         <button
             class="btn btn-primary"
             disabled="disabled"
-            onclick="$(this).data('request-data', $('.control-list').requestData())"
             data-request="onListEditableSave"
+            data-request-form="#list-editable-form"
             data-request-success="$(this).prop('disabled', 'disabled')"
             data-hotkey="ctrl+s, cmd+s"
             data-load-indicator="<?= e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')])); ?>"
