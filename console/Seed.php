@@ -43,6 +43,7 @@ class Seed extends Command
         if ($plugin) $plugins = array($plugin => $pm->findByIdentifier($plugin));
         else         $plugins = $pm->getAllPlugins();
 
+        // TODO: Plugin dependency order
         foreach ($plugins as $name => $pluginObj) {
             // ---------------------------- Seeding db functions
             $slugSnake      = strtolower(str_replace('.', '_', $name));
@@ -86,30 +87,45 @@ class Seed extends Command
                     $name   = $result->name;
                     $suffix = ($result->type == 'file' ? '' : '()');
 
-                    print("  $name$suffix...");
+                    print("  $name$suffix\n");
                     switch ($result->type) {
                         case 'file':
-                            if ($sql = trim(File::get($result->path))) {
-                                try {
-                                    DB::unprepared($sql);
-                                } catch (QueryException $qe) {
-                                    switch ($qe->getCode()) {
-                                        case 'P0003': // Query returned more than one row
-                                            break;
-                                        default:
-                                            throw $qe;
+                            if ($sqlContent = trim(File::get($result->path))) {
+                                $isDo = (substr($sqlContent, 0, 3) == 'do ');
+                                $sqls = array();
+                                if ($isDo) array_push($sqls, $sqlContent);
+                                else       $sqls = explode("\n", $sqlContent);
+
+                                foreach ($sqls as $sql) {
+                                    if (substr($sql, 0, 2) == '--') {
+                                        $comment = substr($sql, 3);
+                                        print("    $comment\n");
+                                    } else {
+                                        try {
+                                            DB::unprepared($sql);
+                                        } catch (QueryException $qe) {
+                                            switch ($qe->getCode()) {
+                                                case 'P0003': // Query returned more than one row
+                                                    break;
+                                                default:
+                                                    throw $qe;
+                                            }
+                                        }
                                     }
                                 }
                             } else {
-                                print('(file empty!) ');
+                                print("    (file empty!)\n");
                             }
                             break;
 
                         case 'function':
-                            DB::unprepared("select $name$suffix");
+                            try {
+                                DB::unprepared("select $name$suffix");
+                            } catch (QueryException $qe) {
+                                throw $qe;
+                            }
                             break;
                     }
-                    print("DONE.\n");
                 }
             }
         }
