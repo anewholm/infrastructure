@@ -141,6 +141,22 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
     font-size: 12px; /* Override .control-toolbar */
 }
 
+.tick-div {
+    text-align: center;
+    font-size: 14px;
+}
+.tick-div.type-cross {
+    /* crosses do not display by default */
+    display: none;
+    color: red;
+}
+.show-cross > .tick-div.type-cross {
+    display: block;
+}
+.hide-tick > .tick-div.type-tick {
+    display: none;
+}
+
 /* list-editable */
 tr.dirty > td {
     background-color:#ffdddd!important;

@@ -19,7 +19,7 @@
             data-trigger-action="enable"
             data-trigger=".control-list input[type=checkbox]"
             data-trigger-condition="checked"
-            data-request-success="$(this).prop('disabled', 'disabled')"
+            data-request-success="$(this).prop('disabled', 'disabled');"
             data-stripe-load-indicator>
             <?= e(trans('backend::lang.list.delete_selected')); ?>
         </button>
@@ -34,7 +34,7 @@
             disabled="disabled"
             data-request="onListEditableSave"
             data-request-form="#list-editable-form"
-            data-request-success="$(this).prop('disabled', 'disabled')"
+            data-request-success="$(this).prop('disabled', 'disabled');  $('.control-list tr.dirty').removeClass('dirty')"
             data-hotkey="ctrl+s, cmd+s"
             data-load-indicator="<?= e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')])); ?>"
             class="btn btn-primary">
