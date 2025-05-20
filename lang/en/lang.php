@@ -50,6 +50,7 @@
             'form_field_complete' => 'Fill out form fields',
             'view_all' => 'View all',
             'row_changes_saved' => 'Row changes saved',
+            'no_changes' => 'No changes found',
             'dateformats' => [
                 'day' => 'Day',
                 'weekinyear' => 'Week In Year',
@@ -66,6 +67,16 @@
             'response' => 'Response',
             'replicated' => 'Replicated',
             'replicated_source' => 'Replication Source'
+        ],
+        'export' => [
+            'import'      => 'Import',
+            'export'      => 'Export',
+            'document_template' => 'Document template',
+            'batch_print' => 'Batch Print',
+            'conditions'  => 'Conditions',
+            'prepend_uniqid' => 'Prepend a unique ID to the PDF filenames',
+            'output_mode' => 'Output mode',
+            'compression' => 'Compression',
         ]
     ],
     'errors' => [

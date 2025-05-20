@@ -310,14 +310,15 @@ HTML;
         return $controller->$onSave(...$popupParams);
     }
 
-    public function onListEditableSave(): string
+    public function onListEditableSave()
     {
         $changes = Model::listEditableSave();
         if ($changes) Flash::info(trans('acorn::lang.models.general.row_changes_saved'));
-        return Redirect::refresh();
+        else          Flash::warning(trans('acorn::lang.models.general.no_changes'));
+        return ($changes ? Redirect::refresh() : NULL);
     }
 
-    public function onSaveAndAddNew(): string
+    public function onSaveAndAddNew()
     {
         // Actually we do not refresh the page here
         // so the created values are left the same
@@ -329,7 +330,7 @@ HTML;
         );
     }
 
-    public function onActionFunction(): string
+    public function onActionFunction()
     {
         // Action functions can:
         //   - require user input
@@ -353,12 +354,11 @@ HTML;
         $modelName   = $this->unqualifiedClassName();
         
         if (!$fnName)     throw new \Exception("onActionFunction() had no POST name");
-        if (!$modelId)    throw new \Exception("onActionFunction() had no POST id");
-        if (!$modelClass) throw new \Exception("onActionFunction() had no POST Model class");
         if (!$user)       throw new \Exception("onActionFunction() requires logged in user with associated User::user");
-        
+        if (!$modelClass) throw new \Exception("onActionFunction() had no POST Model class");
+
         // These will throw their own Exceptions
-        $model          = $modelClass::find($modelId);
+        $model          = ($modelId ? $modelClass::find($modelId) : new $modelClass());
         $actionFunctionDefinition = $model->actionFunctions($fnName);
         $fnDatabaseName = $actionFunctionDefinition['fnDatabaseName'];
         $fnParams       = $actionFunctionDefinition['parameters'];

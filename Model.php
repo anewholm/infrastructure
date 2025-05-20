@@ -333,6 +333,48 @@ class Model extends BaseModel
         static $nextNewModelId = 0;
         return $nextNewModelId++;
     }
+
+    public static function ordinal(int $value): string
+    {
+        $ordinal = '';
+
+        if ($value > 0) {
+            $ordinals = ['th','st','nd','rd','th','th','th','th','th','th'];
+            $ordinal  = $ordinals[$value % 10];
+            if ((($value % 100) >= 11) && (($value % 100) <= 13)) $ordinal = 'th';
+        }
+        
+        return $ordinal;
+    }
+
+    public function buildName(bool $html, string $delimeter, ...$nameModels): string
+    {
+        $name         = '';
+        $useDelimeter = TRUE;
+        foreach ($nameModels as $model) {
+            $modelName = NULL;
+            $class     = 'no-value'; 
+            if ($model instanceof Model) {
+                $modelName  = $model->name;
+                $classParts = explode('\\', get_class($model));
+                $class      = end($classParts);
+            } else if (is_string($model)) {
+                $modelName   = $model;
+                $class       = 'string';
+                $useDelimeter = FALSE;
+            }
+            $modelName = e($modelName);
+            if ($html) {
+                if ($name && $modelName && $useDelimeter) $name .= "<span class='delimeter'>$delimeter</span>";
+                $name .= "<span class='$class'>$modelName</span>";
+            } else {
+                if ($name && $modelName && $useDelimeter) $name .= $delimeter;
+                $name .= $modelName;
+            }
+            if ($model instanceof Model) $useDelimeter = TRUE;
+        }
+        return $name;
+    }
     
     public static function listEditableSave(): bool
     {
@@ -359,9 +401,9 @@ class Model extends BaseModel
                                 $delete = FALSE;
                                 foreach ($columns as $name => &$value) {
                                     // Mode: TRUE|FALSE|Model::LE_DELETE_ON_NULL
-                                    $mode = (isset($model->listEditable[$name]) ? $model->listEditable[$name] : TRUE);
-                                    if ($value === "") {
-                                        $value = NULL;
+                                    if ($value === "") $value = NULL;
+                                    if (is_null($value)) {
+                                        $mode = (isset($model->listEditable[$name]) ? $model->listEditable[$name] : TRUE);
                                         if ($mode === self::LE_DELETE_ON_NULL) $delete = TRUE;
                                     }
                                 }
