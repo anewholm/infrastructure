@@ -9,7 +9,7 @@ $required     = (isset($column->config['required'])      ? $column->config['requ
 $placeholder  = (isset($column->config['placeholder'])   ? $column->config['placeholder']   : '' );
 $pattern      = (isset($column->config['pattern'])       ? $column->config['pattern']       : '' );
 $id           = $record->id;
-$attributes   = (isset($attributes) ? $attributes : array());
+$createValues = (isset($createValues) ? $createValues : array());
 $valueEscaped = htmlentities($value);
 $titleEscaped = (isset($title) ? htmlentities($title) : NULL);
 $idValue      = "Form-field-$class-$column";
@@ -35,7 +35,7 @@ print(<<<HTML
 </input>
 HTML);
 
-foreach ($attributes as $name => $value) {
+foreach ($createValues as $name => $value) {
     $valueEscaped = e($value);
     print("<input type='hidden' name='{$nameStem}[$name]' value='$valueEscaped'></input>");
 }

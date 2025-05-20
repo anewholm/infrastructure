@@ -3,7 +3,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Acorn\Traits\PathsHelper;
 use Backend\Classes\ListColumn;
 use \Carbon\CarbonInterval;
-use Exception;
 
 if (!isset($record)) throw new Exception("_multi.php is a column partial only");
 

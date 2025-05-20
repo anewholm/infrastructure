@@ -19,6 +19,17 @@ tr.rowlink .nowrap {
     animation-duration: 2s;
 }
 
+table.table.data .current {
+    font-weight: bold;
+}
+table.table.data .not-current {
+    color: #999;
+}
+
+table.table.data .ordinal {
+    color: #999;
+}
+
 .toolbar-primary > div > button {
     /* a and button together bit up and down */
     margin-top: 0px;
@@ -155,6 +166,14 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
 }
 .hide-tick > .tick-div.type-tick {
     display: none;
+}
+
+.name-description > .description,
+.name-description > .description p {
+    color: #aaa;
+}
+.name-description .variable {
+    font-weight: bold;
 }
 
 /* list-editable */

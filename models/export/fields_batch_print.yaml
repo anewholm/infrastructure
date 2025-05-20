@@ -1,0 +1,39 @@
+fields:
+    conditions:
+        label: acorn::lang.models.export.conditions
+        span: left
+        type: text
+        comment: For example, score > 90 (optional)
+    template:
+        label: acorn::lang.models.export.document_template
+        type: mediafinder
+        span: left
+        default: /BakeloriaCertificateTemplate.fodt
+        required: true
+        mode: document
+        comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>
+        commentHtml: true
+    prepend_uniqid:
+        label: acorn::lang.models.export.prepend_uniqid
+        type: checkbox
+        default: false
+        span: left
+        comment: Useful when the first field, used for the filename, is not unique
+    output_mode:
+        label: acorn::lang.models.export.output_mode
+        type: radio
+        span: left
+        default: multi
+        required: true
+        options:
+            multi: One document per row
+            single: One page in the document per row (Smaller)
+    compression:
+        label: acorn::lang.models.export.compression
+        type: radio
+        span: left
+        default: zip
+        required: true
+        options:
+            zip: ZIP (MicroSoft Windows)
+            tarGz: TAR+GZIP (Linux)

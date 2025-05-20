@@ -1,8 +1,10 @@
 <div data-control="toolbar">
     <?php // TODO: This should maybe be the toolbar.extend event instead?
-    $model      = $this->widget?->list?->model;
-    $isReadOnly = ((property_exists($this, 'readOnly') && $this->readOnly) 
+    $controllerListUrl = $this->actionUrl('');
+    $model             = $this->widget?->list?->model;
+    $isReadOnly        = ((property_exists($this, 'readOnly') && $this->readOnly) 
         || ($model && property_exists($model, 'readOnly') && $model->readOnly));
+
     if (!$isReadOnly): ?>
         <a
             href="<?= $this->controllerUrl('create'); ?>"
@@ -41,10 +43,58 @@
             <?= "$save $fields"; ?>
         </button>
     <?php endif ?>
+    
+    <?php if ($model && property_exists($model, 'actionFunctions')) {
+        $modelArrayName  = $model->unqualifiedClassName();
+        foreach ($model->actionFunctions as $name => $definition) {
+            if (isset($definition['type']) && $definition['type'] == 'list') {
+                $label = e(trans($definition['label']));
+                $dataRequestData = e(substr(json_encode(array(
+                    'name'       => $name, // SECURITY: We do not want to reveal the full function name
+                    'arrayname'  => $modelArrayName,
+                    'model'      => get_class($model),
+                )), 1,-1));
+                $icon = (isset($definition['icon']) ? '' : '');
+                $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
+
+                print(<<<HTML
+                    <button
+                        class="btn"
+                        data-control="popup"
+                        data-request-data='$dataRequestData'
+                        data-handler="onActionFunction"
+                        data-load-indicator="$dataLoadIndicator"
+                        class="btn">
+                        $label
+                    </button>
+HTML
+                );
+             }
+        }
+    } ?>
 
     <a
         href="javascript:print()"
         class="btn btn-primary wn-icon-print">
         <?= e(trans('acorn::lang.models.general.print')); ?>
     </a>
+
+    <?php if (property_exists($this->widget, 'importUploadForm')): ?>
+        <a
+            href="<?= $controllerListUrl ?>/import"
+            class="btn wn-icon-import">
+            <?= e(trans('acorn::lang.models.general.import')); ?>
+        </a>
+    <?php endif ?>
+
+    <?php if (property_exists($this->widget, 'exportUploadForm')): 
+        $classParts = explode('\\', get_class($this->widget->exportUploadForm->model));
+        $label      = Str::snake(end($classParts));
+    ?>
+        <a
+            href="<?= $controllerListUrl ?>/export"
+            class="btn wn-icon-export">
+            <?= e(trans("acorn::lang.models.export.$label")); ?>
+        </a>
+    <?php endif ?>
 </div>
