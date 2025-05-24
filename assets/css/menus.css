@@ -21,18 +21,20 @@
   font-size:0.8em;
 }
 
-/* -------------------------------------- remove some WinterCMS we don't use */
-#layout-sidenav-1 .headless-menu:has(img[src*=dashboard-icon]),
+/* -------------------------------------- remove some WinterCMS we don't use 
 #layout-sidenav-1 .headless-menu:has(img[src*=cms-icon]),
 #layout-sidenav-1 .headless-menu:has(img[src*=media-icon]),
+#layout-sidenav-1 .headless-menu:has(img[src*=dashboard-icon]),
 #layout-sidenav-1 a.quick-link[target=_blank]:has(i.icon-crosshairs) {
     display: none;
 }
+*/
 
-/* and WinterCMS settings we don't use */
+/* WinterCMS settings we don't use 
 li[data-group-code='system::lang.system.categories.cms'],
 li[data-group-code='system::lang.system.categories.mail'],
 .control-tabs > div > ul.nav-tabs > li:has(a[href='#primarytab-backendlangbackend-preferencescode-editor']),
 li[data-group-code='system::lang.system.categories.system'] > ul > li:has(a[href*='/system/settings/update/winter/backend/editor']) {
     display:none!important;
 }
+*/

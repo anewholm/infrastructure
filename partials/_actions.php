@@ -12,7 +12,7 @@ else throw new \Exception("Cannot ascertain model for actions operation");
 if (method_exists($model, 'actionFunctions')) {
     $formMode        = (isset($formModel) && $model == $formModel);
     $modelArrayName  = $model->unqualifiedClassName();
-    $actionFunctions = $model->actionFunctions(); // Includes inherited 1to1 action functions
+    $actionFunctions = $model->actionFunctions('row'); // Includes inherited 1to1 action functions
     $user            = BackendAuth::user();
 
     if (count($actionFunctions) || $formMode || $model->printable) {

@@ -359,12 +359,15 @@ HTML;
 
         // These will throw their own Exceptions
         $model          = ($modelId ? $modelClass::find($modelId) : new $modelClass());
-        $actionFunctionDefinition = $model->actionFunctions($fnName);
+        $actionFunctionDefinition = $model->actionFunctions(NULL, $fnName);
         $fnDatabaseName = $actionFunctionDefinition['fnDatabaseName'];
         $fnParams       = $actionFunctionDefinition['parameters'];
         $returnType     = $actionFunctionDefinition['returnType'];
         $title          = trans($actionFunctionDefinition['label']);
         $resultAction   = $actionFunctionDefinition['resultAction'] ?? NULL;
+        $classParts     = explode('\\', get_class($model));
+        $shortClass     = end($classParts);
+        $classField     = Str::snake($shortClass); // academic_year
         
         // TODO: SECURITY: Action Function Premissions
 
@@ -391,9 +394,7 @@ HTML;
                         'type'  => $paramType,
                     );
                     else {
-                        $unsatisfiedParams[$paramName] = array(
-                            'type'  => $paramType,
-                        );
+                        $unsatisfiedParams[$paramName] = $paramType;
                     }
                     break;
             }
@@ -411,18 +412,72 @@ HTML;
 
             // Adopt the main models form field configs if there is one
             foreach ($unsatisfiedParams as $paramName => $paramType) {
-                $baseParamName       = preg_replace('/_id$/', '', $paramName);
+                $baseParamName       = preg_replace('/^p_|_id$/', '', $paramName);
                 $fieldParametersName = "parameters[$paramName]";
+
+                $config = array(
+                    'label' => Str::headline($baseParamName),
+                );
+
                 if (isset($modelFields[$baseParamName])) {
-                    $fieldConfig = $modelFields[$baseParamName];
-                    $fieldConfig['comment'] = '';
-                    $formConfig['fields'][$fieldParametersName] = $fieldConfig;
+                    $config = $modelFields[$baseParamName];
+                    $config['comment'] = '';
+                } else if ($baseParamName == $classField) {
+                    $config = array_merge($config, array(
+                        'type'    => 'dropdown',
+                        'options' => "$modelClass::dropdownOptions",
+                    ));
                 } else {
-                    $formConfig['fields'][$fieldParametersName] = array(
-                        'label' => $paramName,
-                        'type'  => 'text',
-                    );
+                    switch ($paramType) {
+                        case 'double precision':
+                        case 'double':
+                        case 'int':
+                        case 'bigint':
+                        case 'integer':
+                            $config['type'] = 'number';
+                            break;
+                        case 'timestamp with time zone':
+                        case 'timestamp without time zone':
+                        case 'date':
+                        case 'datetime':
+                            $config['type'] = 'datepicker';
+                            break;
+                        case 'interval':
+                            // TODO: Currently intervals are just presented as text
+                            break;
+                        case 'boolean':
+                        case 'bool':
+                            $config['type']    = 'switch';
+                            $config['default'] = true;
+                            break;
+                        case 'char':
+                            $config['length'] = 1;
+                            break;
+                        case 'text':
+                            $config['type'] = 'richeditor';
+                            break;
+                        case 'path':
+                            // File uploads are NOT stored in the actual column
+                            $uploadDefinition = array(
+                                'type'         => 'fileupload',
+                                'mode'         => 'image',
+                                'required'     => FALSE,
+                                'imageHeight'  => 260,
+                                'imageWidth'   => 260,
+                                'thumbOptions' => array(
+                                    'mode'      => 'crop',
+                                    'offset'    => array(0,0),
+                                    'quality'   => 90,
+                                    'sharpen'   => 0,
+                                    'interlace' => FALSE,
+                                    'extension' => 'auto',
+                                ),
+                            );
+                            $config = array_merge($config, $uploadDefinition);
+                            break;
+                    }
                 }
+                $formConfig['fields'][$fieldParametersName] = $config;
             }
 
             // Build a Form Widget
@@ -490,10 +545,13 @@ HTML;
             switch ($resultAction) {
                 case 'model-uuid-redirect':
                     $newModelId = $results[0]->result;
-                    Redirect::to($newModelId);
+                    $response   = Redirect::to($newModelId);
+                    break;
+                case 'refresh':
+                    $response   = Redirect::refresh();
                     break;
                 default:
-                    $response = <<<HTML
+                    $response   = <<<HTML
                     <div class="modal-header compact">
                         <button type="button" class="close" data-dismiss="popup">&times;</button>
                         <h4 class="modal-title">

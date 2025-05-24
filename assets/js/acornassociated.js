@@ -29,9 +29,9 @@ String.prototype.toUCFirst = function(){
 }
 
 $(document).ready(function(){
-    $('.multi > li > a').click(function(e) {
-        e.stopPropagation();
-        e.preventDefault();
+    $('.multi > li > a, .action-functions > li > a').click(function(event) {
+        event.stopPropagation();
+        event.preventDefault();
         $(this).popup(this.attributes);
         return false;
     });

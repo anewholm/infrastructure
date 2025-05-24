@@ -120,6 +120,17 @@ class Model extends BaseModel
         return $leafObject;
     }
 
+    protected static function boot()
+    {
+        static::extend(function ($model) {
+            // NestedTree will overwrite out parent relation
+            // removing any custom attributes like name
+            if (isset($model->belongsTo['parent']))
+                $model->belongsTo['parent_copy'] = $model->belongsTo['parent'];
+        });
+        parent::boot();
+    }
+
     protected static function booted()
     {
         // Use locally defined GlobalScope classes, e.g. YearScope
@@ -334,8 +345,15 @@ class Model extends BaseModel
         return $nextNewModelId++;
     }
 
+    public function ordinalText(): string
+    {
+        // 1st|2nd|3rd|...
+        return $this->ordinal . self::ordinal($this->ordinal);
+    }
+
     public static function ordinal(int $value): string
     {
+        // st|nd|th
         $ordinal = '';
 
         if ($value > 0) {
@@ -349,31 +367,57 @@ class Model extends BaseModel
 
     public function buildName(bool $html, string $delimeter, ...$nameModels): string
     {
-        $name         = '';
-        $useDelimeter = TRUE;
+        $name           = '';
+        $useDelimeter   = TRUE;
         foreach ($nameModels as $model) {
             $modelName = NULL;
-            $class     = 'no-value'; 
-            if ($model instanceof Model) {
-                $modelName  = $model->name;
-                $classParts = explode('\\', get_class($model));
-                $class      = end($classParts);
-            } else if (is_string($model)) {
-                $modelName   = $model;
-                $class       = 'string';
-                $useDelimeter = FALSE;
+            $class     = 'no-value';
+
+            if ($model) { // Guard from NULLs
+                if ($model instanceof BaseModel) {
+                    if ($html) $modelName  = ($model->htmlName ?: e($model->name));
+                    else       $modelName  = $model->name;
+                    $classParts = explode('\\', get_class($model));
+                    $class      = Str::kebab(end($classParts));
+                } else if (is_string($model)) {
+                    $modelName   = e($model);
+                    $class       = 'string';
+                    $useDelimeter = FALSE;
+                }
+
+                if ($html) {
+                    $link  = (method_exists($model, 'controllerUrl')
+                        ? $model->controllerUrl('update')
+                        : NULL
+                    );
+                    
+                    // Callers job to not escape the HTML
+                    if ($name && $modelName && $useDelimeter) $name .= "<span class='delimeter'>$delimeter</span>";
+                    $name .= "<span class='$class'>";
+                    if ($link) $name .= "<a href='$link'>";
+                    $name .= $modelName; // pre-escaped
+                    if ($link) $name .= '</a>';
+                    $name .= "</span>";
+                } else {
+                    if ($name && $modelName && $useDelimeter) $name .= $delimeter;
+                    // Callers job to escape the name
+                    $name .= $modelName;
+                }
+                if ($model instanceof BaseModel) $useDelimeter = TRUE;
             }
-            $modelName = e($modelName);
-            if ($html) {
-                if ($name && $modelName && $useDelimeter) $name .= "<span class='delimeter'>$delimeter</span>";
-                $name .= "<span class='$class'>$modelName</span>";
-            } else {
-                if ($name && $modelName && $useDelimeter) $name .= $delimeter;
-                $name .= $modelName;
-            }
-            if ($model instanceof Model) $useDelimeter = TRUE;
         }
+
         return $name;
+    }
+
+    public function buildNameFromRelations(bool $html = FALSE, string $delimeter = '::'): string
+    {
+        $nameModels = array();
+        foreach ($this->belongsTo as $name => &$config) {
+            if (isset($config['name']) && $config['name']) 
+                array_push($nameModels, $this->$name);
+        }
+        return $this->buildName($html, $delimeter, ...$nameModels);
     }
     
     public static function listEditableSave(): bool
@@ -932,12 +976,17 @@ SQL;
         return $list;
     }
 
-    public function actionFunctions(string $fnName = NULL): array {
+    public function actionFunctions(string $type = NULL, string $fnName = NULL): array {
         // Direct model action functions
         $actionFunctions = ($this->actionFunctions ?: array());
         foreach ($actionFunctions as $name => &$actionFunctionDefinition) {
             $condition = $actionFunctionDefinition['condition'] ?? NULL; 
-            if (!$condition || $this::where('id', $this->id)->whereRaw($condition)->count() != 0) {
+            if ((  is_null($type) 
+                || (isset($actionFunctionDefinition['type']) && $type == $actionFunctionDefinition['type'])
+                || (!isset($actionFunctionDefinition['type']) && $type == 'row')
+                )
+                && (!$condition || $this::where('id', $this->id)->whereRaw($condition)->count() != 0)
+            ) {
                 // Populate the Model/Id for correct lookup later
                 $actionFunctionDefinition['model']    = get_class($this);
                 $actionFunctionDefinition['model_id'] = $this->id;
@@ -956,7 +1005,12 @@ SQL;
                         // Write the sub-model id
                         foreach ($relatedModel->actionFunctions as $name => &$actionFunctionDefinition) {
                             $condition = $actionFunctionDefinition['condition'] ?? NULL;
-                            if (!$condition || $relatedModel::where('id', $relatedModel->id)->whereRaw($condition)->count() != 0) {
+                            if ((  is_null($type) 
+                                || (isset($actionFunctionDefinition['type']) && $type == $actionFunctionDefinition['type'])
+                                || (!isset($actionFunctionDefinition['type']) && $type == 'row')
+                                )
+                                && (!$condition || $relatedModel::where('id', $relatedModel->id)->whereRaw($condition)->count() != 0)
+                            ) {
                                 // Populate the Model/Id for correct lookup later
                                 $actionFunctionDefinition['model']    = get_class($relatedModel);
                                 $actionFunctionDefinition['model_id'] = $relatedModel->id;
