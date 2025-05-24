@@ -19,6 +19,15 @@ tr.rowlink .nowrap {
     animation-duration: 2s;
 }
 
+/*
+table.table.data tr.list-tree-level-0 td.list-cell-index-1{padding-left:0px}
+table.table.data tr.list-tree-level-1 td.list-cell-index-1{padding-left:20px}
+table.table.data tr.list-tree-level-2 td.list-cell-index-1{padding-left:40px}
+table.table.data tr.list-tree-level-3 td.list-cell-index-1{padding-left:60px}
+table.table.data tr.list-tree-level-4 td.list-cell-index-1{padding-left:80px}
+table.table.data tr.list-tree-level-5 td.list-cell-index-1{padding-left:100px}
+*/
+
 table.table.data .current {
     font-weight: bold;
 }
@@ -35,6 +44,9 @@ table.table.data .ordinal {
     margin-top: 0px;
 }
 
+.list-cell-type-partial > .multi .delimeter {
+    color: #999;
+}
 .list-cell-type-partial > .multi {
     list-style: circle;
 }

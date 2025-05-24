@@ -123,7 +123,7 @@ class ServiceProvider extends ModuleServiceProvider
         // TODO: Allow plugins to register there own persistent commands
         // using an interface and a call in their Plugin.php
         // maybe inheriting from AA Command that can run itself
-        if (self::isHTTPCall() && self::isDebug()) {
+        if (!$this->app->runningInConsole() && self::isDebug()) {
             $commands = array(
                 'messaging:run'    => '',
                 'websockets:serve' => '--port 6001',
@@ -196,16 +196,6 @@ class ServiceProvider extends ModuleServiceProvider
     }
 
     // ---------------------------------------- Status helpers
-    protected static function isCommandLine(): bool
-    {
-        return !self::isHTTPCall();
-    }
-
-    protected static function isHTTPCall(): bool
-    {
-        return isset($_SERVER['HTTP_HOST']);
-    }
-
     static public function isDebugAny(): bool
     {
         $isDebugAny = FALSE;

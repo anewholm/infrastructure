@@ -21,11 +21,12 @@ if (is_null($value)) {
 }
 
 if ($value) {
-    $multiId   = "$record->id-$column->columnName";
-    $isNested  = (strstr($column->columnName, '[') !== FALSE);
+    $multiId    = "$record->id-$column->columnName";
+    $multiClass = Str::kebab($column->columnName);
+    $isNested   = (strstr($column->columnName, '[') !== FALSE);
     // Custom config settings
-    $limit     = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
-    $action    = (isset($column->config['action']) ? $column->config['action'] : 'update');
+    $limit      = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
+    $action     = (isset($column->config['action']) ? $column->config['action'] : 'update');
     $useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->config['use-linked-popups'] : FALSE);
     // We do not respect the values passed in value
     // instead, we create a collection and re-apply the valueFrom/select logic
@@ -36,12 +37,15 @@ if ($value) {
     // WinterCMS default behaviour with multi-level relations is to apply the valueFrom/select to the top level relation only
     // we apply it to the final Collection result
     $hasNestedDirective = ($isNested && isset($column->config['nestedValueFrom']));
+    $hasManyDirective   = isset($column->config['multi']['valueFrom']);
     $valueFrom = (
-        $hasNestedDirective ? $column->config['nestedValueFrom'] :
-        ($column->valueFrom ? $column->valueFrom :
-        ($column->sqlSelect ? $column->sqlSelect :
+        $hasManyDirective    ? $column->config['multi']['valueFrom'] :
+        ($hasNestedDirective ? $column->config['nestedValueFrom'] :
+        ($column->valueFrom  ? $column->valueFrom :
+        ($column->sqlSelect  ? $column->sqlSelect :
         'name'
-    )));
+    ))));
+    $isHTML   = (isset($column->config['multi']['html']) && $column->config['multi']['html']);
     $relation = $column->relation;
 
     // Custom multi directives
@@ -83,9 +87,12 @@ if ($value) {
 
     $count = $value->count();
     if ($count) {
-        $i     = 0;
-        print("<ul id='$multiId' class='multi'>");
-        $value->each(function ($model) use (&$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
+        $i          = 0;
+        $firstItem  = $value[0];
+        $classParts = explode('\\', get_class($firstItem));
+        $itemClass  = Str::kebab(end($classParts));
+        print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
+        $value->each(function ($model) use (&$isHTML, &$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
             // Name resolution
             $name = '';
             if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
@@ -97,7 +104,6 @@ if ($value) {
             // Output LI item
             print('<li>');
             $controller  = $model->controllerFullyQualifiedClass();
-            $nameEscaped = e($name);
             if ($useLinkedPopups) {
                 $dataRequestData = array(
                     'route'   => "$controller@$action",
@@ -111,7 +117,7 @@ if ($value) {
                     data-control='popup'>"
                 );
             }
-            print($nameEscaped);
+            print($isHTML ? $name : e($name));
             if ($useLinkedPopups) print('</a>');
             print('</li>');
 

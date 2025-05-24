@@ -46,30 +46,28 @@
     
     <?php if ($model && property_exists($model, 'actionFunctions')) {
         $modelArrayName  = $model->unqualifiedClassName();
-        foreach ($model->actionFunctions as $name => $definition) {
-            if (isset($definition['type']) && $definition['type'] == 'list') {
-                $label = e(trans($definition['label']));
-                $dataRequestData = e(substr(json_encode(array(
-                    'name'       => $name, // SECURITY: We do not want to reveal the full function name
-                    'arrayname'  => $modelArrayName,
-                    'model'      => get_class($model),
-                )), 1,-1));
-                $icon = (isset($definition['icon']) ? '' : '');
-                $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
+        foreach ($model->actionFunctions('list') as $name => $definition) {
+            $label = e(trans($definition['label']));
+            $dataRequestData = e(substr(json_encode(array(
+                'name'       => $name, // SECURITY: We do not want to reveal the full function name
+                'arrayname'  => $modelArrayName,
+                'model'      => get_class($model),
+            )), 1,-1));
+            $icon = (isset($definition['icon']) ? '' : '');
+            $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
 
-                print(<<<HTML
-                    <button
-                        class="btn"
-                        data-control="popup"
-                        data-request-data='$dataRequestData'
-                        data-handler="onActionFunction"
-                        data-load-indicator="$dataLoadIndicator"
-                        class="btn">
-                        $label
-                    </button>
+            print(<<<HTML
+                <button
+                    class="btn"
+                    data-control="popup"
+                    data-request-data='$dataRequestData'
+                    data-handler="onActionFunction"
+                    data-load-indicator="$dataLoadIndicator"
+                    class="btn">
+                    $label
+                </button>
 HTML
-                );
-             }
+            );
         }
     } ?>
 
