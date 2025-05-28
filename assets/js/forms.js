@@ -58,34 +58,43 @@ function acorn_dynamicElements(){
 
   // list-editable
   var fCheckDirty = function(event){
-    var jSave = $("button[data-request=onListEditableSave]");
+    var jTable = $(this).closest('table');
+    var jSave  = $("button[data-request=onListEditableSave]");
     jSave.attr('disabled', 1);
 
-    $(this).children('tbody').children('tr').each(function(){
-      var jCheck   = $(this).children('td.list-checkbox').first().find(':input');
-      var isDirty  = false;
+    var tableIsDirty = false;
+    jTable.children('tbody').children('tr').each(function(){
+      var jCheck     = $(this).children('td.list-checkbox').first().find(':input');
+      var rowIsDirty = false;
       $(this).find(':input.list-editable').each(function(){
-        if ($(this).attr('original') != $(this).val()) isDirty = true;
+        if ($(this).attr('original') != $(this).val()) {
+          rowIsDirty   = true;
+          tableIsDirty = true;
+        }
       });
       
-      if (isDirty) {
+      if (rowIsDirty) {
         $(this).addClass('dirty');
-        jCheck.attr('checked', 1);
-        jSave.removeAttr('disabled');
+        if (!jCheck.is(':checked')) jCheck.click();
       } else {
         $(this).removeClass('dirty');
-        jCheck.removeAttr('checked');
+        if (jCheck.is(':checked')) jCheck.click();
       }
     });
+
+    if (tableIsDirty) {
+      jSave.removeAttr('disabled');
+    }
+
+    event.stopPropagation();
+    return false;
   };
-  // Catch at row level so we can check all values
-  $('table:has(:input.list-editable)')
-    .change(fCheckDirty)
-    .keyup(fCheckDirty);
   // Catch in the input because row should still be clickable
   $(':input.list-editable').click(function(event){
     event.stopPropagation();
-  });
+  })
+  .change(fCheckDirty)
+  .keyup(fCheckDirty);
 
   // Enable read-only for radio buttons
   // HTML does not accept readonly on radio buttons
