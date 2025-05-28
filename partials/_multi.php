@@ -6,10 +6,56 @@ use \Carbon\CarbonInterval;
 
 if (!isset($record)) throw new Exception("_multi.php is a column partial only");
 
+$multiId    = "$record->id-$column->columnName";
+$multiClass = Str::kebab($column->columnName);
+$isNested   = (strstr($column->columnName, '[') !== FALSE);
+// Custom config settings
+$limit      = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
+$action     = (isset($column->config['action']) ? $column->config['action'] : 'update');
+$useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->config['use-linked-popups'] : FALSE);
+// We do not respect the values passed in value
+// instead, we create a collection and re-apply the valueFrom/select logic
+// this is to standardise the Collection display
+// When nested, the valueFrom is forced to the columnName
+// so we introduce a non-standard option nestedValueFrom
+// Value selection failover: nestedValueFrom, valueFrom, select, 'name' 
+// WinterCMS default behaviour with multi-level relations is to apply the valueFrom/select to the top level relation only
+// we apply it to the final Collection result
+$hasNestedDirective = ($isNested && isset($column->config['nestedValueFrom']));
+$hasManyDirective   = isset($column->config['multi']['valueFrom']);
+$valueFrom = (
+    $hasManyDirective    ? $column->config['multi']['valueFrom'] :
+    ($hasNestedDirective ? $column->config['nestedValueFrom'] :
+    ($column->valueFrom  ? $column->valueFrom :
+    ($column->sqlSelect  ? $column->sqlSelect :
+    'name'
+))));
+$isHTML   = (isset($column->config['multi']['html']) && $column->config['multi']['html']);
+$relation = $column->relation;
+
+// Custom multi directives
+$sum   = FALSE;
+$total = NULL;
+if (isset($column->config['multi'])) {
+    $multi = $column->config['multi'];
+    if (isset($multi['sum'])) $sum = new ListColumn($multi['sum'], '');
+}
+
+// The field name is the name of the Model relation
+// so the relation is automatically used
+// Some considered scenarios:
+//   1) relation & valueFrom => array(id => valueFrom, ...)
+//   2) valueFrom only => string
+//   3) relation only  => Collection
+//   4) no relation or valueFrom => Collection
+// relation: directive is necessary for searcheable and sortable
+// valueFrom: is honoured on the Collections below
 if (is_null($value)) {
     // This can happen when we have a *Many collection with a [name] valueFrom 
     // like legalcase[many-somethings][name]
-    // because the back-column legalcase[many-somethings] returns a collection, which has no name attribute
+    // which is a partial. So the valueFrom: name | [name] is resolved
+    // before passing the value to the partial.
+    // So the back-column legalcase[many-somethings] returns a collection, which has no name attribute
     // We try to strip the [name] to see what happens
     // TODO: We need to put more checks in this back-column attempt
     if ($backColumnName = PathsHelper::backColumnName($column->columnName, FALSE)) {
@@ -17,131 +63,89 @@ if (is_null($value)) {
         // If there is a problem this will just return NULL again
         $value          = $column->getValueFromData($record);
         if (!$value instanceof Collection) $value = NULL;
+    } else {
+        // Let's also try to get the raw column value
+        // Without the [name] or valueFrom applied
+        $value = $record->{$column->columnName};
     }
 }
 
-if ($value) {
-    $multiId    = "$record->id-$column->columnName";
-    $multiClass = Str::kebab($column->columnName);
-    $isNested   = (strstr($column->columnName, '[') !== FALSE);
-    // Custom config settings
-    $limit      = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
-    $action     = (isset($column->config['action']) ? $column->config['action'] : 'update');
-    $useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->config['use-linked-popups'] : FALSE);
-    // We do not respect the values passed in value
-    // instead, we create a collection and re-apply the valueFrom/select logic
-    // this is to standardise the Collection display
-    // When nested, the valueFrom is forced to the columnName
-    // so we introduce a non-standard option nestedValueFrom
-    // Value selection failover: nestedValueFrom, valueFrom, select, 'name' 
-    // WinterCMS default behaviour with multi-level relations is to apply the valueFrom/select to the top level relation only
-    // we apply it to the final Collection result
-    $hasNestedDirective = ($isNested && isset($column->config['nestedValueFrom']));
-    $hasManyDirective   = isset($column->config['multi']['valueFrom']);
-    $valueFrom = (
-        $hasManyDirective    ? $column->config['multi']['valueFrom'] :
-        ($hasNestedDirective ? $column->config['nestedValueFrom'] :
-        ($column->valueFrom  ? $column->valueFrom :
-        ($column->sqlSelect  ? $column->sqlSelect :
-        'name'
-    ))));
-    $isHTML   = (isset($column->config['multi']['html']) && $column->config['multi']['html']);
-    $relation = $column->relation;
+if (is_string($value)) {
+    $col   = $column->columnName;
+    // The relation associated with the column is invoked ($record->$col()).
+    // The related records are fetched as a Collection using the get() method.
+    // and then the valueFrom is applied, essentially re-creating the same array or string indirectly
+    $model = &$record;
+    if ($relation && $model->hasRelation($relation)) $model = $model->$relation;
+    $value = $model->$col;
+} else if (is_array($value)) {
+    // The $record is already the relation: model
+    $col   = $column->columnName;
+    $value = $record->$col;
+}
 
-    // Custom multi directives
-    $sum   = FALSE;
-    $total = NULL;
-    if (isset($column->config['multi'])) {
-        $multi = $column->config['multi'];
-        if (isset($multi['sum'])) $sum = new ListColumn($multi['sum'], '');
-    }
+// Check that the value is now a collection
+if (!$value instanceof Collection) {
+    $valueType = (is_object($value) ? get_class($value) : gettype($value));
+    throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
+}
 
-    // The field name is the name of the Model relation
-    // so the relation is automatically used
-    // Some considered scenarios:
-    //   1) relation & valueFrom => array(id => valueFrom, ...)
-    //   2) valueFrom only => string
-    //   3) relation only  => Collection
-    //   4) no relation or valueFrom => Collection
-    // relation: directive is necessary for searcheable and sortable
-    // valueFrom: is honoured on the Collections below
-    if (is_string($value)) {
-        $col   = $column->columnName;
-        // The relation associated with the column is invoked ($record->$col()).
-        // The related records are fetched as a Collection using the get() method.
-        // and then the valueFrom is applied, essentially re-creating the same array or string indirectly
-        $model = &$record;
-        if ($relation && $model->hasRelation($relation)) $model = $model->$relation;
-        $value = $model->$col;
-    } else if (is_array($value)) {
-        // The $record is already the relation: model
-        $col   = $column->columnName;
-        $value = $record->$col;
-    }
-
-    // Check that the value is now a collection
-    if (!$value instanceof Collection) {
-        $valueType = (is_object($value) ? get_class($value) : gettype($value));
-        throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
-    }
-
-    $count = $value->count();
-    if ($count) {
-        $i          = 0;
-        $firstItem  = $value[0];
-        $classParts = explode('\\', get_class($firstItem));
-        $itemClass  = Str::kebab(end($classParts));
-        print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
-        $value->each(function ($model) use (&$isHTML, &$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
-            // Name resolution
-            $name = '';
-            if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
-            if (!$name) {
-                $noname = trans('acorn::lang.models.general.noname');
-                $name   = "&lt;$noname&gt;";
-            }
-            
-            // Output LI item
-            print('<li>');
-            $controller  = $model->controllerFullyQualifiedClass();
-            if ($useLinkedPopups) {
-                $dataRequestData = array(
-                    'route'   => "$controller@$action",
-                    'params'  => [$model->id],
-                    'dataRequestUpdate' => array('multi' => $multiId),
-                );
-                $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
-                print("<a
-                    data-handler='onPopupRoute'
-                    data-request-data='$dataRequestDataEscaped'
-                    data-control='popup'>"
-                );
-            }
-            print($isHTML ? $name : e($name));
-            if ($useLinkedPopups) print('</a>');
-            print('</li>');
-
-            if ($sum) {
-                $sumValue = $sum->getValueFromData($model);
-                if (is_numeric($sumValue)) $total = ($total ?: 0) + $sumValue;
-                else if ($sumValue instanceof CarbonInterval) $total = ($total ?: new CarbonInterval(0))->add($sumValue);
-            }
-
-            // False exists the loop
-            // TODO: Continue when $sum
-            $continue = (++$i < $limit);
-            return $continue;
-        });
-        print('</ul>');
-
-        if ($count > $limit) {
-            // Leave this "more" link to simply open the full record update screen
-            $more = e(trans('more...'));
-            print("<a class='more'>$more</a>");
-        } else {
-            if ($sum) print("<div class='multi-total'>$total</div>");
+$count = $value->count();
+if ($count) {
+    $i          = 0;
+    $firstItem  = $value[0];
+    $classParts = explode('\\', get_class($firstItem));
+    $itemClass  = Str::kebab(end($classParts));
+    print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
+    $value->each(function ($model) use (&$isHTML, &$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
+        // Name resolution
+        $name = '';
+        if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
+        if (!$name) {
+            $noname = trans('acorn::lang.models.general.noname');
+            $name   = "&lt;$noname&gt;";
         }
+        
+        // Output LI item
+        print('<li>');
+        $controller  = $model->controllerFullyQualifiedClass();
+        if ($useLinkedPopups) {
+            $dataRequestData = array(
+                'route'   => "$controller@$action",
+                'params'  => [$model->id],
+                'dataRequestUpdate' => array('multi' => $multiId),
+            );
+            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
+            print("<a
+                data-handler='onPopupRoute'
+                data-request-data='$dataRequestDataEscaped'
+                data-control='popup'>"
+            );
+        }
+        print($isHTML ? $name : e($name));
+        if ($useLinkedPopups) print('</a>');
+        print('</li>');
+
+        if ($sum) {
+            $sumValue = $sum->getValueFromData($model);
+            if (is_numeric($sumValue)) $total = ($total ?: 0) + $sumValue;
+            else if ($sumValue instanceof CarbonInterval) $total = ($total ?: new CarbonInterval(0))->add($sumValue);
+        }
+
+        // False exists the loop
+        // TODO: Continue when $sum
+        $continue = (++$i < $limit);
+        return $continue;
+    });
+    print('</ul>');
+
+    if ($count > $limit) {
+        // Leave this "more" link to simply open the full record update screen
+        $more = e(trans('more...'));
+        print("<a class='more'>$more</a>");
     } else {
-        print('-');
+        if ($sum) print("<div class='multi-total'>$total</div>");
     }
-} 
+} else {
+    print('-');
+}

@@ -54,12 +54,37 @@ table.table.data .ordinal {
     font-weight: bold;
     border-top: 3px double #555;
 }
-table.table.data tbody td.list-cell-type-partial > .multi > li > a {
+table.table.data tbody td.list-cell-type-partial > .multi > li a {
     color: darkblue;
 }
-table.table.data tbody td.list-cell-type-partial > .multi > li > a:hover,
+table.table.data tbody td.list-cell-type-partial > .multi > li a:hover,
 table.table.data tbody td.list-cell-type-partial > a.more:hover {
     text-decoration: underline;
+}
+
+table.table.data .counter.count-0 {
+    color: #aaa;
+    font-weight: normal;
+    background-color: Transparent;
+    border: none;
+}
+table.table.data .counter {
+    position: static;
+    background-color: #777;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+table.table.data td.tablet > * {
+    border-radius: 5px;
+    background-color: #aaa;
+    color: #fff;
+    padding: 0px 6px;
+}
+
+table.table.data td.tablet > *.current {
+    background-color: #777;
 }
 
 tr.rowlink.qrscan-highlight > td {

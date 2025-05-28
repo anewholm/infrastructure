@@ -558,10 +558,12 @@ class Model extends BaseModel
                 // Translate the Model relation name chain to Relation Objects (has*|belongsTo*...)
                 $throughRelationObjects   = [];
                 $throughRelationInstance  = $this;
+                $lastRelation = NULL;
                 foreach ($relationConfig['throughRelations'] as $throughRelationName) {
                     // Traverse the Model instances / classes for the relations
                     $throughRelationObject = $throughRelationInstance->$throughRelationName();
                     array_push($throughRelationObjects, $throughRelationObject);
+                    $lastRelation = $throughRelationObject;
                     
                     // Traverse the actual instances for the loaded Models, until we meet a collection
                     // then traverse the Models only

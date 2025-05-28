@@ -21,6 +21,7 @@ class Seed extends Command
      */
     protected $signature = 'acorn:seed
         {plugin? : The qualified Plugin name like Acorn.Lojistiks}
+        {--c|continue : Continue running when errors.}
         {--i|interactive : Ask before each function|file is run.}';
 
     /**
@@ -36,6 +37,7 @@ class Seed extends Command
     {
         $plugin      = $this->argument('plugin');
         $interactive = $this->option( 'interactive');
+        $continue    = $this->option( 'continue');
 
         // Get relevant plugins
         $plugins = array();
@@ -108,7 +110,8 @@ class Seed extends Command
                                                 case 'P0003': // Query returned more than one row
                                                     break;
                                                 default:
-                                                    throw $qe;
+                                                    if ($continue) $this->error($qe->getMessage());
+                                                    else throw $qe;
                                             }
                                         }
                                     }
@@ -122,7 +125,8 @@ class Seed extends Command
                             try {
                                 DB::unprepared("select $name$suffix");
                             } catch (QueryException $qe) {
-                                throw $qe;
+                                if ($continue) $this->error($qe->getMessage());
+                                else throw $qe;
                             }
                             break;
                     }
