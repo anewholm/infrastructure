@@ -28,12 +28,25 @@ if (method_exists($model, 'actionFunctions')) {
                 'model'      => $definition['model']
             )), 1,-1));
 
+            // TODO: Translateable comments
+            $title   = (isset($definition['comment']['en']) ? $definition['comment']['en'] : NULL);
+            $class   = ($title ? 'hover-indicator' : NULL);
+            $tooltip = ($title 
+                ? "<div class='tooltip fade top'>
+                    <div class='tooltip-arrow'></div>
+                    <div class='tooltip-inner'>$title</div>
+                </div>"
+                : NULL
+            );
+
             // TODO: icon
             $icon = (isset($definition['icon']) ? '' : '');
             print(<<<HTML
                 <li>
                     $icon
+                    $tooltip
                     <a
+                        class="$class"
                         data-control="popup"
                         data-request-data='$dataRequestData'
                         data-handler="onActionFunction"
