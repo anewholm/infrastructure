@@ -368,6 +368,7 @@ HTML;
         $classParts     = explode('\\', get_class($model));
         $shortClass     = end($classParts);
         $classField     = Str::snake($shortClass); // academic_year
+        $comment        = (isset($actionFunctionDefinition['comment']['en']) ? $actionFunctionDefinition['comment']['en'] : NULL);
         
         // TODO: SECURITY: Action Function Premissions
 
@@ -492,6 +493,13 @@ HTML;
             $dataRequestData       = post();
             $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));;
 
+            // TODO: Translate comments
+            $commentEscaped = e($comment);
+            $commentHtml = ($comment
+                ? "<div class='help-block'>$commentEscaped</div>"
+                : NULL
+            );
+
             // Render
             $response = <<<HTML
                 <div class="modal-header compact">
@@ -504,6 +512,7 @@ HTML;
                     $formOpen
                     $formHtml
                     $formClose
+                    $commentHtml
                 </div>
                 <div class="modal-footer">
                     <button
