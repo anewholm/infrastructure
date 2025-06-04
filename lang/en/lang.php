@@ -51,6 +51,7 @@
             'view_all' => 'View all',
             'row_changes_saved' => 'Row changes saved',
             'no_changes' => 'No changes found',
+            'advanced' => 'Advanced',
             'dateformats' => [
                 'day' => 'Day',
                 'weekinyear' => 'Week In Year',
@@ -73,10 +74,13 @@
             'export'      => 'Export',
             'document_template' => 'Document template',
             'batch_print' => 'Batch Print',
-            'conditions'  => 'Conditions',
+            'conditions'  => 'Custom Conditions',
+            'conditions_comment' => 'For example, score > 90 (optional)',
             'prepend_uniqid' => 'Prepend a unique ID to the PDF filenames',
             'output_mode' => 'Output mode',
             'compression' => 'Compression',
+            'export_output_format' => '1. Export Output Format',
+            'select_models' => '2. Select data',
         ]
     ],
     'errors' => [

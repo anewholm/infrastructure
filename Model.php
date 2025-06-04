@@ -90,6 +90,7 @@ class Model extends BaseModel
     public static $globalScope;
 
     public $readOnly = FALSE; // For VIEWS
+    public $advanced = []; // Advanced fields
 
     // --------------------------------------------- Translation
     public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
@@ -351,15 +352,19 @@ class Model extends BaseModel
         return $this->ordinal . self::ordinal($this->ordinal);
     }
 
-    public static function ordinal(int $value): string
+    public static function ordinal(int|NULL $value): string|NULL
     {
         // st|nd|th
-        $ordinal = '';
+        $ordinal = NULL;
 
-        if ($value > 0) {
-            $ordinals = ['th','st','nd','rd','th','th','th','th','th','th'];
-            $ordinal  = $ordinals[$value % 10];
-            if ((($value % 100) >= 11) && (($value % 100) <= 13)) $ordinal = 'th';
+        if (!is_null($value)) {
+            if ($value > 0) {
+                $ordinals = ['th','st','nd','rd','th','th','th','th','th','th'];
+                $ordinal  = $ordinals[$value % 10];
+                if ((($value % 100) >= 11) && (($value % 100) <= 13)) $ordinal = 'th';
+            } else {
+                $ordinal = ''; 
+            }
         }
         
         return $ordinal;

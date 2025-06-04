@@ -47,6 +47,16 @@ Trait MorphConfig
                         }
                     }
 
+                    // ------------------------------------------------- Advanced
+                    if (isset($config->fields)) {
+                        foreach ($config->fields as &$fieldConfig) {
+                            if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
+                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                            }
+                        }
+                    }
+
                     if ($parentModel) {
                         // ------------------------------- Auto-hide and set parent model drop-down
                         // We have a parent context

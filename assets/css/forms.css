@@ -46,6 +46,15 @@ body .field-multilingual .ml-btn {
     position: inherit;
 }
 
+.form-group.advanced {
+    display: none;
+}
+
+.comment-icon {
+    float: left;
+    margin: 8px 8px 0px 0px;
+}
+
 /* ------------------------------------- Sidebar */
 .form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {
     border-bottom: none!important;
@@ -301,6 +310,9 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 }
 
 /* ------------------------------------- Popups */
+.modal-dialog .help-block.function-description {
+    padding-bottom: 20px;
+}
 .modal-dialog .control-list p.no-data {
     text-align: left;
     margin:0px;
@@ -348,6 +360,9 @@ body.slim-container .modal-dialog .modal-header.compact > button {
 }
 .modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb > ul > li.stage-2 {
     background-color: #808892;
+}
+.modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb {
+    margin-top: 0px;
 }
 .modal-dialog > .modal-content .modal-header > h4 > div.control-breadcrumb > ul > li.stage-3 {
     background-color: #707882;

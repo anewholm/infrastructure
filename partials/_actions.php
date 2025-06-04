@@ -39,21 +39,27 @@ if (method_exists($model, 'actionFunctions')) {
                 : NULL
             );
 
-            // TODO: icon
-            $icon = (isset($definition['icon']) ? '' : '');
             print(<<<HTML
                 <li>
-                    $icon
                     $tooltip
                     <a
                         class="$class"
                         data-control="popup"
                         data-request-data='$dataRequestData'
+                        data-load-indicator='$title...'
+                        data-request-loading="loading-indicator-container"
+                        data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
                         data-handler="onActionFunction"
                     >$enDevLabel</a>
                 </li>
     HTML
             );
+        }
+
+        // --------------------------------- Advanced
+        if ($model->advanced) {
+            $advanced = e(trans('acorn::lang.models.general.advanced'));
+            print("<li><a id='advanced'>$advanced</a></li>");
         }
 
         // --------------------------------- Printing
