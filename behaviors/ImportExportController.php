@@ -9,6 +9,7 @@ class ImportExportController extends BackendImportExportController
     {
         parent::__construct($controller);
 
+        // Access to backends original partials
         $this->addViewPath('~/modules/backend/behaviors/importexportcontroller/partials');
         $this->assetPath = '/modules/backend/behaviors/importexportcontroller/assets';
     }

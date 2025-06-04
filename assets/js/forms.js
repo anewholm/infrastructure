@@ -124,6 +124,14 @@ function acorn_ready(){
     if (jRows.is(':visible')) jRows.hide();
     else jRows.show();
   });
+
+  $('.action-functions #advanced').click(function(event){
+    $('.form-group.advanced').toggle('visibility');
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    return false;
+  });
 }
 $(document).ready(acorn_ready);
 

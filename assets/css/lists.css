@@ -232,3 +232,21 @@ td.list-cell-type-partial > .list-editable-container {
     float: left;
     margin-right: 6px;
 }
+
+.expression {
+    font-family: Arial;
+}
+.expression .function {
+    font-weight: bold;
+}
+.expression .token,
+.expression .number {
+    background-color: #fddfdf;
+    border-radius: 6px;
+    padding: 0px 3px;
+}
+.expression .replacement {
+    background-color: #ffc0c0;
+    border-radius: 6px;
+    font-style: italic;
+}

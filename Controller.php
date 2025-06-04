@@ -369,7 +369,8 @@ HTML;
         $shortClass     = end($classParts);
         $classField     = Str::snake($shortClass); // academic_year
         $comment        = (isset($actionFunctionDefinition['comment']['en']) ? $actionFunctionDefinition['comment']['en'] : NULL);
-        
+        $commentIcon    = (isset($actionFunctionDefinition['commentIcon']) ? $actionFunctionDefinition['commentIcon'] : NULL);
+
         // TODO: SECURITY: Action Function Premissions
 
         // Parameter gathering
@@ -488,15 +489,21 @@ HTML;
             $formClose  = Form::close();
             $cancelName = $this->transBackend('cancel');
                 
-            // TODO: this stuffs
+            // Data-request
             $dataRequest           = __FUNCTION__;
             $dataRequestData       = post();
             $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));;
 
             // TODO: Translate comments
+            $commentIconHtml = '';
+            if ($commentIcon) {
+                $imageBasePath   = '/modules/acorn/assets/images';
+                $size            = 64;
+                $commentIconHtml = "<img class='comment-icon' src='$imageBasePath/$commentIcon-$size.png'></img>";
+            }
             $commentEscaped = e($comment);
-            $commentHtml = ($comment
-                ? "<div class='help-block'>$commentEscaped</div>"
+            $commentHtml    = ($comment
+                ? "<div class='help-block function-description'>$commentIconHtml$commentEscaped</div>"
                 : NULL
             );
 
@@ -522,8 +529,6 @@ HTML;
                         data-request-data='$dataRequestDataString'
                         data-hotkey='ctrl+s, cmd+s'
                         data-load-indicator='$title...'
-                        data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
-                        data-dismiss='popup'
                         class='btn btn-primary'
                     >
                         $title

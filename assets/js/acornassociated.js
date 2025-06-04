@@ -29,7 +29,7 @@ String.prototype.toUCFirst = function(){
 }
 
 $(document).ready(function(){
-    $('.multi > li > a, .action-functions > li > a').click(function(event) {
+    $('.multi > li > a, .action-functions > li > a[data-control=popup]').click(function(event) {
         event.stopPropagation();
         event.preventDefault();
         $(this).popup(this.attributes);

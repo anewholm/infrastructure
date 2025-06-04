@@ -1,13 +1,12 @@
 fields:
-    conditions:
-        label: acorn::lang.models.export.conditions
-        span: left
-        type: text
-        comment: For example, score > 90 (optional)
+    step1_section:
+        label: acorn::lang.models.export.export_output_format
+        type: section
     template:
         label: acorn::lang.models.export.document_template
         type: mediafinder
-        span: left
+        span: storm
+        cssClass: col-xs-6
         default: /BakeloriaCertificateTemplate.fodt
         required: true
         mode: document
@@ -17,12 +16,14 @@ fields:
         label: acorn::lang.models.export.prepend_uniqid
         type: checkbox
         default: false
-        span: left
+        span: storm
+        cssClass: col-xs-4 new-row
         comment: Useful when the first field, used for the filename, is not unique
     output_mode:
         label: acorn::lang.models.export.output_mode
         type: radio
-        span: left
+        span: storm
+        cssClass: col-xs-4
         default: multi
         required: true
         options:
@@ -31,9 +32,25 @@ fields:
     compression:
         label: acorn::lang.models.export.compression
         type: radio
-        span: left
+        span: storm
+        cssClass: col-xs-4
         default: zip
         required: true
         options:
             zip: ZIP (MicroSoft Windows)
             tarGz: TAR+GZIP (Linux)
+
+    step2_section:
+        label: acorn::lang.models.export.select_models
+        type: section
+    conditions:
+        label: acorn::lang.models.export.conditions
+        span: storm
+        cssClass: col-xs-6
+        type: text
+        comment: acorn::lang.models.export.conditions_comment
+
+    step3_section:
+        # Only here so that the parent Controller does not throw a wobbly
+        label: backend::lang.import_export.set_export_options
+        type: section
