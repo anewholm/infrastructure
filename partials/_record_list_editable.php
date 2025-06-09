@@ -21,6 +21,7 @@ if (!is_array($value))
 $nameSingular = Str::singular($column->columnName);
 $mainColumn   = new ListColumn($nameSingular, '');
 $mainColumn->displayAs('number', $column->config); // Inherit settings
+
 // Model(View)::$baseTable acorn_exam_scores
 //   the source and destination table for the data
 // TODO: We could remove the data_entry from the view to get the Model base table

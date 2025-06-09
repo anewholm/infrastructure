@@ -2,14 +2,12 @@
 
 namespace Acorn\Models;
 
+use Acorn\PdfTemplate;
 use \Backend\Models\ExportModel;
 use File;
 use DB;
 use Log;
 use Exception;
-use Storage;
-use DOMDocument;
-use DOMXPath;
 use Winter\Storm\Filesystem\Zip;
 
 class BatchPrint extends ExportModel
@@ -18,7 +16,8 @@ class BatchPrint extends ExportModel
         'template' => \System\Models\File::class, 
     ];
 
-    public $config; // Injected by the controller
+    // Injected by the controller
+    public $config; 
 
     public $fillable = [
         'query',
@@ -31,14 +30,22 @@ class BatchPrint extends ExportModel
 
     public function exportData($columns, $sessionKey = null)
     {
+        static $first = TRUE;
+        if ($first) Log::info('BatchPrint::exportData()');
+
         $cursor = NULL;
         if ($this->query) {
-            $cursor = DB::cursor($this->query);
+            if ($first) Log::info('  BatchPrint::query mode');
+            $cursor = $this->query->cursor();
         } else if (isset($this->config['query'])) {
+            if ($first) Log::info('  BatchPrint::config query mode');
             $cursor = DB::cursor($this->config['query']);
         } else {
-            if (!isset($this->config['dataModel']))
+            if ($first) Log::info('  BatchPrint::dataModel mode');
+            if (!isset($this->config['dataModel'])) {
+                Log::error("Data Model or query not defined for export process");
                 throw new Exception("Data Model or query not defined for export process");
+            }
             $dataModel = $this->config['dataModel'];
             $groupBy   = (isset($this->config['groupBy']) ? $this->config['groupBy'] : 'filename');
             $builder   = $dataModel::orderBy($groupBy, 'asc');
@@ -54,6 +61,7 @@ class BatchPrint extends ExportModel
             }
             $cursor = $builder->cursor();
         }
+        $first = FALSE;
         
         // cursor() & yield used to reduce memory usage
         foreach ($cursor as $record) {
@@ -67,6 +75,14 @@ class BatchPrint extends ExportModel
 
     protected function processExportData($columns, $results, $options)
     {
+        static $first = TRUE;
+        if ($first) {
+            Log::info('BatchPrint::processExportData()');
+            Log::info($options);
+            Log::info(\Session::all());
+        }
+        $first = FALSE;
+
         // Output details
         $tempPath = temp_path();          // Absolute: /var/www/university/storage/temp
         $outName  = uniqid('oc'); // oc68247db892897
@@ -74,62 +90,28 @@ class BatchPrint extends ExportModel
 
         // TODO: Support options compression and output_mode
         // TODO: Check for LibreOffice binary
-        if ($this->compression != 'zip')
+        if ($this->compression != 'zip') {
+            Log::error("Compression mode [$this->compression] is not supported yet. Only ZIP");
             throw new Exception("Compression mode [$this->compression] is not supported yet. Only ZIP");
-        if ($this->output_mode != 'multi')
+        }
+        if ($this->output_mode != 'multi') {
+            Log::error("Only multi output mode is supported, not [$this->output_mode]");
             throw new Exception("Only multi output mode is supported, not [$this->output_mode]");
-        if (!$this->template)
+        }
+        if (!$this->template) {
+            Log::error("Template required");
             throw new Exception("Template required");
-        if (!$results)
+        }
+        if (!$results) {
+            Log::error("No records");
             throw new Exception("No records");
-
-        // Load template
-        $storageTemplatePath = "media/$this->template";
-        if (!Storage::exists($storageTemplatePath))
-            throw new Exception("[$storageTemplatePath] template not found");
-        $templateContents    = Storage::get($storageTemplatePath);
-        if (!$templateContents)
-            throw new Exception("[$storageTemplatePath] template empty");
-        $templateDOM         = new DOMDocument();
-        if (!$templateDOM->loadXML($templateContents))
-            throw new Exception("[$storageTemplatePath] failed to loadXML()");
-
-        // Locate form controls
-        //   <form:textarea form:name="scores.kurdish" form:control-implementation="ooo:com.sun.star.form.component.TextField" xml:id="control3" form:id="control3" form:input-required="false" form:convert-empty-to-null="true">
-        // and text boxes
-        //   <draw:frame text:anchor-type="paragraph" draw:z-index="0" draw:name="student_code" draw:style-name="gr3" draw:text-style-name="P10" svg:width="3.028cm" svg:height="1.848cm" svg:x="2.469cm" svg:y="3.454cm">
-        //     <draw:text-box>
-        //       <text:p>test</text:p>
-        //     </draw:text-box>
-        //     <svg:title>student_code</svg:title>
-        //   </draw:frame>
-        $xpath               = new DOMXPath($templateDOM);
-        $xPageNode           = $xpath->query('/office:document/office:body/office:text')[0];
-        $xFormNode           = $xpath->query('office:forms/form:form', $xPageNode)[0];
-        $xFormControls       = $xpath->query('form:textarea', $xFormNode);
-        $xDrawTextBoxes      = $xpath->query('text:p/draw:frame', $xPageNode);
-
-        $formControls = array();
-        foreach ($xFormControls as $xFormControl) {
-            $objectName = $xFormControl->getAttribute('form:name');
-            if (!$objectName) throw new Exception("Nameless control");
-            $formControls[$objectName] = $xFormControl;
-            Log::info("$objectName form control found");
         }
 
-        $textBoxes = array();
-        foreach ($xDrawTextBoxes as $xDrawTextBox) {
-            $objectName = $xDrawTextBox->getAttribute('draw:name');
-            if (!$objectName) throw new Exception("Nameless control");
-            $xTextP = $xpath->query('draw:text-box/text:p', $xDrawTextBox)[0];
-            if (!$xTextP) throw new Exception("draw:frame without text:p");
-            $textBoxes[$objectName] = $xTextP;
-            Log::info("$objectName text-box found");
-        }
+        $pdfTemplate = new PdfTemplate($this->template);
 
         // TODO: output_mode:single Add new page copy
         // Look for / create a new-page style:
-        // <style:paragraph-properties fo:break-before="page"/>
+        //   <style:paragraph-properties fo:break-before="page"/>
         // $xPageBreakStyles = $xpath->query('/office:document/office:automatic-styles/style:style[style:paragraph-properties/@fo:break-before="page"]');
         // if (!$xPageBreakStyles->count())
         //     throw new Exception('No automatic page break styles');
@@ -146,57 +128,20 @@ class BatchPrint extends ExportModel
             if (!$first) {
                 if (!$groupBy || !$model->$groupBy || $lastGroupBy != $model->$groupBy) {
                     // Save generated FODT into the storage/temp directory
-                    array_push($files, $this->writePDF($templateDOM, $outName, $filename));
+                    array_push($files, $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid));
                     // Reset all form values
-                    foreach ($xFormControls as $xFormControl) $xFormControl->setAttribute('form:current-value', '');
+                    $pdfTemplate->resetTemplate();
                 }
             }
 
-            // filename
-            $filename = ($model->filename ?: $model->name);
-
-            // Fill form values
-            foreach ($model->attributesToArray() as $name => $value) {
-                if (is_array($value)) {
-                    // JSONable field
-                    // scores => geography|history|math => id|title|value
-                    foreach ($value as $subName => $subValues) {
-                        $embeddedName = "$name.$subName"; // scores.geography|history|math
-                        $subValue     = (is_array($subValues)
-                            ? (isset($subValues['value']) ? $subValues['value'] : NULL)
-                            : $subValues
-                        );
-                        if (isset($formControls[$embeddedName])) {
-                            Log::info("Form control attribute $embeddedName => $subValue");
-                            $xFormControl = $formControls[$embeddedName];
-                            $xFormControl->setAttribute('form:current-value', $subValue);
-                        }
-                        if (isset($textBoxes[$embeddedName])) {
-                            Log::info("Text box $embeddedName => $subValue");
-                            $xDrawTextBox = $textBoxes[$embeddedName];
-                            $xDrawTextBox->nodeValue = $subValue;
-                        }
-                    }
-                } else {
-                    if (isset($formControls[$name])) {
-                        // this => that
-                        Log::info("Form control attribute $name => $value");
-                        $xFormControl = $formControls[$name];
-                        $xFormControl->setAttribute('form:current-value', $value);
-                    }
-                    if (isset($textBoxes[$name])) {
-                        Log::info("Text box $name => $value");
-                        $xDrawTextBox = $textBoxes[$name];
-                        $xDrawTextBox->nodeValue = $value;
-                    }
-                }
-            }
+            $filename = ($model->hasAttribute('filename') ? $model->filename : $model->name);
+            $pdfTemplate->writeAttributes($model);
             
             if ($groupBy) $lastGroupBy = $model->$groupBy;
             $first = FALSE;
         }
         // Save last generated FODT into the storage/temp directory
-        if (!$first) array_push($files, $this->writePDF($templateDOM, $outName, $filename));
+        if (!$first) array_push($files, $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid));
 
         // Compression
         ZIP::make("$tempPath/$outName", $files);
@@ -217,24 +162,5 @@ class BatchPrint extends ExportModel
         //   => download/<reference>/<exportFileName>
         //   => download/oc68248694e0ac3/print.zip
         return $outName; 
-    }
-
-    protected function writePDF(DOMDocument &$templateDOM, string $outName, string $filename): string
-    {
-        $tempPath = temp_path();
-        $filename = preg_replace('/[^a-zA-Z0-9-_]+/', '-', $filename);
-        $filename = ($this->prepend_uniqid ? "$outName-$filename" : $filename);
-        File::put("$tempPath/$filename.fodt", $templateDOM->saveXML());
-        // Generate PDF out to the storage/temp directory
-        // will have name $outName-$id.pdf
-        $execOutput = exec("libreoffice --headless --convert-to pdf:writer_pdf_Export $tempPath/$filename.fodt --outdir $tempPath");
-        Log::info("LibreOffice PDF generator of [$filename] reported [$execOutput]");
-
-        $pdfPath = "$tempPath/$filename.pdf";
-        if (!File::exists($pdfPath))
-            throw new Exception("LibreOffice PDF output at [$pdfPath] does not exist with [$execOutput]");
-        File::delete("$tempPath/$filename.fodt");
-
-        return $pdfPath;
     }
 }

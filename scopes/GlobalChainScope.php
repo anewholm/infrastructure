@@ -30,22 +30,24 @@ class GlobalChainScope implements Scope
 
     public static function globalScopeClasses(Model $model): array
     {
-        $globalScopeClasses = array();
-
-        // TODO: This only returns the last global-scope chain. Should return all
-        while ($globalScopeRelations = self::globalScopeRelations($model)) {
-            foreach ($globalScopeRelations as $relation) {
-                $model = $relation->getRelated();
-            }
-        }
+        // Recursively get the Models on the ends of the global-scope relation chains
+        // Includes this $model parameter, if a $globalScope
+        $endChainModels       = array();
         if (property_exists($model, 'globalScope') && $model::$globalScope)
-            array_push($globalScopeClasses, $model);
-  
-        return $globalScopeClasses;
+            $endChainModels[get_class($model)] = $model;
+        
+        $globalScopeRelations = self::globalScopeRelations($model);
+        foreach ($globalScopeRelations as $relation) {
+            $model          = $relation->getRelated();
+            $endChainModels = array_merge($endChainModels, self::globalScopeClasses($model));
+        }
+
+        return $endChainModels;
     }
 
     public static function chainScopes(Model $model): array
     {
+        // Get _our_ scopes on this $model
         $chainScopes = array();
         if ($allChainScopes = $model->getGlobalScopes()) { // For calling class
             foreach ($allChainScopes as $class => $chainScope) {

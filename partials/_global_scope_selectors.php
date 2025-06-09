@@ -8,8 +8,7 @@ if (isset($this->controller->widget->list->model)) {
     
     if ($globalScopeClasses) {
         // TODO: Translation
-        foreach ($globalScopeClasses as $model) {
-            $classFQN    = get_class($model);
+        foreach ($globalScopeClasses as $classFQN => $model) {
             $classParts  = explode('\\', $classFQN);
             $class       = end($classParts);
             $settingName = "$classFQN::globalScope";

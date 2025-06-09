@@ -115,6 +115,11 @@ body .field-multilingual .ml-btn {
 .goto-form-group-selection {
   color: #4444ff;
 }
+ul.help-block {
+    list-style: disc;
+    margin-left:15px;
+    color: #777;
+}
 
 .goto-form-group-selection {
   float:right;

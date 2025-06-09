@@ -18,8 +18,16 @@ class ImportExportController extends BackendImportExportController
     {
         // We inject the config in to the Model
         // because it makes decisions about model retrieval
-        $model = parent::getModelForType($type);
+        $model         = parent::getModelForType($type);
         $model->config = $this->config->export;
+            
+        // Copied from ImportExportController::exportFromList()
+        if (isset($model->config['useListQuery']) && $model->config['useListQuery']) {
+            $lists         = $this->controller->makeLists();
+            $widget        = $lists['list'] ?? reset($lists);
+            $model->query  = $widget->prepareQuery(); // Also applies scopes and search
+        }
+
         return $model;
     }
 }

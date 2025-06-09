@@ -7,7 +7,7 @@ fields:
         type: mediafinder
         span: storm
         cssClass: col-xs-6
-        default: /BakeloriaCertificateTemplate.fodt
+        default: /ActionTemplates/Acorn/Exam/Models/DataEntryScore/BakeloriaCertificateTemplate.fodt
         required: true
         mode: document
         comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>
@@ -29,6 +29,7 @@ fields:
         options:
             multi: One document per row
             single: One page in the document per row (Smaller)
+            row: One row in the document per row (Lists)
     compression:
         label: acorn::lang.models.export.compression
         type: radio
