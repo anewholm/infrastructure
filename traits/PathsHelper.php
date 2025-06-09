@@ -1,6 +1,7 @@
 <?php namespace Acorn\Traits;
 
 use Str;
+use Backend\Facades\Backend;
 use Exception;
 use Model;
 use Winter\Storm\Html\Helper as HtmlHelper;
@@ -329,7 +330,7 @@ Trait PathsHelper {
         return $this->pluralLowerCaseName();
     }
 
-    public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL): string
+    public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL, bool $withBackend = TRUE): string
     {
         // TODO: Use $controller->actionUrl($action, $path)
         $pluginPathPartAuthorPlugin  = $this->pluginPathPartAuthorPlugin();
@@ -338,13 +339,19 @@ Trait PathsHelper {
         $controllerDirectoryRelative = $this->controllerDirectoryPathRelative();
         if (!is_dir($controllerDirectoryRelative)) throw new Exception("$controllerDirectoryRelative not found");
 
-        $url = "/backend/$pluginPathPartAuthorPlugin/$controllerDirectoryName";
+        $url  = ($withBackend ? '/backend/' : '');
+        $url .= "$pluginPathPartAuthorPlugin/$controllerDirectoryName";
         if ($action) {
             $url .= "/$action";
             if (is_null($id)) $id = $this->id;
             if ($id) $url .= "/$id";
         }
         return $url;
+    }
+
+    public function absoluteControllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL): string
+    {
+        return Backend::url($this->controllerUrl($action, $id, $object, FALSE));
     }
 
     // ----------------------------------------- Reverse lookups

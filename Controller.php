@@ -103,6 +103,46 @@ class Controller extends BackendController
     }
 
     // ------------------------------------------ Event Handlers
+    public function onListActionTemplate()
+    {
+        $template   = post('template');
+
+        
+
+        // TODO: This export_result_form does not work yet. The fileUrl is not a file, so it 404s
+        return $this->makePartial('export_result_form', array(
+            'returnUrl' => '.',
+            'fileUrl'   => ''
+        ));
+    }
+
+    public function onActionTemplate()
+    {
+        $template   = post('template');
+        $modelClass = post('model');
+        $modelId    = post('modelId');
+        $outName    = uniqid('oc');
+        $filename   = basename($template);
+
+        if ($model = $modelClass::find($modelId)) {
+            $pdfTemplate = new PdfTemplate($template);
+            $pdfTemplate->writeAttributes($model);
+            $reference   = $pdfTemplate->writePDF($outName, $filename);
+            $fileUrl     = $this->actionUrl(
+                'download',
+                "$outName/$filename"
+            );
+        } else {
+            throw new Exception("Model not found");
+        }
+
+        // TODO: This export_result_form does not work yet. The fileUrl is not a file, so it 404s
+        return $this->makePartial('export_result_form', array(
+            'returnUrl' => '.',
+            'fileUrl'   => ''
+        ));
+    }
+    
     // TODO: These were made for the list view _multi editing popups. Is there not another way?
     public function onRefreshField()
     {

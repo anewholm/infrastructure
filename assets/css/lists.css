@@ -189,6 +189,10 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
     margin-top: -4px;
     font-size: 12px; /* Override .control-toolbar */
 }
+.search-global-scope-selectors-container > form {
+    display: inline-block;
+    max-width: 200px;
+}
 
 .tick-div {
     text-align: center;
@@ -231,6 +235,18 @@ td.list-cell-type-partial > .list-editable-container > label {
 td.list-cell-type-partial > .list-editable-container {
     float: left;
     margin-right: 6px;
+}
+
+td.list-cell-type-partial > .number {
+    text-align: right;
+    font-family: Arial;
+}
+td.list-cell-type-partial > .bar {
+    background-color: #fff;
+}
+td.list-cell-type-partial > .bar > .inner {
+    height: 10px;
+    background-color: #00a870;
 }
 
 .expression {

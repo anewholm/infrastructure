@@ -12,19 +12,21 @@ class BatchPrintController extends ImportExportController
         parent::__construct($controller);
 
         $this->addViewPath('~/modules/backend/behaviors/batchprintcontroller/partials');
-        $this->assetPath = '/modules/backend/behaviors/batchprintcontroller/assets';
+        $this->addViewPath('~/modules/acorn/behaviors/batchprintcontroller/partials');
     }
 
     protected function makeExportFormatFormWidget()
     {
         // Copied from parent. YAML config changed
-        // TODO: Provide / set the list filters from session
-        // TODO: Load the on-board ListController, its widget and thus session filter settings
+        // TODO: Change back... Doesn't work...
+        $yamlFile = '~/modules/acorn/behaviors/batchprintcontroller/partials/fields_export.yaml';
+        $yamlFile = '~/modules/backend/behaviors/importexportcontroller/partials/fields_export.yaml';
+
         if (!$this->getConfig('export') || $this->getConfig('export[useList]')) {
             return null;
         }
 
-        $widgetConfig = $this->makeConfig('~/modules/acorn/behaviors/batchprintcontroller/partials/fields_export.yaml');
+        $widgetConfig = $this->makeConfig($yamlFile);
         $widgetConfig->model = $this->exportGetModel();
         $widgetConfig->alias = 'exportUploadForm';
 
@@ -34,20 +36,6 @@ class BatchPrintController extends ImportExportController
             $holder->data = [];
         });
 
-        // Custom++
-        // This event happens after this function runs above
-        Event::listen('backend.filter.extendScopes', function (Filter $filterWidget) use($widget) {
-            /*
-            foreach ($filterWidget->allScopes as $name => $scope) {
-                $fields = &$widget->config['fields'];
-                $fields[$name] = array(
-                    'type' => 'text',
-                );
-            }
-                */
-            $test = 9;
-        });
-        
         return $widget;
     }
 }

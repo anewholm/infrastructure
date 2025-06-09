@@ -47,7 +47,7 @@ if (method_exists($model, 'actionFunctions')) {
                         data-control="popup"
                         data-request-data='$dataRequestData'
                         data-load-indicator='$title...'
-                        data-request-loading="loading-indicator-container"
+                        data-request-loading="loading-indicator"
                         data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
                         data-handler="onActionFunction"
                     >$enDevLabel</a>
@@ -87,6 +87,30 @@ if (method_exists($model, 'actionFunctions')) {
                 >$print</a></li>");
             }
         }
+
+        // --------------------------------- PDF ActionTemplates
+        $ml       = System\Classes\MediaLibrary::instance();
+        $class    = get_class($model);
+        $location = "ActionTemplates\\$class";
+        // MediaLibraryItem s
+        foreach ($ml->listFolderContents($location, 'title', NULL, TRUE) as $mli) {
+            $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
+            $print     = e(trans('acorn::lang.models.general.print'));
+            $printName = e($pdfTemplate->label());
+            $dataRequestData = e(substr(json_encode(array(
+                'template'   => $mli->path,
+                'model'      => get_class($model),
+                'modelId'    => $model->id,
+            )), 1,-1));
+            print(<<<HTML
+                <li><a 
+                    data-control="popup"
+                    data-request-data='$dataRequestData'
+                    data-handler="onActionTemplate"
+                >$print $printName</a></li>
+HTML
+            );
+        } 
 
         // --------------------------------- QR scan
         if ($formMode) {
