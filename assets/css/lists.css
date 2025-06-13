@@ -222,7 +222,7 @@ table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(di
 tr.dirty > td {
     background-color:#ffdddd!important;
 }
-td.list-cell-type-partial > .list-editable-container > input.list-editable {
+td.list-cell-type-partial > .list-editable-container > input.list-editable-number {
     width: 80px;
     padding: 0px 4px;
 }

@@ -11,15 +11,42 @@ $pattern      = (isset($column->config['pattern'])       ? $column->config['patt
 $readOnly     = (isset($column->config['readOnly'])      ? $column->config['readOnly']      : FALSE );
 $id           = $record->id;
 $createValues = (isset($createValues) ? $createValues : array());
-$valueEscaped = htmlentities($value);
-$titleEscaped = (isset($title) ? htmlentities($title) : NULL);
 $idValue      = "Form-field-$class-$columnName";
 $nameStem     = "ListEditable[{$classFQN}][$id]";
+$locale       = Lang::getLocale();
+$localeFallback = Lang::getFallback();
 
+// Title can be a locale array
+$titleEscaped = NULL;
+if (isset($title)) {
+    if (is_array($title)) {
+        if      (isset($title[$locale]))         $title = $title[$locale];
+        else if (isset($title[$localeFallback])) $title = $title[$localeFallback];
+        else $title = '';
+    }
+    $titleEscaped = e($title);
+}
+
+// Value can be a locale array
+$valueEscaped = NULL;
+if (isset($value)) {
+    if (is_array($value)) {
+        if      (isset($value[$locale]))         $value = $value[$locale];
+        else if (isset($value[$localeFallback])) $value = $value[$localeFallback];
+        else $value = '';
+    }
+    $valueEscaped = e($value);
+}
+
+$attributes = NULL;
 switch ($type) {
     case 'number':
         if (!isset($column->config['pattern'])) $pattern   = '-?\d+(\.\d+)?';
         if (!isset($column->config['max']))     $maxlength = 6;
+        break;
+    case 'boolean':
+        $type       = 'checkbox';
+        $attributes = ($value ? 'checked' : '');
         break;
 }
 
@@ -37,8 +64,8 @@ HTML
     print(<<<HTML
     <input type="$type" step="any" name="{$nameStem}[$columnName]" 
         id="$idValue" value="$valueEscaped" original="$valueEscaped"
-        placeholder="$placeholder" class="form-control list-editable" autocomplete="off" 
-        pattern="$pattern" maxlength="$maxlength" required="$required">
+        placeholder="$placeholder" class="form-control list-editable list-editable-$type" autocomplete="off" 
+        pattern="$pattern" maxlength="$maxlength" required="$required" $attributes>
     </input>
 HTML
     );

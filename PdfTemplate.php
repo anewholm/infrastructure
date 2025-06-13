@@ -24,6 +24,7 @@ class PdfTemplate {
     public $identifier;
     public $type;
     public $title;
+    public $templateLocale;
 
     public function __construct(string $templateFilePath = NULL, string $dir = 'media')
     {
@@ -52,13 +53,13 @@ class PdfTemplate {
     {
         $label    = NULL;
         $labelSet = ($plural ? 'labels-plural' : 'labels');
-        $failover = 'en';
+        $locale   = Lang::getLocale();
+        $localeFallback = Lang::getFallback();
 
         if (isset($this->comment[$labelSet])) {
             $labels = $this->comment[$labelSet];
-            $locale = Lang::getLocale();
-            if      (isset($labels[$locale])) $label = $labels[$locale];
-            else if (isset($labels[$failover]))    $label = $labels[$failover];
+            if      (isset($labels[$locale]))         $label = $labels[$locale];
+            else if (isset($labels[$localeFallback])) $label = $labels[$localeFallback];
         } 
         
         if (is_null($label)) {
@@ -99,6 +100,15 @@ class PdfTemplate {
             $this->identifier = $this->getNodeValue('dc:identifier', $xOfficeMETA);
             $this->type       = $this->getNodeValue('dc:type', $xOfficeMETA);
             $this->title      = $this->getNodeValue('dc:title', $xOfficeMETA);
+        }
+        // Language
+        // Set on each text element
+        // fo:language="en" fo:country="US"
+        if ($xLanguage = $this->getSingleNode('//*/@fo:language')) {
+            $this->templateLocale = $xLanguage->nodeValue;
+            Log::info("Template locale: $this->templateLocale");
+        } else {
+            Log::warning("Template locale not stated");
         }
 
         // Locate form controls
@@ -144,20 +154,19 @@ class PdfTemplate {
 
         $this->textBoxes = array();
         foreach ($xDrawTextBoxes as $xDrawTextBox) {
-            $objectName = $xDrawTextBox->getAttribute('draw:name');
-            if (!$objectName) {
+            if ($objectName = $xDrawTextBox->getAttribute('draw:name')) {
+                // <text:p text:style-name="P15"><text:span text:style-name="T3"><text:s/></text:span></text:p>
+                if ($xTextP = $this->getSingleNode('draw:text-box/text:p', $xDrawTextBox)) {
+                    // A child <text:span ...> allows paragraph and character formatting
+                    if ($xTextSP = $this->getSingleNode('text:span', $xTextP)) $xTextP = $xTextSP;
+                    $this->textBoxes[$objectName] = $xTextP;
+                    Log::info("$objectName text-box found");
+                } else {
+                    Log::error("draw:frame without text:p");
+                }
+            } else {
                 Log::error("Nameless control");
             }
-            // <text:p text:style-name="P15"><text:span text:style-name="T3"><text:s/></text:span></text:p>
-            $xTextP  = $this->xpath->query('draw:text-box/text:p', $xDrawTextBox)[0];
-            if (!$xTextP) {
-                Log::error("draw:frame without text:p");
-            }
-            // A child <text:span ...> allows paragraph and character formatting
-            $xTextSP = $this->xpath->query('text:span', $xTextP);
-            if (count($xTextSP)) $xTextP = $xTextSP[0];
-            $this->textBoxes[$objectName] = $xTextP;
-            Log::info("$objectName text-box found");
         }
 
         return $this->templateDOM;
@@ -168,9 +177,9 @@ class PdfTemplate {
         // Write QR Code
         if ($this->xQrCodeNode) {
             // Failovers for the link to the data model edit / view screen
-            $qrCodeMode   = (property_exists($model, 'qrcodemode') ? $model->qrcodemode : 'update');
-            $qrCodeObject = (property_exists($model, 'qrCodeObject') ? $model->{$model->qrCodeObject} : $model);
-            $qrCode       = (property_exists($model, 'qrcode') 
+            $qrCodeMode   = ($model->hasAttribute('qrcodemode') ? $model->qrcodemode : 'update');
+            $qrCodeObject = ($model->hasAttribute('qrCodeObject') ? $model->{$model->qrCodeObject} : $model);
+            $qrCode       = ($model->hasAttribute('qrcode') 
                 ? $model->qrcode
                 : (method_exists($qrCodeObject, 'controllerUrl')
                     ? $qrCodeObject->absoluteControllerUrl($qrCodeMode)
@@ -188,7 +197,9 @@ class PdfTemplate {
         }
 
         // Fill form values
-        $attributes = $model->attributesToArray();
+        $locale         = Lang::getLocale();
+        $localeFallback = Lang::getFallback();
+        $attributes     = $model->attributesToArray();
         foreach ($attributes as $name => $value) {
             if (is_array($value)) {
                 // JSONable field
@@ -199,6 +210,13 @@ class PdfTemplate {
                         ? (isset($subValues['value']) ? $subValues['value'] : NULL)
                         : $subValues
                     );
+
+                    // Translation
+                    if (is_array($subValue)) {
+                        if      (isset($subValue[$locale]))         $subValue = $subValue[$locale];
+                        else if (isset($subValue[$localeFallback])) $subValue = $subValue[$localeFallback];
+                        else $subValue = implode(',', array_keys($subValue));
+                    }
 
                     // scores.geography|history|math
                     $embeddedName = "$name.$subName"; 

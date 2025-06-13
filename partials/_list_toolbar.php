@@ -80,8 +80,8 @@ HTML
             // MediaLibraryItem s
             foreach ($ml->listFolderContents($location, 'title', NULL, TRUE) as $mli) {
                 $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
-                $print     = e(trans('acorn::lang.models.general.print'));
-                $printName = e($pdfTemplate->label(TRUE));
+                $print       = e(trans('acorn::lang.models.general.print'));
+                $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
                 $dataRequestData = e(substr(json_encode(array(
                     'template'   => $mli->path,
                 )), 1,-1));

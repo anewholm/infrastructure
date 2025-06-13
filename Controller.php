@@ -105,19 +105,83 @@ class Controller extends BackendController
     // ------------------------------------------ Event Handlers
     public function onListActionTemplate()
     {
-        $template   = post('template');
+        // Options popup for multi-printing of this 
+        // controller's List context
+        $template    = post('template');
+        $breadcrumb  = post('breadcrumb');
+        $popupParams = (post('params') ?: array());
+        $popupAction = 'export';
+        $unqualifiedControllerName = $this->unqualifiedClassName();
 
-        
+        if (!property_exists($this->widget, 'list'))
+            throw new Exception('onListActionTemplate requires a list widget');
+        $list  = &$this->widget->list;
+        $model = &$list->model;
 
-        // TODO: This export_result_form does not work yet. The fileUrl is not a file, so it 404s
-        return $this->makePartial('export_result_form', array(
-            'returnUrl' => '.',
-            'fileUrl'   => ''
-        ));
+        // ------------------------------- Render
+        $postUrl        = $this->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
+        $closeName      = $this->transBackend('close');
+        $actionName     = $this->transBackend($popupAction);
+        $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label', $model) : last(explode('\\', get_class($model))));
+        $popupTitle     = "$actionName $modelTitle";
+        $breadcrumbHTML = "";
+        if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
+        else             $breadcrumbs = array($unqualifiedControllerName, $popupTitle);
+        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
+        $eventJs   = 'popup';
+        $initJs    = "$('body > .control-popup').trigger('$eventJs');";
+        $form      = $this->makeFormWidget(\Backend\Widgets\Form::class, '$/modules/acorn/behaviors/batchprintcontroller/partials/fields_export.yaml');
+        $formOpen  = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
+        $formHtml  = $form->render();
+        $formClose = Form::close();
+
+        // Associated Field updates on success
+        // We remove the braces for correct data-request-data format
+        // NOTE: json_encode() will surround everything in double quotes
+        $dataRequestData = array(
+            'action'                => $popupAction,
+            'template'              => $template,
+            'params'                => $popupParams,
+        );
+        $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
+
+        // TODO: Encapsulate popup form display in a partial!
+        return <<<HTML
+            <div class="modal-header compact">
+                <button type="button" class="close" data-dismiss="popup">&times;</button>
+                <h4 class="modal-title">
+                    <div class='control-breadcrumb'><ul>$breadcrumbHTML</ul></div>
+                </h4>
+            </div>
+            <div class="modal-body">
+                $formOpen
+                $formHtml
+                $formClose
+            </div>
+            <div class="modal-footer">
+                <button
+                    type='submit'
+                    data-request-url='$postUrl'
+                    data-request='onSomething'
+                    data-request-form='.modal-body form'
+                    data-request-data='$dataRequestDataString'
+                    data-hotkey='ctrl+s, cmd+s'
+                    data-load-indicator='$popupTitle...'
+                    data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                    data-dismiss='popup'
+                    class='btn btn-primary'
+                >
+                    $actionName
+                </button>
+                <button type='button' data-dismiss='popup' class='btn btn-default'>$closeName</button>
+                <script>$initJs</script>
+            </div>
+HTML;
     }
 
     public function onActionTemplate()
     {
+        // Direct print template for single current model
         $template   = post('template');
         $modelClass = post('model');
         $modelId    = post('modelId');
@@ -215,7 +279,6 @@ class Controller extends BackendController
         $form    = &$controller->widget->form; // Backend\Widgets\Form
         $model   = &$form->model;
         $unqualifiedControllerName = $controller->unqualifiedClassName();
-        $unqualifiedModelName      = $model?->unqualifiedClassName();
         $fullyQualifiedModelClass  = $model?->fullyQualifiedClassName();
 
         // Inject, hide and control formFields from post request
