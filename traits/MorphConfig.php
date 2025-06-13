@@ -56,6 +56,30 @@ Trait MorphConfig
                             }
                         }
                     }
+                    if (isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as &$fieldConfig) {
+                            if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
+                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                            }
+                        }
+                    }
+                    if (isset($config->secondaryTabs['fields'])) {
+                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) {
+                            if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
+                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                            }
+                        }
+                    }
+                    if (isset($config->tertiaryTabs['fields'])) {
+                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) {
+                            if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
+                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                            }
+                        }
+                    }
 
                     if ($parentModel) {
                         // ------------------------------- Auto-hide and set parent model drop-down
@@ -66,6 +90,7 @@ Trait MorphConfig
                             if (isset($fieldConfig['type']) 
                                 && $fieldConfig['type'] == 'dropdown'
                                 && isset($fieldConfig['options'])
+                                && is_string($fieldConfig['options'])
                             ) {
                                 // Only works for create-system standard drop-down specification
                                 $optionsParts  = explode('::', $fieldConfig['options']);
