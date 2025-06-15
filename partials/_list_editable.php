@@ -38,42 +38,44 @@ if (isset($value)) {
     $valueEscaped = e($value);
 }
 
-$attributes = NULL;
+$checked = NULL;
+$inputType = 'number';
 switch ($type) {
+    case 'double precision':
+    case 'integer':
     case 'number':
         if (!isset($column->config['pattern'])) $pattern   = '-?\d+(\.\d+)?';
         if (!isset($column->config['max']))     $maxlength = 6;
         break;
     case 'boolean':
-        $type       = 'checkbox';
-        $attributes = ($value ? 'checked' : '');
+        $inputType = 'checkbox';
+        $checked   = ($value ? 'checked' : '');
         break;
 }
 
+$readOnlyClass = ($readOnly ? 'read-only' : '');
+$disabled      = ($readOnly ? 'disabled'  : '');
+
 print('<div class="list-editable-container">');
+
 if ($titleEscaped) print(<<<HTML
     <label for="$idValue">$titleEscaped</label>
 HTML);
 
-if ($readOnly) {
-    print(<<<HTML
-        <div id="$idValue" class="form-control list-editable read-only">$valueEscaped</div>
+print(<<<HTML
+<input type="$inputType" step="any" name="{$nameStem}[$columnName]" 
+    id="$idValue" value="$valueEscaped" original="$valueEscaped"
+    placeholder="$placeholder" class="form-control list-editable list-editable-$type $readOnlyClass" autocomplete="off" 
+    pattern="$pattern" maxlength="$maxlength" required="$required" $disabled $checked>
+</input>
 HTML
-    );
-} else {
-    print(<<<HTML
-    <input type="$type" step="any" name="{$nameStem}[$columnName]" 
-        id="$idValue" value="$valueEscaped" original="$valueEscaped"
-        placeholder="$placeholder" class="form-control list-editable list-editable-$type" autocomplete="off" 
-        pattern="$pattern" maxlength="$maxlength" required="$required" $attributes>
-    </input>
-HTML
-    );
+);
 
-    foreach ($createValues as $name => $value) {
-        $valueEscaped = e($value);
-        print("<input type='hidden' name='{$nameStem}[$name]' value='$valueEscaped'></input>");
-    }
+// Accompanying values for not-NULL create row scenarios
+// like score rows
+foreach ($createValues as $name => $value) {
+    $valueEscaped = e($value);
+    print("<input type='hidden' name='{$nameStem}[$name]' value='$valueEscaped'></input>");
 }
 
 print('</div>');

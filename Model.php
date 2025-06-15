@@ -84,7 +84,8 @@ class Model extends BaseModel
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
 
-    public const LE_DELETE_ON_NULL = 2;
+    public const LE_DELETE_ON_NULL = 2; // Row deletes
+    public const LE_FALSE_ON_NULL = 3;  // Useful for missing boolean checkbox values
 
     public $printable = FALSE;
     public static $globalScope;
@@ -453,7 +454,13 @@ class Model extends BaseModel
                                     if ($value === "") $value = NULL;
                                     if (is_null($value)) {
                                         $mode = (isset($model->listEditable[$name]) ? $model->listEditable[$name] : TRUE);
-                                        if ($mode === self::LE_DELETE_ON_NULL) $delete = TRUE;
+                                        if ($mode === self::LE_DELETE_ON_NULL) {
+                                            // Useful for rows
+                                            $delete = TRUE;
+                                        } else if ($mode === self::LE_FALSE_ON_NULL) {
+                                            // Useful for missing boolean checkbox values
+                                            $value = FALSE;
+                                        }
                                     }
                                 }
 

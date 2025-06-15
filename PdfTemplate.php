@@ -22,6 +22,9 @@ class PdfTemplate {
 
     public $comment;
     public $identifier;
+    // Where the action should appear, like fields.yaml
+    // create, update, index
+    public $contexts = array(); 
     public $type;
     public $title;
     public $templateLocale;
@@ -72,6 +75,21 @@ class PdfTemplate {
         return $label;
     }
 
+    public function forContext(string $context): bool
+    {
+        return (!$this->contexts || in_array($context, $this->contexts));
+    }
+
+    public function forUpdateContext(): bool
+    {
+        return $this->forContext('update');
+    }
+
+    public function forIndexContext(): bool
+    {
+        return $this->forContext('index');
+    }
+
     public function loadTemplate(string $templateFilePath, string $dir = 'media'): DOMDocument
     {
         // Load template
@@ -100,6 +118,7 @@ class PdfTemplate {
             $this->identifier = $this->getNodeValue('dc:identifier', $xOfficeMETA);
             $this->type       = $this->getNodeValue('dc:type', $xOfficeMETA);
             $this->title      = $this->getNodeValue('dc:title', $xOfficeMETA);
+            $this->contexts   = array_filter(preg_split('/ *, */', $this->getNodeValue('dc:coverage', $xOfficeMETA)));
         }
         // Language
         // Set on each text element

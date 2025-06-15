@@ -3,7 +3,7 @@
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $controllerListUrl = $this->actionUrl('');
-$count             = (isset($formModel) ? $formModel::menuItemCount() : NULL);
+$count             = NULL; //(isset($formModel) ? $formModel::menuItemCount() : NULL);
 
 Block::put('breadcrumb') ?>
     <ul>

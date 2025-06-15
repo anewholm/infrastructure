@@ -450,7 +450,9 @@ Trait MorphConfig
     protected static function settingRemove(array &$fieldConfig, string $modelClass): bool
     {
         $settingsClass = self::getSettingsModel($modelClass);
-        $removeField   = ($settingsClass && isset($fieldConfig['setting']) && $settingsClass::get($fieldConfig['setting']) != '1');
+        $removeField   = FALSE;
+        if ($settingsClass && isset($fieldConfig['setting']) && $settingsClass::get($fieldConfig['setting']) != '1')
+            $removeField = TRUE;
         return $removeField;
     }
 

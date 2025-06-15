@@ -57,7 +57,7 @@ if (method_exists($model, 'actionFunctions')) {
         }
 
         // --------------------------------- Advanced
-        if ($model->advanced) {
+        if ($model->advanced && $this->action == 'update') {
             $advanced = e(trans('acorn::lang.models.general.advanced'));
             print("<li><a id='advanced'>$advanced</a></li>");
         }
@@ -102,14 +102,17 @@ if (method_exists($model, 'actionFunctions')) {
                 'model'      => get_class($model),
                 'modelId'    => $model->id,
             )), 1,-1));
-            print(<<<HTML
-                <li><a 
-                    data-control="popup"
-                    data-request-data='$dataRequestData'
-                    data-handler="onActionTemplate"
-                >$print $printName</a></li>
+
+            if ($pdfTemplate->forContext('list')) {
+                print(<<<HTML
+                    <li><a 
+                        data-control="popup"
+                        data-request-data='$dataRequestData'
+                        data-handler="onActionTemplate"
+                    >$print $printName</a></li>
 HTML
-            );
+                );
+            }
         } 
 
         // --------------------------------- QR scan
