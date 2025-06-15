@@ -87,17 +87,19 @@ HTML
                 )), 1,-1));
                 $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
 
-                print(<<<HTML
-                    <button
-                        data-control="popup"
-                        data-request-data='$dataRequestData'
-                        data-handler="onListActionTemplate"
-                        data-load-indicator="$dataLoadIndicator"
-                        class="btn">
-                        $print $printName...
-                    </button>
+                if ($pdfTemplate->forContext($this->action)) {
+                    print(<<<HTML
+                        <button
+                            data-control="popup"
+                            data-request-data='$dataRequestData'
+                            data-handler="onListActionTemplate"
+                            data-load-indicator="$dataLoadIndicator"
+                            class="btn">
+                            $print $printName...
+                        </button>
 HTML
-                );
+                    );
+                }
             } 
         }
     ?>
