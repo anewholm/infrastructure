@@ -112,6 +112,14 @@ function acorn_ready(){
   // README.md screen
   $('.plugin-details-content > h1').addClass('collapsable');
   
+  $('div.control-toolbar select.btn').click(function (event){
+    // The toolbar dropdowns (e.g. ActionTemplates) are not working...
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    event.preventDefault(false);
+    return true;
+  });
+
   // Collapseable <table>s
   $('table.collapsable tr.section').click(function(){
     var jRows = $(this).nextUntil('tr.section');

@@ -9,7 +9,7 @@ Block::put('breadcrumb') ?>
     <ul>
         <li>
             <a href="<?= $controllerListUrl ?>"><?= e($modelsLabelKey); ?></a>
-            <span class="counter"><?= $count; ?></span>
+            <?php if (!is_null($count)) print("<span class='counter'>$count</span>"); ?>
         </li>
         <li><?= e($this->pageTitle) ?></li>
     </ul>

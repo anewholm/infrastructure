@@ -1,4 +1,5 @@
 <?php
+// For example: avg(0,9) or sum(:my/token/thing:)
 $value = preg_replace('/<([^>]+)>/', '<span class="replacement">&lt;$1&gt;</span>', $value);
 $value = preg_replace('/([a-z]+)\(/', '<span class="function">$1</span>(', $value);
 $value = preg_replace('/:([^:]+):/', '<span class="token">:$1:</span>', $value);

@@ -81,57 +81,86 @@ Trait MorphConfig
                         }
                     }
 
-                    if ($parentModel) {
-                        // ------------------------------- Auto-hide and set parent model drop-down
-                        // We have a parent context
-                        // TODO: This does not work if the parent field is nested
-                        foreach ($config->fields as $fieldName => &$fieldConfig) {
-                            // Look for a parent model selector
-                            if (isset($fieldConfig['type']) 
-                                && $fieldConfig['type'] == 'dropdown'
-                                && isset($fieldConfig['options'])
-                                && is_string($fieldConfig['options'])
-                            ) {
-                                // Only works for create-system standard drop-down specification
-                                $optionsParts  = explode('::', $fieldConfig['options']);
-                                $dropDownModel = $optionsParts[0];
+                    // ------------------------------- Auto-hide and set parent model drop-down
+                    // TODO: This does not work if the parent field is 1-1 nested
+                    // e.g. Student.user[languages] => user_user_language.user (student)
+                    foreach ($config->fields as $fieldName => &$fieldConfig) {
+                        // Look for a parent model selector
+                        $dropDownModel = NULL;
+                        
+                        // type: dropdown + options call
+                        // Create-system standard drop-down specification
+                        // options: Acorn\University\Models\Student::dropdownOptions
+                        if (isset($fieldConfig['type']) 
+                            && $fieldConfig['type'] == 'dropdown'
+                            && isset($fieldConfig['options'])
+                            && is_string($fieldConfig['options'])
+                        ) {
+                            $optionsParts  = explode('::', $fieldConfig['options']);
+                            $dropDownModel = $optionsParts[0];
+                        } 
 
-                                if ($dropDownModel == $parentModel) {
-                                    // Set and hide parentModel
-                                    $fieldConfig['cssClass'] .= ' hidden';
-                                    $fieldConfig['default']   = $parentModelId;
-                                } 
-                                else if ($controllerModel) {
-                                    // Set and hide controllerModel
-                                    if ($dropDownModel == get_class($controllerModel)) {
-                                        $fieldConfig['cssClass'] .= ' hidden';
-                                        $fieldConfig['default']   = $controllerModel->id;
-                                    }
-                                    // Set and hide common singular parent BelongsTo models
-                                    else if ($sameParent = $controllerModel->$fieldName) {
-                                        if ($dropDownModel == get_class($sameParent)
-                                            && $controllerModel->$fieldName() instanceof BelongsTo
-                                        ) {
-                                            $fieldConfig['cssClass'] .= ' hidden';
-                                            $fieldConfig['default']   = $sameParent->id;
-                                        }
-                                    }
-                                } 
+                        // Yaml configs often use type: relation
+                        // type: relation
+                        else if (isset($fieldConfig['type']) 
+                            && $fieldConfig['type'] == 'relation'
+                            && $modelClass 
+                        ) {
+                            $model = new $modelClass();
+                            if ($model->hasRelation($fieldName)
+                                && ($relation = $model->$fieldName())
+                                && ($relation instanceof BelongsTo)
+                            ) {
+                                $dropDownModel = get_class($relation->getRelated());
                             }
                         }
+
+                        if ($dropDownModel) { 
+                            // Set and hide parentModel
+                            // can be useful in nested popups
+                            if ($parentModel
+                                && $dropDownModel == $parentModel
+                            ) {
+                                $fieldConfig['cssClass'] .= ' hidden';
+                                $fieldConfig['default']   = $parentModelId;
+                            } 
+                            
+                            // Set and hide the main controllerModel
+                            else if ($controllerModel 
+                                && $dropDownModel == get_class($controllerModel)
+                            ) {
+                                $fieldConfig['cssClass'] .= ' hidden';
+                                $fieldConfig['default']   = $controllerModel->id;
+                            }
+                            
+                            // Set and hide common singular parent BelongsTo models
+                            // Student->user has common with UserUserLanguage->user
+                            // when adding XfromXSemi languages
+                            // We need the actual controller object
+                            else if ($controllerModel
+                                && $controllerModel->hasRelation($fieldName)
+                                && ($relation = $controllerModel->$fieldName())
+                                && ($relation instanceof BelongsTo)
+                                && ($controllerFieldModel = $controllerModel->$fieldName)
+                                && ($dropDownModel == get_class($controllerFieldModel))
+                            ) {
+                                $fieldConfig['cssClass'] .= ' hidden';
+                                $fieldConfig['default']   = $controllerFieldModel->id;
+                            }
+                        }
+                    }
                         
-                        // ------------------------------------- Auto-hide parent model reverse relation managers
-                        // so that X-X relations do not have repeating relationmanager popup loops
-                        // TODO: Secondary tabs
-                        if (isset($config->tabs['fields'])) {
-                            foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
-                                if (   isset($fieldConfig['type']) 
-                                    && isset($fieldConfig['relatedModel'])
-                                    && $fieldConfig['type'] == 'relationmanager'
-                                    && $fieldConfig['relatedModel'] == $parentModel
-                                ) {
-                                    unset($config->tabs['fields'][$fieldName]);
-                                }
+                    // ------------------------------------- Auto-hide parent model reverse relation managers
+                    // so that X-X relations do not have repeating relationmanager popup loops
+                    // TODO: Secondary tabs
+                    if ($parentModel && isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
+                            if (   isset($fieldConfig['type']) 
+                                && isset($fieldConfig['relatedModel'])
+                                && $fieldConfig['type'] == 'relationmanager'
+                                && $fieldConfig['relatedModel'] == $parentModel
+                            ) {
+                                unset($config->tabs['fields'][$fieldName]);
                             }
                         }
                     }
@@ -157,58 +186,6 @@ Trait MorphConfig
                             }
                         }
                     }
-
-                    // ------------------------------------------------- include: directives
-                    // RECURSIVE!
-                    // Scan for include directives
-                    // only allowed in the main fields collection
-                    // TODO: Remove include: 1to1, it is superceeded by create-system
-                    /*
-                    $subConfigs = array();
-                    foreach ($config->fields as $fieldName => &$fieldConfig) {
-                        if (isset($fieldConfig['include'])) {
-                            $path              = NULL;
-                            $includeModelClass = NULL;
-                            
-                            if (     isset($fieldConfig['path'])) $path = $fieldConfig['path'];
-                            else if (isset($fieldConfig['includeModel'])) {
-                                $includeModelClass = $fieldConfig['includeModel'];
-                                $model      = new $includeModelClass;
-                                $modelDir   = $model->modelDirectoryPathRelative();
-                                $path       = "$modelDir/$configFileName";
-                            }
-                            
-                            if ($path) $subConfigs[$fieldName] = $this->makeConfig($path, $requiredConfig);
-                            else throw new Exception("Include directive without path or model in [$fieldName]");
-                            $subConfigs[$fieldName]->modelClass = $includeModelClass;
-                        }
-                    }
-
-                    // Inject fields and tabs
-                    foreach ($subConfigs as $fieldName => $subConfig) {
-                        if (property_exists($subConfig, 'fields')) self::processFields($config->fields, $subConfig->fields, $fieldName, $subConfig->modelClass);
-                        if (property_exists($subConfig, 'tabs') && isset($subConfig->tabs['fields'])) {
-                            if (!property_exists($config, 'tabs')) $config->tabs = array();
-                            if (!isset($config->tabs['fields']))   $config->tabs['fields'] = array();
-                            self::processFields($config->tabs['fields'], $subConfig->tabs['fields'], $fieldName, $subConfig->modelClass);
-                        }
-                        if (property_exists($subConfig, 'secondaryTabs') && isset($subConfig->secondaryTabs['fields'])) {
-                            if (!property_exists($config, 'secondaryTabs')) $config->secondaryTabs = array();
-                            if (!isset($config->secondaryTabs['fields']))   $config->secondaryTabs['fields'] = array();
-                            self::processFields($config->secondaryTabs['fields'], $subConfig->secondaryTabs['fields'], $fieldName, $subConfig->modelClass);
-                        }
-                        if (property_exists($subConfig, 'tertiaryTabs') && isset($subConfig->tertiaryTabs['fields'])) {
-                            if (!property_exists($config, 'tertiaryTabs')) $config->tertiaryTabs = array();
-                            if (!isset($config->tertiaryTabs['fields']))   $config->tertiaryTabs['fields'] = array();
-                            self::processFields($config->tertiaryTabs['fields'], $subConfig->tertiaryTabs['fields'], $fieldName, $subConfig->modelClass);
-                        }
-                        $debugOutput = TRUE;
-                    }
-
-                    // Remove include directives
-                    foreach ($subConfigs as $fieldName => $subConfig) unset($config->fields[$fieldName]);
-                    //if (count($subConfigs)) dd($config);
-                    */
 
                     // ------------------------------------------------- permission-settings
                     // The permission name can be qualified _or_ un-qualified
@@ -281,97 +258,6 @@ Trait MorphConfig
                         }
                     }
 
-                    // ------------------------------------------------- include: directives
-                    // RECURSIVE!
-                    // Scan for include directives
-                    // only allowed in the main fields collection
-                    // TODO: Remove include: 1to1, it is superceeded by create-system
-                    /*
-                    $subConfigs = array();
-                    foreach ($config->columns as $fieldName => &$fieldConfig) {
-                        if (isset($fieldConfig['include'])) {
-                            $path              = NULL;
-                            $includeModelClass = NULL;
-
-                            if (isset($fieldConfig['includeModel'])) {
-                                $includeModelClass = $fieldConfig['includeModel'];
-                                $model      = new $includeModelClass;
-                                $modelDir   = $model->modelDirectoryPathRelative();
-                                $path       = "$modelDir/$configFileName";
-                            }
-                            if (isset($fieldConfig['path'])) $path = $fieldConfig['path'];
-                            if ($path) $subConfigs[$fieldName] = $this->makeConfig($path, $requiredConfig);
-                            else throw new Exception("Include directive without path or model in [$fieldName]");
-
-                            // Stamp the modelClass on the fields
-                            $subConfigs[$fieldName]->modelClass = $includeModelClass;
-                        }
-                    }
-
-                    // Inject columns
-                    foreach ($subConfigs as $fieldName => $subConfig) {
-                        if (property_exists($subConfig, 'columns')) {
-                            foreach ($subConfig->columns as $subFieldName => $subFieldConfig) {
-                                // TODO: Nested 1from1 relations
-                                $subType        = ($subFieldConfig['type']           ?? 'text');
-                                $includeContext = ($subFieldConfig['includeContext'] ?? 'include');
-                                if (   $subFieldName != 'id' 
-                                    && $includeContext != 'no-include'
-                                    // Dates will not work because this model does not have the same $dates casting
-                                    // TODO: Support datetime types include
-                                    && $subType != 'timetense' 
-                                    && $subType != 'date' 
-                                ) {
-                                    $isAlreadyNested   = self::isNested($subFieldName);
-                                    $isPseudoFieldName = self::isPseudo($subFieldName);
-                                    $nestedFieldName   = $subFieldName;
-                                    if (!$isPseudoFieldName) {
-                                        // Sub-relation fields: The relation is added in to the name[relation][valueFrom|name]
-                                        if (isset($subFieldConfig['relation'])) {
-                                            // We cannot use the relation field because there already is one
-                                            // relation: does work with nesting, but let's move to full nested name anyway
-                                            // TODO: This does not work on teachers list => user[languages]
-                                            $subFieldName    = $subFieldConfig['relation'];
-                                            $nestedFieldName = "${fieldName}[$subFieldName]";
-                                            unset($subFieldConfig['relation']);
-                                            $valueFrom       = $subFieldConfig['valueFrom'] ?? 'name';
-                                            $nestedFieldName = "${nestedFieldName}[$valueFrom]";
-                                            unset($subFieldConfig['valueFrom']);
-                                            
-                                            $subFieldConfig['searchable'] = FALSE;
-                                            $subFieldConfig['sortable']   = FALSE;
-                                        } else {
-                                            // No relation field, so lets just set it
-                                            // relation: user
-                                            // no additional field name nesting
-                                            // TODO: select: ?
-                                            $subFieldConfig['relation']   = $fieldName;
-                                            // valueFrom: is necessary for the relation to work
-                                            $subFieldConfig['valueFrom'] = ($subFieldConfig['valueFrom'] ?? 'name');
-                                            // TODO: Should be able to maintain searcheable in certain conditions
-                                            // $subFieldConfig['searchable'] = TRUE; // Leave as before
-                                            $subFieldConfig['sortable']   = FALSE;
-                                        }
-                                    }
-
-                                    // Custom nesting information
-                                    $nestLevel = $subFieldConfig['nestLevel'] ?? 0;
-                                    $subFieldConfig['nested']    = TRUE;
-                                    $subFieldConfig['nestLevel'] = $nestLevel+1;
-                                    $subFieldConfig['included']  = TRUE;
-                    
-                                    // Insert before $fieldName
-                                    self::array_insert($config->columns, $fieldName, array($nestedFieldName => $subFieldConfig));
-                                    $debugOutput = TRUE;
-                                }
-                            }
-                        }
-                    }
-
-                    // Remove include directives
-                    foreach ($subConfigs as $fieldName => $subConfig) unset($config->columns[$fieldName]);
-                    //if (count($subConfigs)) dd($configFile, $config);
-                    */
                     break;
             }
         }
@@ -431,6 +317,9 @@ Trait MorphConfig
 
     protected static function getSettingsModel(string $modelClass): string|NULL
     {
+        // TODO: This will fail for create-system embedded 1-1 fields
+        // inherited from a belongsTo Model
+        // like Student belongsTo User with password: setting: has_front_end
         $settingsClass = NULL;
         $modelClassParts = explode('\\', $modelClass);
         array_pop($modelClassParts);

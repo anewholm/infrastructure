@@ -279,6 +279,27 @@ class PdfTemplate {
             }
         }
     }
+
+    public function notify(Model $model): bool
+    {
+        // TODO: Notify all Models that they have been printed
+        // TODO: This should be an event. A separate table should log prints, model and model_id
+        $notified = FALSE;
+
+        if (method_exists($model, 'pdfTemplatePrintNotify')) {
+            $model->printed($model);
+            $notified = TRUE;
+        }
+        $attributes = $model->attributesToArray();
+        foreach ($attributes as $name => $value) {
+            if ($value instanceof Model && method_exists($model, 'pdfTemplatePrintNotify')) {
+                $value->printed($model);
+                $notified = TRUE;
+            }
+        }
+
+        return $notified;
+    }
     
     public function resetTemplate(): void
     {
