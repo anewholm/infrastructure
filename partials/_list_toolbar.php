@@ -72,13 +72,15 @@ HTML
         } 
     
         // --------------------------------- PDF ActionTemplates
-        // TODO: PDF ActionTemplates
         if ($model) {
             $ml       = System\Classes\MediaLibrary::instance();
             $class    = get_class($model);
             $location = "ActionTemplates\\$class";
             // MediaLibraryItem s
-            foreach ($ml->listFolderContents($location, 'title', NULL, TRUE) as $mli) {
+            $mlis        = $ml->listFolderContents($location, 'title', NULL, TRUE);
+            $useDropDown = (count($mlis) > 2);
+            if ($useDropDown) print("<select class='btn'>");
+            foreach ($mlis as $mli) {
                 $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
                 $print       = e(trans('acorn::lang.models.general.print'));
                 $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
@@ -87,8 +89,9 @@ HTML
                 )), 1,-1));
                 $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
 
-                if ($pdfTemplate->forContext($this->action)) {
-                    print(<<<HTML
+                // if ($pdfTemplate->forContext($this->action)) {
+                    if ($useDropDown) print("<option value='$mli->path'>$print $printName...</option>");
+                    else              print(<<<HTML
                         <button
                             data-control="popup"
                             data-request-data='$dataRequestData'
@@ -99,8 +102,9 @@ HTML
                         </button>
 HTML
                     );
-                }
+                // }
             } 
+            if ($useDropDown) print("</select>");
         }
     ?>
 
