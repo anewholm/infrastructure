@@ -59,11 +59,18 @@ function acorn_tabbing(){
   });
 
   $('select').focus(function(){
-    $(this).closest('.form-group').find('.select2-container').addClass('select2-container--focus');
-    return false;
+    var jContainer = $(this).closest('.form-group').find('.select2-container');
+    var hasContainer = jContainer.length;
+    var bubble       = !hasContainer;
+    jContainer.addClass('select2-container--focus');
+    return bubble;
   })
   .blur(function(){
-    $(this).closest('.form-group').find('.select2-container').removeClass('select2-container--focus');
+    var jContainer = $(this).closest('.form-group').find('.select2-container');
+    var hasContainer = jContainer.length;
+    var bubble       = !hasContainer;
+    jContainer.removeClass('select2-container--focus');
+    return bubble;
   });
 
   // Radio field key selection

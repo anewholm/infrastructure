@@ -52,7 +52,7 @@ if (method_exists($model, 'actionFunctions')) {
                         data-handler="onActionFunction"
                     >$enDevLabel</a>
                 </li>
-    HTML
+HTML
             );
         }
 

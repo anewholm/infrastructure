@@ -28,7 +28,7 @@ class GlobalChainScope implements Scope
         return $globalScopeRelations;
     }
 
-    public static function globalScopeClasses(Model $model): array
+    public static function globalScopeClasses(Model $model, array $fromEndChainModels = NULL): array
     {
         // Recursively get the Models on the ends of the global-scope relation chains
         // Includes this $model parameter, if a $globalScope
@@ -38,8 +38,13 @@ class GlobalChainScope implements Scope
         
         $globalScopeRelations = self::globalScopeRelations($model);
         foreach ($globalScopeRelations as $relation) {
-            $model          = $relation->getRelated();
-            $endChainModels = array_merge($endChainModels, self::globalScopeClasses($model));
+            $relatedModel   = $relation->getRelated();
+            $relatedClass   = get_class($relatedModel);
+            if (isset($fromEndChainModels[$relatedClass])) {
+                $chain = implode(' => ', array_keys($fromEndChainModels));
+                throw new Exception("Infinite global-scope recursion on $chain");
+            }
+            $endChainModels = array_merge($endChainModels, self::globalScopeClasses($relatedModel, $endChainModels));
         }
 
         return $endChainModels;
@@ -71,6 +76,8 @@ class GlobalChainScope implements Scope
 
     public function shouldApply(Builder $builder, Model $model): bool
     {
+        // Only works out if the Final Scope has a setting or not
+        // pre-Query, $model is empty
         $shouldApply = FALSE;
         $globalScopeRelations = self::globalScopeRelations($model);
         foreach ($globalScopeRelations as $relation) {
@@ -110,8 +117,29 @@ class GlobalChainScope implements Scope
         $class       = get_class($model);
         $settingName = "$class::globalScope";
         $setting     = Session::get($settingName);
-        if ($setting)
+
+        if ($setting) {
             $builder->where("$model->table.id", '=', $setting);
+
+            // TODO: Allow NULLs on the first join to show Models without an explicit setting
+            /*
+            $query = $builder->getQuery();
+            if (isset($query->joins[0])) {
+                // Joins:
+                // type     = "Column"
+                // first    = "acorn_exam_calculations.academic_year_id"
+                // operator = "="
+                // second   = "acorn_university_academic_years.id"
+                // boolean  = "and"
+                $firstJoin = $query->joins[0];
+                if (isset($firstJoin->wheres[0])) {
+                    $firstWhere = $firstJoin->wheres[0];
+                    $builder->orWhere($firstWhere['first'], '=', NULL);
+                }
+            }
+            */
+        }
+
         return (bool) $setting;
     }
 

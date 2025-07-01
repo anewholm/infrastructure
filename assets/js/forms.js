@@ -43,14 +43,15 @@ function acorn_dynamicElements(){
   });
 
   // HTML Tooltips
-  // It is possible we have not understood data-toggle="tooltip" documentation
+  // TODO: It is possible we have not understood data-toggle="tooltip" "documentation"
   $('*:has(> .tooltip)').hover(function(){
     var jTooltip = $(this).children('.tooltip');
     jTooltip.addClass('in').fadeIn();
 
     if (jTooltip.hasClass('top')) {
-      var height = jTooltip.height() + 6;
-      jTooltip.css({marginTop:-height});
+      var height = jTooltip.height() + $(this).height();
+      var width  = $(this).width() / 2;
+      jTooltip.css({marginTop:-height + 'px', marginLeft:-width + 'px'});
     }
   }, function(){
     $(this).children('.tooltip').fadeOut();
@@ -112,12 +113,9 @@ function acorn_ready(){
   // README.md screen
   $('.plugin-details-content > h1').addClass('collapsable');
   
-  $('div.control-toolbar select.btn').click(function (event){
-    // The toolbar dropdowns (e.g. ActionTemplates) are not working...
-    event.stopPropagation();
+  $('div.control-toolbar select.btn').mousedown(function (event){
+    // The toolbar dropdowns (e.g. ActionTemplates) are not working
     event.stopImmediatePropagation();
-    event.preventDefault(false);
-    return true;
   });
 
   // Collapseable <table>s
