@@ -34,19 +34,20 @@ if (!class_exists($modelClass)) {
     $modelClass = implode('\\', $recordClassParts);
 }
 
-foreach ($value as $name => $leConfig) {
+foreach ($value as $name => $leValues) {
     // Existing models use string UUIDs
     // Null id indicates that the model is new
     // we assign a global integer for the form display
     $model = NULL;
-    if (is_null($leConfig['id'])) {
+    if (is_null($leValues['id'])) {
         $model     = new $modelClass();
         $model->id = Model::nextNewModelId();
     } else {
-        $model     = $modelClass::find($leConfig['id']);
+        $model     = $modelClass::find($leValues['id']);
     }
-    $leConfig['record'] = $model;
-    $leConfig['column'] = $mainColumn;
+    $leValues['values'] = $leValues;
+    $leValues['record'] = $model;
+    $leValues['column'] = $mainColumn;
 
-    print($this->makePartial('list_editable', $leConfig));
+    print($this->makePartial('list_editable', $leValues));
 }

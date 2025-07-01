@@ -78,20 +78,41 @@ HTML
             $location = "ActionTemplates\\$class";
             // MediaLibraryItem s
             $mlis        = $ml->listFolderContents($location, 'title', NULL, TRUE);
-            $useDropDown = (count($mlis) > 2);
-            if ($useDropDown) print("<select class='btn'>");
+            $useDropDown = (count($mlis) > 0);
+            $print       = e(trans('acorn::lang.models.general.print'));
+            $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
+            if ($useDropDown) {
+                print(<<<HTML
+                    <form class="inline-block"
+                        data-control="popup"
+                        data-handler="onListActionTemplate"
+                        data-load-indicator="$dataLoadIndicator"
+                    >
+                        <div class="form-group dropdown-field" data-field-name="template">
+                            <select name="template" 
+                                class="form-control custom-select select2-hidden-accessible" 
+                                required="" 
+                                data-placeholder="$print" 
+                                data-disposable="data-disposable" 
+                                tabindex="-1" 
+                                aria-hidden="true"
+                            >
+                                <option value="">$print</option>
+HTML
+                );
+            }
+            
             foreach ($mlis as $mli) {
                 $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
-                $print       = e(trans('acorn::lang.models.general.print'));
                 $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
                 $dataRequestData = e(substr(json_encode(array(
                     'template'   => $mli->path,
                 )), 1,-1));
-                $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
 
                 // if ($pdfTemplate->forContext($this->action)) {
-                    if ($useDropDown) print("<option value='$mli->path'>$print $printName...</option>");
-                    else              print(<<<HTML
+                    if ($useDropDown) {
+                        print("<option value='$mli->path'>$print $printName...</option>");
+                    } else              print(<<<HTML
                         <button
                             data-control="popup"
                             data-request-data='$dataRequestData'
@@ -104,7 +125,12 @@ HTML
                     );
                 // }
             } 
-            if ($useDropDown) print("</select>");
+            if ($useDropDown) print(<<<HTML
+                            </select>
+                        </div>  
+                    </form>                      
+HTML                    
+            );
         }
     ?>
 

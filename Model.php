@@ -118,7 +118,9 @@ class Model extends BaseModel
             }
         }
 
-        if ($throwIfNull && !$leafObject) throw new Exception("Leaf $thisName not found for id($this->id)");
+        if ($throwIfNull && !$leafObject) 
+            throw new Exception("Leaf $thisName not found for id($this->id)");
+        
         return $leafObject;
     }
 

@@ -11,6 +11,7 @@ $pattern      = (isset($column->config['pattern'])       ? $column->config['patt
 $readOnly     = (isset($column->config['readOnly'])      ? $column->config['readOnly']      : FALSE );
 $id           = $record->id;
 $createValues = (isset($createValues) ? $createValues : array());
+$values       = (isset($values)       ? $values : array());
 $idValue      = "Form-field-$class-$columnName";
 $nameStem     = "ListEditable[{$classFQN}][$id]";
 $locale       = Lang::getLocale();
@@ -76,6 +77,22 @@ HTML
 foreach ($createValues as $name => $value) {
     $valueEscaped = e($value);
     print("<input type='hidden' name='{$nameStem}[$name]' value='$valueEscaped'></input>");
+}
+
+// Other values
+foreach ($values as $name => $value) {
+    switch ($name) {
+        case 'id':
+        case 'title':
+        case 'value':
+        case 'createValues':
+            // Special handling
+            break;
+        default:
+            $valueEscaped = e($value);
+            // TODO: Extra value handling?
+            print("<input type='hidden' class='list-editable-extra-value-$type-$name' value='$valueEscaped'></input>");
+    }
 }
 
 print('</div>');
