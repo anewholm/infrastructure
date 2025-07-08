@@ -181,7 +181,7 @@ class PdfTemplate {
                     $this->textBoxes[$objectName] = $xTextP;
                     Log::info("$objectName text-box found");
                 } else {
-                    Log::error("draw:frame without text:p");
+                    Log::warning("draw:frame without text:p");
                 }
             } else {
                 Log::error("Nameless control");

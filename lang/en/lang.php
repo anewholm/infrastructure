@@ -70,6 +70,8 @@
             'replicated_source' => 'Replication Source'
         ],
         'export' => [
+            'label'       => 'Export',
+            'label_plural' => 'Exports',
             'import'      => 'Import',
             'export'      => 'Export',
             'document_template' => 'Document template',
@@ -89,6 +91,7 @@
             '23505' => 'Data :constraint is not unique',
             '23502' => 'The :column field is required.',
             '23514' => 'Check :check failed',
+            'CIM'   => ':title',
         ],
     ],
     'helpblock' => [

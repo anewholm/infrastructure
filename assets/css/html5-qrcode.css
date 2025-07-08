@@ -17,7 +17,7 @@
     border-radius: 8px;
     max-height:240pt;
     max-width:240pt;
-    float:right;
+    margin: 100px auto;
 }
 
 #my-qr-reader img[alt="Info icon"] {

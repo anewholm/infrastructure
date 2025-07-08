@@ -25,6 +25,20 @@ body .field-multilingual .ml-btn {
     color: rgb(0, 0, 0);
 }
 
+.list-editable-container.is-required > label:after{
+    background-color:#c20a0a;
+    border-radius:8px;
+    content:"";
+    display:inline-block;
+    font-size:60%;
+    height:5px;
+    margin-left:3px;
+    vertical-align:super;
+    width:5px
+}
+.list-editable-container.failed > input {
+    border-color: red;
+}
 .new-row {
   clear:both;
 }

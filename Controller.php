@@ -18,12 +18,14 @@ use Flash;
 use \Exception;
 use Str;
 use Winter\Storm\Html\Helper as HtmlHelper;
+use \Backend\Widgets\Form as FormWidget;
 
 use Acorn\User\Models\User;
 use Acorn\Events\DataChange;
 use Acorn\Events\UserNavigation;
 use Acorn\ServiceProvider;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Database\QueryException;
 
 /**
  * Computer Product Backend Controller
@@ -31,6 +33,7 @@ use Illuminate\Http\RedirectResponse;
 class Controller extends BackendController
 {
     use Traits\PathsHelper;
+    use \Acorn\Traits\NiceSqlErrors;
 
     public const DENEST = TRUE;
 
@@ -83,6 +86,12 @@ class Controller extends BackendController
         */
     }
 
+    // ------------------------------------------ Custom Actions
+    public function qrcodescan(): string
+    {
+        return '<div id="my-qr-reader"></div>';
+    }
+
     // ------------------------------------------ Leaf models
     public function update($id)
     {
@@ -107,33 +116,37 @@ class Controller extends BackendController
     {
         // Options popup for multi-printing of this 
         // controller's List context
+        // TODO: This is not complete! Just copied from somwhere else
         $template    = post('template');
         $breadcrumb  = post('breadcrumb');
         $popupParams = (post('params') ?: array());
         $popupAction = 'export';
         $unqualifiedControllerName = $this->unqualifiedClassName();
 
+        // ------------------------------- Input checks
+        if (!$template)
+            throw new Exception('onListActionTemplate requires an explicit template');
         if (!property_exists($this->widget, 'list'))
             throw new Exception('onListActionTemplate requires a list widget');
         $list  = &$this->widget->list;
         $model = &$list->model;
+        if (!$model)
+            throw new Exception('onListActionTemplate requires a list model');
 
-        // ------------------------------- Render
-        $postUrl        = $this->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
-        $closeName      = $this->transBackend('close');
-        $actionName     = $this->transBackend($popupAction);
-        $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label', $model) : last(explode('\\', get_class($model))));
-        $popupTitle     = "$actionName $modelTitle";
-        $breadcrumbHTML = "";
-        if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
-        else             $breadcrumbs = array($unqualifiedControllerName, $popupTitle);
-        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
-        $eventJs   = 'popup';
-        $initJs    = "$('body > .control-popup').trigger('$eventJs');";
-        $form      = $this->makeFormWidget(\Backend\Widgets\Form::class, '$/modules/acorn/behaviors/batchprintcontroller/partials/fields_export.yaml');
-        $formOpen  = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
-        $formHtml  = $form->render();
-        $formClose = Form::close();
+        // ------------------------------- Build the Standard Export Form widget
+        $widgetConfig = $this->makeConfig('~/modules/backend/behaviors/importexportcontroller/partials/fields_export.yaml');
+        $widgetConfig->model = $model;
+        $widgetConfig->alias = 'exportUploadForm';
+        $formExport = $this->makeWidget('Backend\Widgets\Form', $widgetConfig);
+
+        // ------------------------------- Build the Custom Form widget
+        $configDir    = '$/../modules/acorn/behaviors/batchprintcontroller/partials';
+        $fieldsYaml   = 'fields_export_direct';
+        $widgetConfig = $this->makeConfig("$configDir/$fieldsYaml.yaml");
+        $widgetConfig->model     = $model;
+        $widgetConfig->alias     = 'exportCustomForm';
+        $widgetConfig->arrayName = ucfirst($popupAction).'Options';
+        $formCustom = $this->makeFormWidget(FormWidget::class, $widgetConfig);
 
         // Associated Field updates on success
         // We remove the braces for correct data-request-data format
@@ -142,9 +155,34 @@ class Controller extends BackendController
             'action'                => $popupAction,
             'template'              => $template,
             'params'                => $popupParams,
+
+            'format_preset'       => "standard",
+            'format_delimiter'    => ",",
+            'format_enclosure'    => '"',
+            'format_escape'       => "\\",
+            'export_columns[]'    => 'id',
+            'visible_columns[id]' => "1",
         );
         $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
 
+        // ------------------------------- Render
+        $postUrl        = $this->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
+        $closeName      = $this->transBackend('close');
+        $actionName     = trans("acorn::lang.models.export.batch_print");
+        $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label_plural', $model) : last(explode('\\', get_class($model))));
+        $popupTitle     = "$actionName $modelTitle";
+        $breadcrumbHTML = "";
+        if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
+        else             $breadcrumbs = array($unqualifiedControllerName, $popupTitle);
+        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
+        $eventJs   = 'popup';
+        $initJs    = "$('body > .control-popup').trigger('$eventJs');";
+        
+        $formOpen  = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
+        //$formExportHtml  = $formExport->render();
+        $formCustomHtml  = $formCustom->render();
+        $formClose = Form::close();
+        
         // TODO: Encapsulate popup form display in a partial!
         return <<<HTML
             <div class="modal-header compact">
@@ -155,14 +193,15 @@ class Controller extends BackendController
             </div>
             <div class="modal-body">
                 $formOpen
-                $formHtml
+                $formCustomHtml
                 $formClose
             </div>
             <div class="modal-footer">
                 <button
                     type='submit'
+                    data-control="popup"
                     data-request-url='$postUrl'
-                    data-request='onSomething'
+                    data-request='onExportLoadForm'
                     data-request-form='.modal-body form'
                     data-request-data='$dataRequestDataString'
                     data-hotkey='ctrl+s, cmd+s'
@@ -270,11 +309,14 @@ HTML;
         //     $this->model = $model;
         // Use the relevant to controller to handle the form render
         $fullyQualifiedControllerClass = $this->qualifyClassName($controllerClass);
-        if (!class_exists($fullyQualifiedControllerClass))  throw new \Exception("Controller [$fullyQualifiedControllerClass] does not exist");
+        if (!class_exists($fullyQualifiedControllerClass))  
+            throw new Exception("Controller [$fullyQualifiedControllerClass] does not exist");
         $controller = new $fullyQualifiedControllerClass;
-        if (!is_callable(array($controller, $popupAction))) throw new \Exception("action method [$popupAction] does not exist on [$fullyQualifiedControllerClass]");
+        if (!is_callable(array($controller, $popupAction))) 
+            throw new Exception("action method [$popupAction] does not exist on [$fullyQualifiedControllerClass]");
         $controller->$popupAction(...$popupParams);
-        if (!property_exists($controller->widget, 'form'))  throw new \Exception("Failed to bind formWidget to controller [$fullyQualifiedControllerClass] during $popupAction($paramString)");
+        if (!property_exists($controller->widget, 'form'))  
+            throw new Exception("Failed to bind formWidget to controller [$fullyQualifiedControllerClass] during $popupAction($paramString)");
 
         $form    = &$controller->widget->form; // Backend\Widgets\Form
         $model   = &$form->model;
@@ -286,7 +328,8 @@ HTML;
         if (is_array(post('Fields'))) {
             foreach (post('Fields') as $fieldDirectiveName => $fieldDirectivesArray) {
                 $formField = $form->getField($fieldDirectiveName);
-                if (!$formField) throw new Exception("Fields directive [$fieldDirectiveName] has no target");
+                if (!$formField) 
+                    throw new Exception("Fields directive [$fieldDirectiveName] has no target");
 
                 foreach ($fieldDirectivesArray as $directiveName => $directiveStringValue) {
                     if (substr($directiveName, 0, 1) == '@') {
@@ -648,13 +691,17 @@ HTML;
             $results      = array();
             $bindings     = array_pluck($paramsMerged, 'value');
             $placeholders = implode(',', array_fill(0, count($bindings), '?'));
-            switch ($returnType) {
-                case 'record':
-                    // TODO: runFunction() 
-                    $results = DB::select("select * from $fnDatabaseName($placeholders)", $bindings);
-                    break;
-                default:
-                    $results = DB::select("select $fnDatabaseName($placeholders) as result", $bindings);
+            try {
+                switch ($returnType) {
+                    case 'record':
+                        // TODO: runFunction() 
+                        $results = DB::select("select * from $fnDatabaseName($placeholders)", $bindings);
+                        break;
+                    default:
+                        $results = DB::select("select $fnDatabaseName($placeholders) as result", $bindings);
+                }
+            } catch (QueryException $qe) {
+                $this->throwNiceSqlError($qe);
             }
             
             // TODO: Respond with an immediate refresh

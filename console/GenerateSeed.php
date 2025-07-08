@@ -76,22 +76,16 @@ class GenerateSeed extends Command
                         foreach ($result as $name => $value) {
                             if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
                                 if (!$first) print(', ');
-                                if      (is_null($value))    $value = 'NULL';
-                                else if ($value == 'NULL')          $value = 'NULL';
-                                else if (is_bool($value))    $value = ($value ? 'true' : 'false');
-                                else if (is_numeric($value)) {}
-                                else if (is_string($value))  $value = "'$value'";
-
+                                $export = var_export($value, TRUE);
                                 switch ($whiteSpace) {
                                     case 'normalize':
-                                        $value = preg_replace('/\s+/', ' ', $value);
+                                        $export = preg_replace('/\s+/', ' ', $export);
                                         break;
                                     case 'no-new-lines':
-                                        $value = preg_replace('/[\n\r]+/', ' ', $value);
+                                        $export = preg_replace('/[\n\r]+/', ' ', $export);
                                         break;
                                 }
-
-                                print($value);
+                                print($export);
                                 $first = FALSE;
                             }
                         }
@@ -125,9 +119,16 @@ class GenerateSeed extends Command
                         foreach ($result as $name => $value) {
                             if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
                                 if (!$first) print(', ');
-                                if (is_null($value)) print('NULL');
-                                if (is_string($value)) print("'$value'");
-                                else print($value);
+                                $export = var_export($value, TRUE);
+                                switch ($whiteSpace) {
+                                    case 'normalize':
+                                        $export = preg_replace('/\s+/', ' ', $export);
+                                        break;
+                                    case 'no-new-lines':
+                                        $export = preg_replace('/[\n\r]+/', ' ', $export);
+                                        break;
+                                }
+                                print($export);
                                 $first = FALSE;
                             }
                         }
