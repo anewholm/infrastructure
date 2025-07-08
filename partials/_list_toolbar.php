@@ -78,7 +78,7 @@ HTML
             $location = "ActionTemplates\\$class";
             // MediaLibraryItem s
             $mlis        = $ml->listFolderContents($location, 'title', NULL, TRUE);
-            $useDropDown = (count($mlis) > 0);
+            $useDropDown = (count($mlis) > 2);
             $print       = e(trans('acorn::lang.models.general.print'));
             $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
             if ($useDropDown) {
@@ -88,16 +88,16 @@ HTML
                         data-handler="onListActionTemplate"
                         data-load-indicator="$dataLoadIndicator"
                     >
-                        <div class="form-group dropdown-field" data-field-name="template">
+                        <input type="submit" value="submit" class="hidden"/>
+                        <div class="form-group dropdown-field select-and-go" data-field-name="template">
                             <select name="template" 
-                                class="form-control custom-select select2-hidden-accessible" 
-                                required="" 
+                                class="form-control select-no-search custom-select select2-hidden-accessible" 
+                                required="required" 
                                 data-placeholder="$print" 
-                                data-disposable="data-disposable" 
+                                data-disposable="data-disposable"
                                 tabindex="-1" 
-                                aria-hidden="true"
                             >
-                                <option value="">$print</option>
+                                <option value="" selected="selected">$print</option>
 HTML
                 );
             }

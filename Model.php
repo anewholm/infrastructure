@@ -83,6 +83,7 @@ class Model extends BaseModel
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
+    use \Acorn\Traits\NiceSqlErrors;
 
     public const LE_DELETE_ON_NULL = 2; // Row deletes
     public const LE_FALSE_ON_NULL = 3;  // Useful for missing boolean checkbox values
@@ -94,8 +95,22 @@ class Model extends BaseModel
     public $advanced = []; // Advanced fields
 
     // --------------------------------------------- Translation
-    public $implement = ['Winter.Translate.Behaviors.TranslatableModel'];
+    public $implement = ['Acorn.Behaviors.TranslatableModel'];
+    public $implementReplaces = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = ['name', 'description'];
+
+    public function isClassExtendedWith($name) {
+        // Winter hard codes behavior requirements sometimes
+        // for example: 
+        //   EventRegistry::registerModelTranslation() 
+        //   requires Winter.Translate.Behaviors.TranslatableModel
+        // Here we fake the implemntation in favor of our sub-class
+        return parent::isClassExtendedWith($name)
+            || (
+                isset($this->implementReplaces) 
+                && in_array($name, $this->implementReplaces)
+            );
+    }
 
     // --------------------------------------------- Star schema centre => leaf services
     public function getLeafTypeAttribute(?bool $throwIfNull = FALSE)
@@ -279,55 +294,7 @@ class Model extends BaseModel
         } 
         // Last chance error formatting for some presentable & understandable SQL problems
         catch (QueryException $qe) {
-            $messageAdvanced = $qe->getMessage();
-            $messageNice     = NULL;
-
-            switch ($qe->getCode()) {
-                case 23514:
-                    // SQLSTATE[23514]: Check violation: 7 ERROR: new row for relation "acorn_finance_invoices" violates check constraint "payee_either_or"
-                    if (preg_match_all('/relation "([^"]+)" violates check constraint "([^"]+)"/', $messageAdvanced, $matches) == 1) {
-                        if (count($matches) == 3) {
-                            $check       = $matches[2][0];
-                            $title       = Str::headline($check);
-                            $messageNice = trans('acorn::lang.errors.sql.23514', ['check' => $title]);
-                        }
-                    }
-                    break;
-                case 23502:
-                    // NotNullConstraintViolationException
-                    // SQLSTATE[23502]: Not null violation: 7 ERROR:  null value in column "number" of relation "acorn_finance_receipts" violates not-null constraint
-                    if (preg_match_all('/ERROR:  null value in column "([^"]+)" of relation "([^"]+)"/', $messageAdvanced, $matches) == 1) {
-                        if (count($matches) == 3) {
-                            $column      = $matches[1][0];
-                            $messageNice = trans('acorn::lang.errors.sql.23502', ['column' => $column]);
-                        }
-                    }
-                    break;
-                case 23505:
-                    // SQLSTATE[23505]: Unique violation: 7 ERROR: duplicate key value violates unique constraint "course_semester_year_academic_year_material"
-                    // DETAIL: Key (course_id, semester_year_id, academic_year_id, material_id)=(66d3ca90-1b6c-11f0-90cc-a77dd8e640be, 9c6e1d20-2bd1-11f0-8119-93a057070d34, 5afc781c-2b47-11f0-bc2a-0bdc97d6ed09, cdc800ae-28be-11f0-a8a6-334555029afd) already exists.
-                    if (preg_match_all('/ERROR: +duplicate key value violates unique constraint +"([^"]+)"/', $messageAdvanced, $matches) == 1) {
-                        if (count($matches) == 2) {
-                            // Data %constraint is not unique
-                            $constraint  = $matches[1][0];
-                            $title       = Str::headline($constraint);
-                            $messageNice = trans('acorn::lang.errors.sql.23505', ['constraint' => $title]); 
-                        }
-                    }
-                    break;
-            }
-
-            if ($messageNice) {
-                if (env('APP_DEBUG')) {
-                    $messageNice .= "\nAdvanced: \n";
-                    $messageNice .= $messageAdvanced;  
-                }
-                throw new ValidationException(['error' => $messageNice]);
-            } else {
-                // Completely unhandled
-                // Throw original in dev and live env
-                throw $qe;
-            }
+            $this->throwNiceSqlError($qe);
         }
 
         if (!$qe) {

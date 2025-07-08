@@ -1,0 +1,44 @@
+fields:
+    template:
+        label: acorn::lang.models.export.document_template
+        type: mediafinder
+        span: storm
+        cssClass: col-xs-12
+        default: /ActionTemplates/Acorn/Exam/Models/DataEntryScore/BakeloriaCertificateTemplate.fodt
+        required: true
+        mode: document
+        comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>
+        commentHtml: true
+
+    step3_section:
+        # Also here so that the parent Controller does not throw a wobbly
+        label: backend::lang.import_export.set_export_options
+        type: section
+    prepend_uniqid:
+        label: acorn::lang.models.export.prepend_uniqid
+        type: checkbox
+        default: false
+        span: storm
+        cssClass: col-xs-4 new-row
+        comment: Useful when the first field, used for the filename, is not unique
+    output_mode:
+        label: acorn::lang.models.export.output_mode
+        type: radio
+        span: storm
+        cssClass: col-xs-4
+        default: multi
+        required: true
+        options:
+            multi: One document per row
+            single: One page in the document per row (Smaller)
+            row: One row in the document per row (Lists)
+    compression:
+        label: acorn::lang.models.export.compression
+        type: radio
+        span: storm
+        cssClass: col-xs-4
+        default: zip
+        required: true
+        options:
+            zip: ZIP (MicroSoft Windows)
+            tarGz: TAR+GZIP (Linux)

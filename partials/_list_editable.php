@@ -5,7 +5,9 @@ $class        = end($classParts);
 $columnName   = $column->getName();
 $maxlength    = (isset($column->config['max'])           ? $column->config['max']           : 255 );
 $type         = (isset($column->config['typeEditable'])  ? $column->config['typeEditable']  : 'number' );
-$required     = (isset($column->config['required'])      ? $column->config['required']      : FALSE );
+if (!isset($required)) 
+    $required = (isset($column->config['required'])      ? $column->config['required']      : FALSE );
+$passed       = (isset($passed) ? $passed : NULL);
 $placeholder  = (isset($column->config['placeholder'])   ? $column->config['placeholder']   : '' );
 $pattern      = (isset($column->config['pattern'])       ? $column->config['pattern']       : '' );
 $readOnly     = (isset($column->config['readOnly'])      ? $column->config['readOnly']      : FALSE );
@@ -56,8 +58,10 @@ switch ($type) {
 
 $readOnlyClass = ($readOnly ? 'read-only' : '');
 $disabled      = ($readOnly ? 'disabled'  : '');
+$isRequired    = ($required ? 'is-required' : '');
+$isPassed      = (is_null($passed) ? '' : ($passed ? 'passed' : 'failed')); // 3-state
 
-print('<div class="list-editable-container">');
+print("<div class='list-editable-container $isRequired $isPassed'>");
 
 if ($titleEscaped) print(<<<HTML
     <label for="$idValue">$titleEscaped</label>

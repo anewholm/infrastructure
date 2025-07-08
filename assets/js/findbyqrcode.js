@@ -79,6 +79,33 @@ function onScanSuccess(decodeText, decodeResult) {
 function initializeQrScanner() {
     // Initialize the QR code scanner when the element exists
     $("#my-qr-reader").each(function () {
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                const html5QrCode = new Html5Qrcode("my-qr-reader");
+                html5QrCode.start(
+                    devices[0].id, 
+                    {
+                        fps: 10,    // Optional, frame per seconds for qr code scanning
+                        qrbox: { width: 350, height: 350 }  // Optional, if you want bounded box UI
+                    },
+                    (decodedText, decodedResult) => {
+                        onScanSuccess.call(self, decodedText, decodedResult);
+                    }
+                );
+            }
+        })
+        .catch(err => {
+            $("#my-qr-reader").addClass('error flash-message').text(err);
+        });
+
+
+        qrScannerInitialized = true;
+    });
+
+    // Initialize the QR code scanner when the element exists
+    // TODO: Remove this old scanning 2-step system
+    /*
+    $("#my-qr-reader").each(function () {
         var self = this;
         let htmlscanner = new Html5QrcodeScanner("my-qr-reader", {
             fps: 10,
@@ -91,6 +118,7 @@ function initializeQrScanner() {
         });
         qrScannerInitialized = true;
     });
+    */
 }
 
 $(document).ready(function () {

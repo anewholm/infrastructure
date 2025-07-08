@@ -113,9 +113,18 @@ function acorn_ready(){
   // README.md screen
   $('.plugin-details-content > h1').addClass('collapsable');
   
-  $('div.control-toolbar select.btn').mousedown(function (event){
-    // The toolbar dropdowns (e.g. ActionTemplates) are not working
+  $('div.control-toolbar .select2-container').click(function (event){
+    // The toolbar dropdowns (e.g. ActionTemplates) are immediately submitting the form
     event.stopImmediatePropagation();
+    event.stopPropagation();
+    return false;
+  });
+  $('.select-and-go').change(function(event){
+    if ($(this).find(':input').val()) {
+      // trigger('submit') on the <form> doesn't seem to trigger the popup
+      var jSubmitButton = $(this).closest('form').find('input[type=submit]');
+      jSubmitButton.trigger('click');
+    }
   });
 
   // Collapseable <table>s
