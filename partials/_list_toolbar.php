@@ -79,7 +79,7 @@ HTML
             // MediaLibraryItem s
             $mlis        = $ml->listFolderContents($location, 'title', NULL, TRUE);
             $useDropDown = (count($mlis) > 2);
-            $print       = e(trans('acorn::lang.models.general.print'));
+            $print       = e(trans('acorn::lang.models.general.batch_print'));
             $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
             if ($useDropDown) {
                 print(<<<HTML

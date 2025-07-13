@@ -11,39 +11,95 @@ class TranslatableModel extends WinterTranslatableModel
             $locale = $this->translatableContext;
         }
 
+        // 1-1 chain translation values saving
+        // $this->model->attributes was having relationship arrays set on it, entity => [user_group => name] and crashing
+        // Instead we ascertain the correct nested model
+        // so it will set the translated names on university => entity => user_group, not on university
+        $translatableModel = &$this;
+        $model    = &$this->model;
+        $keyArray = HtmlHelper::nameToArray($key);
+        $isNested = (count($keyArray) > 1);
+        if ($isNested) {
+            $key = array_pop($keyArray);
+            foreach ($keyArray as $step) $model = &$model->{$step};
+            $translatableModel = $model->getClassExtension('Acorn.Behaviors.TranslatableModel');
+            if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
+        }
+        
         if ($locale == $this->translatableDefault) {
-            // $this->model->attributes is having relationship arrays set on it, entity => [user_group => name]
-            // It is pass-by-reference
-            // Instead we send the whole model, so that relationships are correctly traversed
-            return $this->setAttributeFromData($this->model, $key, $value);
-        }
-
-        if (!array_key_exists($locale, $this->translatableAttributes)) {
-            $this->loadTranslatableData($locale);
-        }
-
-        return $this->setAttributeFromData($this->translatableAttributes[$locale], $key, $value);
-    }
-
-    protected function setAttributeFromData(&$dataOrModel, $attribute, $value)
-    {
-        $keyArray = HtmlHelper::nameToArray($attribute);
-
-        if (is_array($dataOrModel)) {
-            // Sometimes direct &arrays are sent also (2 method references ^)
-            array_set($dataOrModel, implode('.', $keyArray), $value);
+            $model->attributes[$key] = $value;
         } else {
-            // This is to accomodate &Models
-            // and setting of nested relationships values
-            // rather than direct attributes
-            // setAttributeTranslated() has been changed to send the &Model, not &Model->attributes
-            $name = array_pop($keyArray);
-            foreach ($keyArray as $step) {
-                $dataOrModel = &$dataOrModel->{$step};
+            if (!array_key_exists($locale, $translatableModel->translatableAttributes)) {
+                $translatableModel->loadTranslatableData($locale);
             }
-            $dataOrModel->{$name} = $value;
+            $translatableModel->translatableAttributes[$locale][$key] = $value;
         }
 
         return $value;
+    }
+
+    public function getAttributeTranslated($key, $locale = null)
+    {
+        if ($locale == null) {
+            $locale = $this->translatableContext;
+        }
+
+        // 1-1 chain translation values saving
+        // $this->model->attributes was having relationship arrays set on it, entity => [user_group => name] and crashing
+        // Instead we ascertain the correct nested model
+        // so it will set the translated names on university => entity => user_group, not on university
+        $translatableModel = &$this;
+        $model    = &$this->model;
+        $keyArray = HtmlHelper::nameToArray($key);
+        $isNested = (count($keyArray) > 1);
+        if ($isNested) {
+            $key = array_pop($keyArray);
+            foreach ($keyArray as $step) $model = &$model->{$step};
+            $translatableModel = $model->getClassExtension('Acorn.Behaviors.TranslatableModel');
+            if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
+        }
+
+        /*
+         * Result should not return NULL to successfully hook beforeGetAttribute event
+         */
+        $result = '';
+
+        /*
+         * Default locale
+         */
+        if (is_null($translatableModel) || $locale == $translatableModel->translatableDefault) {
+            $result = $model->attributes[$key];
+        }
+        /*
+         * Other locale
+         */
+        else {
+            if (!array_key_exists($locale, $translatableModel->translatableAttributes)) {
+                $translatableModel->loadTranslatableData($locale);
+            }
+
+            if ($translatableModel->hasTranslation($key, $locale)) {
+                $result = $translatableModel->translatableAttributes[$locale][$key];
+            }
+            elseif ($translatableModel->translatableUseFallback 
+                // Sometimes the translatable fields list is a lie
+                && isset($translatableModel->model->attributes[$key])
+            ) {
+                $result = $translatableModel->model->attributes[$key];
+            }
+        }
+
+        /*
+         * Handle jsonable attributes, default locale may return the value as a string
+         */
+        if (
+            is_string($result) &&
+            method_exists($model, 'isJsonable') &&
+            $model->isJsonable($key)
+        ) {
+            $result = json_decode($result, true);
+        }
+
+        return $result;
     }
 }

@@ -1,14 +1,14 @@
 fields:
-    template:
-        label: acorn::lang.models.export.document_template
-        type: mediafinder
-        span: storm
-        cssClass: col-xs-12
-        default: /ActionTemplates/Acorn/Exam/Models/DataEntryScore/BakeloriaCertificateTemplate.fodt
-        required: true
-        mode: document
-        comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>
-        commentHtml: true
+    # template:
+    #     label: acorn::lang.models.export.document_template
+    #     type: mediafinder
+    #     span: storm
+    #     cssClass: col-xs-12
+    #     default: /ActionTemplates/Acorn/Exam/Models/DataEntryScore/BakeloriaCertificateTemplate.fodt
+    #     required: true
+    #     mode: document
+    #     comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>
+    #     commentHtml: true
 
     step3_section:
         # Also here so that the parent Controller does not throw a wobbly

@@ -97,7 +97,7 @@ class Model extends BaseModel
     // --------------------------------------------- Translation
     public $implement = ['Acorn.Behaviors.TranslatableModel'];
     public $implementReplaces = ['Winter.Translate.Behaviors.TranslatableModel'];
-    public $translatable = ['name', 'description'];
+    public $translatable = [];
 
     public function isClassExtendedWith($name) {
         // Winter hard codes behavior requirements sometimes
@@ -404,7 +404,7 @@ class Model extends BaseModel
             if (!$processed) {
                 $processed = TRUE;
 
-                $checked   = post('checked');
+                $checked   = post('checked'); // NULL if no checked column
                 foreach ($listEditable as $modelName => $models) {
                     foreach ($models as $id => $columns) {
                         if (!$checked || in_array($id, $checked)) {

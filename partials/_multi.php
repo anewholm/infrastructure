@@ -70,81 +70,101 @@ if (is_null($value)) {
     }
 }
 
-if (is_string($value)) {
-    $col   = $column->columnName;
-    // The relation associated with the column is invoked ($record->$col()).
-    // The related records are fetched as a Collection using the get() method.
-    // and then the valueFrom is applied, essentially re-creating the same array or string indirectly
-    $model = &$record;
-    if ($relation && $model->hasRelation($relation)) $model = $model->$relation;
-    $value = $model->$col;
-} else if (is_array($value)) {
-    // The $record is already the relation: model
-    $col   = $column->columnName;
-    $value = $record->$col;
-}
+if (!is_null($value)) {
+    if (is_string($value)) {
+        $col   = $column->columnName;
+        // The relation associated with the column is invoked ($record->$col()).
+        // The related records are fetched as a Collection using the get() method.
+        // and then the valueFrom is applied, essentially re-creating the same array or string indirectly
+        $model = &$record;
+        if ($relation && $model->hasRelation($relation)) $model = $model->$relation;
+        $value = $model->$col;
+    } else if (is_array($value)) {
+        // The $record is already the relation: model
+        $col   = $column->columnName;
+        $value = $record->$col;
+    }
 
-// Check that the value is now a collection
-if (!$value instanceof Collection) {
-    $valueType = (is_object($value) ? get_class($value) : gettype($value));
-    throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
-}
+    // Maybe it is actually an array!
+    if (is_array($value)) {
+        $value = new Collection($value);
+    }
 
-$count = $value->count();
-if ($count) {
-    $i          = 0;
-    $firstItem  = $value[0];
-    $classParts = explode('\\', get_class($firstItem));
-    $itemClass  = Str::kebab(end($classParts));
-    print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
-    $value->each(function ($model) use (&$isHTML, &$i, &$limit, &$total, $sum, $valueFrom, $action, $multiId, $useLinkedPopups) {
-        // Name resolution
-        $name = '';
-        if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
-        if (!$name) {
-            $noname = trans('acorn::lang.models.general.noname');
-            $name   = "&lt;$noname&gt;";
+    // Check that the value is now a collection
+    if (!$value instanceof Collection) {
+        $valueType = (is_object($value) ? get_class($value) : gettype($value));
+        throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
+    }
+
+    $count = $value->count();
+    if ($count) {
+        $i          = 0;
+        $firstItem  = $value[0];
+        $itemClass  = NULL;
+        if (is_object($firstItem)) {
+            $classParts = explode('\\', get_class($firstItem));
+            $itemClass  = Str::kebab(end($classParts));
+        } else {
+            $itemClass = gettype($firstItem);
         }
-        
-        // Output LI item
-        print('<li>');
-        $controller  = $model->controllerFullyQualifiedClass();
-        if ($useLinkedPopups) {
-            $dataRequestData = array(
-                'route'   => "$controller@$action",
-                'params'  => [$model->id],
-                'dataRequestUpdate' => array('multi' => $multiId),
-            );
-            $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
-            print("<a
-                data-handler='onPopupRoute'
-                data-request-data='$dataRequestDataEscaped'
-                data-control='popup'>"
-            );
+        print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
+        foreach ($value as $model) {
+            if (is_null($model)) continue;
+
+            // Name resolution
+            $name = $model;
+            if ($model instanceof Model) {
+                if ($model->hasAttribute($valueFrom)) $name = $model->$valueFrom;
+                if (!$name) {
+                    $noname = trans('acorn::lang.models.general.noname');
+                    $name   = "&lt;$noname&gt;";
+                }
+            }
+            
+            // Output LI item
+            print('<li>');
+            if ($model instanceof Model) {
+                $controller  = $model->controllerFullyQualifiedClass();
+                if ($useLinkedPopups) {
+                    $dataRequestData = array(
+                        'route'   => "$controller@$action",
+                        'params'  => [$model->id],
+                        'dataRequestUpdate' => array('multi' => $multiId),
+                    );
+                    $dataRequestDataEscaped = e(substr(json_encode($dataRequestData), 1, -1));
+                    print("<a
+                        data-handler='onPopupRoute'
+                        data-request-data='$dataRequestDataEscaped'
+                        data-control='popup'>"
+                    );
+                }
+            }
+            print($isHTML ? $name : e($name));
+            if ($model instanceof Model && $useLinkedPopups) print('</a>');
+            print('</li>');
+
+            if ($sum) {
+                $sumValue = $sum->getValueFromData($model);
+                if (is_numeric($sumValue)) $total = ($total ?: 0) + $sumValue;
+                else if ($sumValue instanceof CarbonInterval) $total = ($total ?: new CarbonInterval(0))->add($sumValue);
+            }
+
+            // False exists the loop
+            // TODO: Continue when $sum
+            $continue = (++$i < $limit);
+            if (!$continue) break;
+        };
+        print('</ul>');
+
+        if ($count > $limit) {
+            // Leave this "more" link to simply open the full record update screen
+            $more = e(trans('more...'));
+            print("<a class='more'>$more</a>");
+        } else {
+            if ($sum) print("<div class='multi-total'>$total</div>");
         }
-        print($isHTML ? $name : e($name));
-        if ($useLinkedPopups) print('</a>');
-        print('</li>');
-
-        if ($sum) {
-            $sumValue = $sum->getValueFromData($model);
-            if (is_numeric($sumValue)) $total = ($total ?: 0) + $sumValue;
-            else if ($sumValue instanceof CarbonInterval) $total = ($total ?: new CarbonInterval(0))->add($sumValue);
-        }
-
-        // False exists the loop
-        // TODO: Continue when $sum
-        $continue = (++$i < $limit);
-        return $continue;
-    });
-    print('</ul>');
-
-    if ($count > $limit) {
-        // Leave this "more" link to simply open the full record update screen
-        $more = e(trans('more...'));
-        print("<a class='more'>$more</a>");
     } else {
-        if ($sum) print("<div class='multi-total'>$total</div>");
+        print('-');
     }
 } else {
     print('-');

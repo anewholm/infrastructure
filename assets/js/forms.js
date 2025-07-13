@@ -107,6 +107,42 @@ $(document).ready(acorn_dynamicElements);
 $(window).on('ajaxUpdateComplete', acorn_dynamicElements);
 $(document).on('change', ':input', acorn_updateViewSelectionLink);
 
+function acorn_setAdvanced(show, delay) {
+    if (delay === undefined) delay = 0;
+
+    // Fields
+    var jAdvancedFields  = $('.form-group.advanced');
+    if (show) jAdvancedFields.slideDown(delay, function(){
+      jAdvancedFields.removeClass('hidden');
+    });
+    else jAdvancedFields.slideUp(delay, function(){
+      jAdvancedFields.addClass('hidden');
+    });
+
+    // Show/hide empty tabs
+    $('.nav-tabs').children('li').each(function() {
+      // We want to show/hide any tabs that
+      // only have advanced fields
+      // that are now hidden
+      var jLI  = $(this);
+      var id   = jLI.children('a[data-target]').attr('data-target');
+      var jTab = $(id);
+
+      // Tab contents disappear
+      var hasNormalFields = jTab.find('.form-group').not('.advanced').length;
+      if (!hasNormalFields) {
+        if (show) {
+          jLI.removeClass('advanced-hidden');
+          jLI.slideDown(delay, function(){
+            jLI.removeAttr('style');
+          });
+        } else jLI.slideUp(delay, function(){
+          jLI.addClass('advanced-hidden');
+        });
+      }
+    });
+}
+
 function acorn_ready(){
   // Permissions screen
   $('.permissioneditor > table').addClass('collapsable');
@@ -141,12 +177,25 @@ function acorn_ready(){
   });
 
   $('.action-functions #advanced').click(function(event){
-    $('.form-group.advanced').toggle('visibility');
+    // Show/hide fields
+    var jButton          = $(this);
+    var jAdvancedFields  = $('.form-group.advanced');
+    var fieldsAreVisible = jAdvancedFields.not('.hidden').length;
+
+    acorn_setAdvanced(!fieldsAreVisible, 400);
+
+    if (fieldsAreVisible) jButton.removeClass('shown');
+    else                  jButton.addClass('shown');
+
+    // That's quite enough of that
     event.stopPropagation();
     event.stopImmediatePropagation();
     event.preventDefault();
     return false;
   });
+
+  // Cookie remember advanced state
+  acorn_setAdvanced(false, 0);
 }
 $(document).ready(acorn_ready);
 

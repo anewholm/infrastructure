@@ -33,6 +33,7 @@
             'save_and_print'    => 'Rizgardike û Çap',
             'correct_and_print' => 'Lihevanîn û Çap',
             'print' => 'Çap',
+            'batch_print' => 'Çap bi şablonek',
             'backend_user_group' => 'Group',
             'backend_user' => 'Person',
             'from_backend_user_group' => 'From Group',

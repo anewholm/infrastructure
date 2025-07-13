@@ -35,6 +35,43 @@ Block::put('breadcrumb') ?>
                     class="btn btn-primary">
                     <?= e(trans('backend::lang.form.save')); ?>
                 </button>
+
+                <?php
+                    // Custom query string Save buttons with redirects
+                    // ?buttons={"plugin::lang.create_and_add": {
+                    //   redirect: "..."
+                    // }}
+                    if (isset($_REQUEST['buttons'])) {
+                        if ($buttons = json_decode($_REQUEST['buttons'])) {
+                            foreach ($buttons as $title => $buttonDefinition) {
+                                $titleEscaped    = e(trans($title));
+                                $redirectEscaped = e(is_string($buttonDefinition)
+                                    ? e($buttonDefinition)
+                                    : (isset($button['redirect'])
+                                        ? e($buttonDefinition['redirect'])
+                                        : '#'
+                                    )
+                                );
+                                $loadIndicator = e(trans('backend::lang.form.saving_name', ['name' => $modelLabelKey]));
+                                $cancelStandardRedirect = 'redirect: 0';
+
+                                print(<<<HTML
+                                    <button
+                                        type="button"
+                                        data-request="onSave"
+                                        data-request-data="$cancelStandardRedirect"
+                                        data-request-redirect="$redirectEscaped"
+                                        data-load-indicator="$loadIndicator"
+                                        class="btn btn-primary">
+                                        $titleEscaped
+                                    </button>
+HTML
+                                );    
+                            }
+                        }
+                    }
+                ?>
+
                 <button
                     type="button"
                     data-request="onSave"
@@ -44,6 +81,7 @@ Block::put('breadcrumb') ?>
                     class="btn btn-default">
                     <?= e(trans('backend::lang.form.save_and_close')); ?>
                 </button>
+
                 <button
                     type="button"
                     class="wn-icon-trash-o btn-icon danger pull-right"
@@ -51,6 +89,7 @@ Block::put('breadcrumb') ?>
                     data-load-indicator="<?= e(trans('backend::lang.form.deleting_name', ['name' => $modelLabelKey])); ?>"
                     data-request-confirm="<?= e(trans('backend::lang.form.confirm_delete')); ?>">
                 </button>
+
                 <span class="btn-text">
                     or <a href="<?= $controllerListUrl ?>"><?= e(trans('backend::lang.form.cancel')); ?></a>
                 </span>
