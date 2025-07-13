@@ -21,11 +21,11 @@ class PdfTemplate {
     protected $xQrCodeNode, $qrCodeHeightPX;
 
     public $comment;
-    public $identifier;
+    public $courseCode;
+    public $courseName;
     // Where the action should appear, like fields.yaml
     // create, update, index
     public $contexts = array(); 
-    public $type;
     public $title;
     public $templateLocale;
 
@@ -90,6 +90,17 @@ class PdfTemplate {
         return $this->forContext('index');
     }
 
+    public function details(): array
+    {
+        return array(
+            'acorn::lang.models.pdftemplate.title'      => $this->label(),
+            'acorn::lang.models.pdftemplate.coursecode' => $this->courseCode,
+            'acorn::lang.models.pdftemplate.coursename' => $this->courseName,
+            'acorn::lang.models.pdftemplate.locale'     => $this->templateLocale,
+        );
+    }
+
+
     public function loadTemplate(string $templateFilePath, string $dir = 'media'): DOMDocument
     {
         // Load template
@@ -115,8 +126,8 @@ class PdfTemplate {
         if ($xOfficeMETA = $this->getSingleNode('/office:document/office:meta')) {
             $comment = $this->getNodeValue('dc:description', $xOfficeMETA);
             $this->comment    = ($comment ? Yaml::parse($comment) : array());
-            $this->identifier = $this->getNodeValue('dc:identifier', $xOfficeMETA);
-            $this->type       = $this->getNodeValue('dc:type', $xOfficeMETA);
+            $this->courseCode = $this->getNodeValue('dc:identifier', $xOfficeMETA);
+            $this->courseName = $this->getNodeValue('dc:type', $xOfficeMETA);
             $this->title      = $this->getNodeValue('dc:title', $xOfficeMETA);
             $this->contexts   = array_filter(preg_split('/ *, */', $this->getNodeValue('dc:coverage', $xOfficeMETA)));
         }

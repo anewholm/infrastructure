@@ -89,7 +89,9 @@ class Controller extends BackendController
     // ------------------------------------------ Custom Actions
     public function qrcodescan(): string
     {
-        return '<div id="my-qr-reader"></div>';
+        // buttons={"Create and Scan another QR Code": "/backend/acorn/enrollment/courseentryrequirements/qrcodescan"}'
+        $buttons = (isset($_REQUEST['buttons']) ? e($_REQUEST['buttons']) : '');
+        return "<div id='my-qr-reader' buttons='$buttons'></div>";
     }
 
     // ------------------------------------------ Leaf models
@@ -122,6 +124,7 @@ class Controller extends BackendController
         $popupParams = (post('params') ?: array());
         $popupAction = 'export';
         $unqualifiedControllerName = $this->unqualifiedClassName();
+        $locale      = App::getLocale();
 
         // ------------------------------- Input checks
         if (!$template)
@@ -132,6 +135,20 @@ class Controller extends BackendController
         $model = &$list->model;
         if (!$model)
             throw new Exception('onListActionTemplate requires a list model');
+
+        // ------------------------------- Template details
+        $pdfTemplate = new PdfTemplate($template);
+        $pdfTemplateDetails = '<ul class="template-details">';
+        foreach ($pdfTemplate->details() as $transKey => $value) {
+            $labelEscaped = e(trans($transKey));
+            $valueEscaped = e($value);
+            $pdfTemplateDetails .= "<li><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
+        }
+        if ($pdfTemplate->templateLocale && $locale != $pdfTemplate->templateLocale) {
+            $warning = "locale($locale) is not the same as the Template locale($pdfTemplate->templateLocale)";
+            $pdfTemplateDetails .= "<li class='warning'><label>Warning</label>: $warning</li>";
+        }
+        $pdfTemplateDetails .= '</ul>';
 
         // ------------------------------- Build the Standard Export Form widget
         $widgetConfig = $this->makeConfig('~/modules/backend/behaviors/importexportcontroller/partials/fields_export.yaml');
@@ -152,16 +169,17 @@ class Controller extends BackendController
         // We remove the braces for correct data-request-data format
         // NOTE: json_encode() will surround everything in double quotes
         $dataRequestData = array(
-            'action'                => $popupAction,
-            'template'              => $template,
-            'params'                => $popupParams,
+            //'action'                => $popupAction,
+            'ExportOptions[template]' => $template,
+            'params'                  => $popupParams,
 
             'format_preset'       => "standard",
             'format_delimiter'    => ",",
             'format_enclosure'    => '"',
             'format_escape'       => "\\",
-            'export_columns[]'    => 'id',
+            'export_columns[]'    => ['id', 'course'],
             'visible_columns[id]' => "1",
+            'visible_columns[course]' => "1",
         );
         $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
 
@@ -193,6 +211,8 @@ class Controller extends BackendController
             </div>
             <div class="modal-body">
                 $formOpen
+                $pdfTemplateDetails
+                <hr/>
                 $formCustomHtml
                 $formClose
             </div>

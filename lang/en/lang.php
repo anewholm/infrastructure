@@ -35,6 +35,7 @@
             'save_and_print' => 'Save and Print',
             'correct_and_print' => 'Save correction and print',
             'print' => 'Print',
+            'batch_print' => 'Batch Print',
             'create_and_add_new' => 'Create and add New',
             'backend_user_group' => 'Group',
             'backend_user' => 'Person',
@@ -44,6 +45,7 @@
             'leaf_id' => 'Leaf ID',
             'qrcode_name' => 'QR Code name',
             'scan_qrcode' => 'Scan A QRCode',
+            'save_and_scan_qrcode' => 'Save and Scan another QR Code',
             'find_by_qrcode' => 'Find by QRCode',
             'find_in_list' => 'Find in list',
             'redirect' => 'Go to record',
@@ -84,7 +86,13 @@
             'compression' => 'Compression',
             'export_output_format' => '1. Export Output Format',
             'select_models' => '2. Select data',
-        ]
+        ],
+        'pdftemplate' => [
+            'title' => 'Template Title',
+            'coursecode' => 'Organisation Code',
+            'coursename' => 'Organisation Name',
+            'locale'     => 'Template locale',
+        ],
     ],
     'errors' => [
         'sql' => [

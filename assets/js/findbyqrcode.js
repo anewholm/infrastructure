@@ -9,6 +9,8 @@ function onScanSuccess(decodeText, decodeResult) {
     var actions       = actionsString.split(",");
     var listSelector  = jQrScanner.attr("list-selector");
     var formSelector  = jQrScanner.attr("form-selector");
+    var jQrReader     = $("#my-qr-reader")
+    var buttons       = jQrReader.attr('buttons');
 
     var i = 0;
     var actionSuccess, action, isLast;
@@ -44,7 +46,7 @@ function onScanSuccess(decodeText, decodeResult) {
             }
 
             case "redirect": {
-                document.location = controllerURL;
+                document.location = controllerURL + '?buttons=' + buttons;
                 actionSuccess     = true;
                 break;
             }
