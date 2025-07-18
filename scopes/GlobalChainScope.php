@@ -11,8 +11,15 @@ use Flash;
 
 class GlobalChainScope implements Scope
 {
-    public static function globalScopeRelations(Model $model): array
+    // TODO: Re-organise this class to just recurse once per model
+    // collecting builder joins on the way
+    // and only applying them back at the root call if necessary
+    public const IS_THIS = TRUE;
+
+    // ------------------------------------ Direct situation on this model
+    public static function globalScopeRelationsOn(Model $model): array
     {
+        // These can branch in to a tree of multiple global scopes
         $globalScopeRelations = array();
 
         $relationConfigs = $model->belongsTo + $model->hasMany;
@@ -28,33 +35,12 @@ class GlobalChainScope implements Scope
         return $globalScopeRelations;
     }
 
-    public static function globalScopeClasses(Model $model, array $fromEndChainModels = NULL): array
-    {
-        // Recursively get the Models on the ends of the global-scope relation chains
-        // Includes this $model parameter, if a $globalScope
-        $endChainModels       = array();
-        if (property_exists($model, 'globalScope') && $model::$globalScope)
-            $endChainModels[get_class($model)] = $model;
-        
-        $globalScopeRelations = self::globalScopeRelations($model);
-        foreach ($globalScopeRelations as $relation) {
-            $relatedModel   = $relation->getRelated();
-            $relatedClass   = get_class($relatedModel);
-            if (isset($fromEndChainModels[$relatedClass])) {
-                $chain = implode(' => ', array_keys($fromEndChainModels));
-                throw new Exception("Infinite global-scope recursion on $chain");
-            }
-            $endChainModels = array_merge($endChainModels, self::globalScopeClasses($relatedModel, $endChainModels));
-        }
-
-        return $endChainModels;
-    }
-
-    public static function chainScopes(Model $model): array
+    protected static function ourGlobalChainScopesOn(Model $model): array
     {
         // Get _our_ scopes on this $model
+        // Not recursive at all
         $chainScopes = array();
-        if ($allChainScopes = $model->getGlobalScopes()) { // For calling class
+        if ($allChainScopes = $model->getGlobalScopes()) {
             foreach ($allChainScopes as $class => $chainScope) {
                 if ($chainScope instanceof Closure) {
                     // We do not honour Closures
@@ -74,52 +60,115 @@ class GlobalChainScope implements Scope
         return $chainScopes;
     }
 
-    public function shouldApply(Builder $builder, Model $model): bool
+    public static function getSettingFor(Model $model): string|NULL
     {
-        // Only works out if the Final Scope has a setting or not
-        // pre-Query, $model is empty
+        $class       = get_class($model);
+        $settingName = "$class::globalScope";
+        return Session::get($settingName);
+    }
+
+    public static function hasSessionFor(Model $model, bool $isThis = FALSE): bool
+    {
+        // Usually called with an apply() override:
+        // public function shouldApply(Builder $builder, Model $model): bool {
+        //     return self::hasSessionFor($builder, $model);
+        // }
+        // Returing TRUE causes the scope chain to be recursively applied
+        $setting = self::getSettingFor($model);
+        return ($isThis
+            ? ($setting && $model->id == $setting)
+            : (bool) $setting
+        );
+    }
+
+    // --------------------------------------------- Recursive
+    // Searching down global-scope relations to the end
+    public static function isEndSelectedFrom(Model $model): bool
+    {
+        $isSelected = FALSE;
+        foreach (self::endGlobalScopeClasses($model) as $scopeModel) {
+            $setting    = self::getSettingFor($scopeModel);
+            $isSelected = ($scopeModel->id == $setting);
+            if ($isSelected) break;
+        }
+
+        return $isSelected;
+    }
+
+    public static function endGlobalScopeClasses(Model $model, array $fromEndChainModels = NULL): array
+    {
+        // Recursive
+        // Get the (existing) Models on the ends of the global-scope relation chain(s)
+        // Includes this $model parameter, if a $globalScope
+        $endChainModels       = array();
+        if (property_exists($model, 'globalScope') && $model::$globalScope)
+            $endChainModels[get_class($model)] = $model;
+        
+        $globalScopeRelations = self::globalScopeRelationsOn($model);
+        foreach ($globalScopeRelations as $name => $relation) {
+            if ($model->exists) $relatedModel = $model->{$name};
+            else                $relatedModel = $relation->getRelated();
+            $relatedClass   = get_class($relatedModel);
+            if (isset($fromEndChainModels[$relatedClass])) {
+                $chain = implode(' => ', array_keys($fromEndChainModels));
+                throw new Exception("Infinite global-scope recursion on $chain");
+            }
+            $endChainModels = array_merge($endChainModels, self::endGlobalScopeClasses($relatedModel, $endChainModels));
+        }
+
+        return $endChainModels;
+    }
+
+    public function shouldApply(Model $model, bool $isThis = FALSE): bool
+    {
+        // Recursive
+        // Works out if the Final Scope(s) have a setting or not
+        // override shouldApply() on an end GlobalScope to return the setting
+        // usually with hasSessionFor()
         $shouldApply = FALSE;
-        $globalScopeRelations = self::globalScopeRelations($model);
-        foreach ($globalScopeRelations as $relation) {
+        $globalScopeRelations = self::globalScopeRelationsOn($model);
+        foreach ($globalScopeRelations as $name => $relation) {
             // Chain all global_scope relations
             // For calling class
-            $relatedModel = $relation->getRelated();
-            $chainScopes  = self::chainScopes($relatedModel);
-            foreach ($chainScopes as $chainScope) {
-                // Inherit your Scope from GlobalChainScope to activate this chain
-                $shouldApply = $chainScope->shouldApply($builder, $relatedModel);
+            // We traverse the existing models if possible, for $isThis
+            if ($model->exists) $relatedModel = $model->{$name};
+            else                $relatedModel = $relation->getRelated();
+
+            // TODO: It's possible that it has no model set, what to do?
+            if ($relatedModel) {
+                $chainScopes  = self::ourGlobalChainScopesOn($relatedModel);
+                foreach ($chainScopes as $chainScope) {
+                    // Inherit your Scope from GlobalChainScope to activate this chain
+                    $shouldApply = $chainScope->shouldApply($relatedModel, $isThis);
+                    // TODO: This returns the first positive scope setting only, should return...?
+                    if ($shouldApply) break;
+                }
             }
+            if ($shouldApply) break;
         }
         
         return $shouldApply;
     }
 
-    public static function hasSession(Model $model): bool
-    {
-        // Usually called with an apply() override:
-        // public function shouldApply(Builder $builder, Model $model): bool {
-        //     return self::hasSession($builder, $model);
-        // }
-        // Returing TRUE causes the scope chain to be recursively applied
-        $class       = get_class($model);
-        $settingName = "$class::globalScope";
-        $setting     = Session::get($settingName);
-        return (bool) $setting;
-    }
-
     public static function applySession(Builder $builder, Model $model): bool 
     {
+        // From this model only
+        // Not recursive at all
         // Usually called with an apply() override:
         // public function apply(Builder $builder, Model $model): bool {
         //     return self::applySession($builder, $model);
         // }
         // Returing TRUE causes the scope chain to be recursively applied
-        $class       = get_class($model);
-        $settingName = "$class::globalScope";
-        $setting     = Session::get($settingName);
+        $setting = self::getSettingFor($model);
 
         if ($setting) {
-            $builder->where("$model->table.id", '=', $setting);
+            if (isset($model::$globalScope::$scopingFunction)) {
+                $scopingFunction = $model::$globalScope::$scopingFunction;
+                $settingEscaped  = str_replace("'", "\\'", $setting);
+                $builder->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
+            } else {
+                $builder->where("$model->table.id", '=', $setting);
+            }
 
             // TODO: Allow NULLs on the first join to show Models without an explicit setting
             /*
@@ -147,12 +196,12 @@ class GlobalChainScope implements Scope
         // Follow global_scope => TRUE relation(s)
         // This is overridden by
         //   YearScope::apply(...)
-        if ($this->shouldApply($builder, $model)) 
+        if ($this->shouldApply($model)) 
             $this->applyRecursive($builder, $model);
     }
 
     public function applyRecursive(Builder $builder, Model $model): void {
-        $globalScopeRelations = self::globalScopeRelations($model);
+        $globalScopeRelations = self::globalScopeRelationsOn($model);
         foreach ($globalScopeRelations as $relation) {
             // TODO: $relation->addConstraints();
             // TODO: At least $relation->getQualifiedForeignKeyName()
@@ -168,7 +217,7 @@ class GlobalChainScope implements Scope
             
             // Chain all global_scope relations
             // For calling class
-            $chainScopes  = self::chainScopes($relatedModel);
+            $chainScopes  = self::ourGlobalChainScopesOn($relatedModel);
             foreach ($chainScopes as $chainScope) {
                 // Inherit your Scope from GlobalChainScope to activate this chain
                 $chainScope->apply($builder, $relatedModel);

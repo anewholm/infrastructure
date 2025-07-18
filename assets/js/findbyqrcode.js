@@ -6,11 +6,25 @@ function onScanSuccess(decodeText, decodeResult) {
     var jQrScanner    = $(this);
     var controllerURL = decodeText;
     var actionsString = jQrScanner.attr("actions");
-    var actions       = actionsString.split(",");
+    var actions       = (actionsString ? actionsString.split(",") : ['redirect']);
     var listSelector  = jQrScanner.attr("list-selector");
     var formSelector  = jQrScanner.attr("form-selector");
     var jQrReader     = $("#my-qr-reader")
     var buttons       = jQrReader.attr('buttons');
+    var hasQuery      = controllerURL.indexOf('?');
+    var extraQuery    = (hasQuery ? '&' : '?');
+
+    if (buttons) controllerURL += extraQuery + 'buttons=' + buttons;
+
+    // Analyse the controller domain and protocol
+    // Morph them to this domain for development purposes
+    if (true) {
+        var controllerLocation  = document.createElement('a');
+        controllerLocation.href = controllerURL;
+        controllerLocation.protocol = document.location.protocol;
+        controllerLocation.host     = document.location.host;
+        controllerURL = controllerLocation.href;
+    }
 
     var i = 0;
     var actionSuccess, action, isLast;
@@ -46,7 +60,7 @@ function onScanSuccess(decodeText, decodeResult) {
             }
 
             case "redirect": {
-                document.location = controllerURL + '?buttons=' + buttons;
+                document.location = controllerURL;
                 actionSuccess     = true;
                 break;
             }

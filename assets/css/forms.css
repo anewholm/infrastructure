@@ -15,17 +15,26 @@ body .field-multilingual .ml-btn {
   margin-top: 0px;
 }
 
-.template-details label {
+.template-details label,
+.list-details label {
     display: inline;
     font-weight: bold;
 }
+.template-details .warning label,
+.list-details .warning label {
+    color: #f00;
+}
 
-.toolbar-primary .form-group {
+.control-toolbar .form-group {
     padding-bottom: 0px;
 }
-.toolbar-primary .form-group .select2-container {
+.control-toolbar .toolbar-primary .form-group .select2-container {
     min-width: 250px;
 }
+.control-toolbar .select2-results__options > li:first-child {
+    color: #aaa;
+}
+
 .btn:not(.btn-primary):focus, .btn:not(.btn-primary):hover {
     color: rgb(0, 0, 0);
 }
@@ -73,6 +82,11 @@ body .field-multilingual .ml-btn {
 
 .control-breadcrumb .counter {
     position: inherit;
+}
+
+.template-thumbnail {
+    float:right;
+    width:450px;
 }
 
 #advanced.shown {

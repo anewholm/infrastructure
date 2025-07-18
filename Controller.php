@@ -1,11 +1,15 @@
 <?php namespace Acorn;
 
-use BackendMenu;
 use Backend\Classes\Controller as BackendController;
 use Backend\Behaviors\ListController;
-use Backend\Classes\FormTabs;
+use Backend\Widgets\Form as FormWidget;
+
 use Illuminate\Support\Facades\Event;
-use System\Classes\PluginManager;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Database\QueryException;
+
+use Winter\Storm\Html\Helper as HtmlHelper;
+
 use App;
 use DB;
 use File;
@@ -17,15 +21,12 @@ use ReflectionClass;
 use Flash;
 use \Exception;
 use Str;
-use Winter\Storm\Html\Helper as HtmlHelper;
-use \Backend\Widgets\Form as FormWidget;
 
 use Acorn\User\Models\User;
 use Acorn\Events\DataChange;
 use Acorn\Events\UserNavigation;
 use Acorn\ServiceProvider;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Database\QueryException;
+use Acorn\User\Models\Language;
 
 /**
  * Computer Product Backend Controller
@@ -54,6 +55,11 @@ class Controller extends BackendController
             // TODO: attach the FileUpload widget instead
             $controller->addJs('~/modules/backend/formwidgets/fileupload/assets/js/fileupload.js');
             $controller->addCss('~/modules/backend/formwidgets/fileupload/assets/css/fileupload.css');
+
+            // For export functions
+            // TODO: Conditionally load
+            $controller->addJs('~/modules/backend/behaviors/importexportcontroller/assets/js/winter.export.js', 'core');
+            $controller->addCss('~/modules/backend/behaviors/importexportcontroller/assets/css/export.css', 'core');
 
             // Include general plugin CSS/JS for this controller
             // TODO: This plugin.css should be done in the Plugin, with the same event name
@@ -131,32 +137,72 @@ class Controller extends BackendController
             throw new Exception('onListActionTemplate requires an explicit template');
         if (!property_exists($this->widget, 'list'))
             throw new Exception('onListActionTemplate requires a list widget');
-        $list  = &$this->widget->list;
-        $model = &$list->model;
+        $list   = &$this->widget->list;
+        $filter = &$this->widget->listFilter;
+        $model  = &$list->model;
         if (!$model)
             throw new Exception('onListActionTemplate requires a list model');
 
+        // ------------------------------- List and filter details
+        $recordCount  = $list->prepareQuery()->count();
+        $timeMins     = ceil($recordCount * 4 / 60);
+        $warning      = ($recordCount > 2000 ? 'warning' : '');
+        $listDetails  = '<ul class="list-details">';
+        $listDetails .= "<li class='$warning'><label>Record count</label>: $recordCount <i class='duration'>($timeMins minutes)</i></li>";
+        $filterNames  = array();
+        $filterLanguage    = NULL;
+        $hasLanguageFilter = FALSE;
+        foreach ($filter->getScopes() as $name => &$scope) {
+            if ($scope->value) {
+                array_push($filterNames, $name);
+            }
+            if (isset($scope->config['modelClass']) && $scope->config['modelClass'] == Language::class) {
+                $hasLanguageFilter = TRUE;
+                if ($scope->value && is_array($scope->value)) {
+                    $id = array_keys($scope->value)[0];
+                    $filterLanguage = Language::find($id);
+                }
+            }
+        }
+        $filterNamesString = implode(', ', $filterNames);
+        if ($filterNames) $listDetails .= "<li><label>Filter(s)</label>: $filterNamesString</li>";
+        else              $listDetails .= "<li class='warning'><label>Filter(s)</label>: none</li>";
+        $listDetails .= '</ul>';
+
         // ------------------------------- Template details
         $pdfTemplate = new PdfTemplate($template);
-        $pdfTemplateDetails = '<ul class="template-details">';
+        $pdfTemplateDetails = '';
+        if ($storageThumbnailUrl = $pdfTemplate->getTemplateThumbnail()) {
+            $pdfTemplateDetails .= "<img class='template-thumbnail' src='$storageThumbnailUrl' />";
+        }
+        $pdfTemplateDetails .= '<ul class="template-details">';
         foreach ($pdfTemplate->details() as $transKey => $value) {
             $labelEscaped = e(trans($transKey));
             $valueEscaped = e($value);
             $pdfTemplateDetails .= "<li><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
         }
-        if ($pdfTemplate->templateLocale && $locale != $pdfTemplate->templateLocale) {
-            $warning = "locale($locale) is not the same as the Template locale($pdfTemplate->templateLocale)";
-            $pdfTemplateDetails .= "<li class='warning'><label>Warning</label>: $warning</li>";
+        if ($pdfTemplate->templateLocale && $hasLanguageFilter) {
+            if (!$filterLanguage) {
+                $warning = "Template locale is only <b>$pdfTemplate->templateLocale</b> but no language filter is active";
+                $pdfTemplateDetails .= "<li class='warning'><label>Warning</label>: $warning</li>";
+            } else if ($filterLanguage->locale != $pdfTemplate->templateLocale) {
+                $warning = "Template locale <b>$pdfTemplate->templateLocale</b> is not the same as the language filter selection <b>$filterLanguage->locale</b>";
+                $pdfTemplateDetails .= "<li class='warning'><label>Warning</label>: $warning</li>";
+            }
         }
         $pdfTemplateDetails .= '</ul>';
 
         // ------------------------------- Build the Standard Export Form widget
-        $widgetConfig = $this->makeConfig('~/modules/backend/behaviors/importexportcontroller/partials/fields_export.yaml');
-        $widgetConfig->model = $model;
-        $widgetConfig->alias = 'exportUploadForm';
-        $formExport = $this->makeWidget('Backend\Widgets\Form', $widgetConfig);
+        // $widgetConfig = $this->makeConfig('~/modules/backend/behaviors/importexportcontroller/partials/fields_export.yaml');
+        // $widgetConfig->model = $model;
+        // $widgetConfig->alias = 'exportUploadForm';
+        // $formExport = $this->makeWidget('Backend\Widgets\Form', $widgetConfig);
+        // $formExportHtml  = $formExport->render();
 
         // ------------------------------- Build the Custom Form widget
+        // TODO: The model for the form should be the BatchPrint edplort model
+        // with the tmeplate already set
+        // Not the actual Certificate model to be printed
         $configDir    = '$/../modules/acorn/behaviors/batchprintcontroller/partials';
         $fieldsYaml   = 'fields_export_direct';
         $widgetConfig = $this->makeConfig("$configDir/$fieldsYaml.yaml");
@@ -168,18 +214,10 @@ class Controller extends BackendController
         // Associated Field updates on success
         // We remove the braces for correct data-request-data format
         // NOTE: json_encode() will surround everything in double quotes
+        // TODO: Move this field in to the form.yaml
         $dataRequestData = array(
-            //'action'                => $popupAction,
             'ExportOptions[template]' => $template,
             'params'                  => $popupParams,
-
-            'format_preset'       => "standard",
-            'format_delimiter'    => ",",
-            'format_enclosure'    => '"',
-            'format_escape'       => "\\",
-            'export_columns[]'    => ['id', 'course'],
-            'visible_columns[id]' => "1",
-            'visible_columns[course]' => "1",
         );
         $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
 
@@ -196,12 +234,23 @@ class Controller extends BackendController
         $eventJs   = 'popup';
         $initJs    = "$('body > .control-popup').trigger('$eventJs');";
         
-        $formOpen  = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
-        //$formExportHtml  = $formExport->render();
+        // Winter\Storm\Html\FormBuilder
+        // The @action makes the onExport AJAX post to the ../export controller
+        $formOpen  = Form::ajax('onExportLoadForm', [
+            'class' => 'layout popup-form', 
+            'data-request-url'  => $postUrl,
+            'data-request-data' => $dataRequestDataString,
+        ]); 
         $formCustomHtml  = $formCustom->render();
         $formClose = Form::close();
         
-        // TODO: Encapsulate popup form display in a partial!
+        // These attributes all work with the @data-control - @data-handler system 
+        // @data-load-indicator='$popupTitle...' does not seem to do anything
+        // NOTE: It is important that this main form remains 
+        // and it has an @id=exportColumns field
+        // because the export AJAX does this:
+        //     var $form = $('#exportColumns').closest('form')
+        //     $form.request('onExport', {...})
         return <<<HTML
             <div class="modal-header compact">
                 <button type="button" class="close" data-dismiss="popup">&times;</button>
@@ -212,27 +261,22 @@ class Controller extends BackendController
             <div class="modal-body">
                 $formOpen
                 $pdfTemplateDetails
-                <hr/>
+                $listDetails
+                <hr id="exportColumns" class="clear"/>
                 $formCustomHtml
                 $formClose
             </div>
             <div class="modal-footer">
-                <button
-                    type='submit'
+                <a
                     data-control="popup"
-                    data-request-url='$postUrl'
-                    data-request='onExportLoadForm'
+                    data-handler="onExportLoadForm"
                     data-request-form='.modal-body form'
-                    data-request-data='$dataRequestDataString'
-                    data-hotkey='ctrl+s, cmd+s'
-                    data-load-indicator='$popupTitle...'
-                    data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
-                    data-dismiss='popup'
                     class='btn btn-primary'
-                >
-                    $actionName
-                </button>
+                    href='javascript:;'
+                >$actionName</a>
+
                 <button type='button' data-dismiss='popup' class='btn btn-default'>$closeName</button>
+                
                 <script>$initJs</script>
             </div>
 HTML;

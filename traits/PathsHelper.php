@@ -62,6 +62,14 @@ Trait PathsHelper {
         return $fullyQualifiedClassName;
     }
 
+    protected function dotName(bool $withModel = FALSE, Object $object = NULL): string
+    {
+        $class       = $this->fullyQualifiedClassName($object);
+        $aClass      = explode('\\', $class);
+        if (!$withModel) $aClass = array_filter($aClass, function($value){return $value != 'Models';});
+        return strtolower(implode('.', $aClass));
+    }
+
     protected function pluginPathPartAuthorPlugin(Object $object = NULL): string
     {
         $class       = $this->fullyQualifiedClassName();
@@ -99,7 +107,7 @@ Trait PathsHelper {
     }
 
     // ----------------------------------------- Translation
-    public function translationDomainModel(string $name, Model|NULL $model = NULL): string
+    public function translationDomainModel(string $name = 'label', Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
         $modelName = $this->lowerCaseName($model);
@@ -107,7 +115,7 @@ Trait PathsHelper {
         return "$authorDotPlugin::lang.models.$modelName.$name";
     }
 
-    public function translationDomainPlugin(string $name, Model|NULL $model = NULL): string
+    public function translationDomainPlugin(string $name = 'label', Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
         $authorDotPlugin = $model->pluginAuthorDotPlugin(); // acorn.lojistiks
@@ -383,6 +391,16 @@ Trait PathsHelper {
         $unqualifiedTableName         = preg_replace('/^[^.]+\./', '', $tableName);
         if ($unqualifiedClassTableName != $unqualifiedTableName) throw new Exception("$tableName => $class => $unqualifiedClassTableName does not match");
         return $model;
+    }
+
+    // ----------------------------------------- Permissions names
+    public function permissionFQN(string|array $qualifier = NULL): string
+    {
+        if (is_array($qualifier)) $qualifier = implode('_', $qualifier);
+
+        $permissionFQN = $this->dotName(); // Without Model
+        if ($qualifier) $permissionFQN .= "_$qualifier";
+        return $permissionFQN;
     }
 
     // ----------------------------------------- Column names
