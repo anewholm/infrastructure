@@ -1,33 +1,54 @@
 <?php
 use Acorn\Scopes\GlobalChainScope;
+use Backend\Facades\BackendAuth;
 
 // Only works for lists at the moment
 if (isset($this->controller->widget->list->model)) {
     $listModel          = $this->controller->widget->list->model;
-    $globalScopeClasses = GlobalChainScope::globalScopeClasses($listModel);
+    $globalScopeClasses = GlobalChainScope::endGlobalScopeClasses($listModel);
+    $user = BackendAuth::user();
     
     if ($globalScopeClasses) {
         // TODO: Translation
         foreach ($globalScopeClasses as $classFQN => $model) {
-            $classParts  = explode('\\', $classFQN);
-            $class       = end($classParts);
             $settingName = "$classFQN::globalScope";
             $setting     = Session::get($settingName);
-            $none        = "No $class";
+            $classLabel  = trans($model->translationDomainModel());
+            $noLabel     = trans('system::lang.plugins.check_no');
+            $noneLabel   = e("$noLabel $classLabel");
+
+            // TODO: Permissions check globalscope.view & globalscope.change
+            // e.g. acorn.university.academicyears.globalscope.view|change
+            $hasPermissions = (method_exists($model, 'permissionFQN'));
+            $canView   = (!$hasPermissions || $user->hasPermission($model->permissionFQN(['globalscope', 'view'])));
+            $canChange = (!$hasPermissions || $user->hasPermission($model->permissionFQN(['globalscope', 'change'])));
             
-            // <select>or
-            print(<<<HTML
-                <form><select name="$settingName"
-                    data-request="onGlobalScopeChange"
-                >
+            if ($canView) {
+                // <select>or
+                $disabled = ($canChange ? '' : 'disabled="disabled"');
+                print(<<<HTML
+                    <form
+                        data-request='onGlobalScopeChange'
+                    >
+                        <input type="submit" value="submit" class="hidden"/>
+                        <div class="form-group dropdown-field is-required select-and-go" data-field-name="$settingName">
+                            <select 
+                                id="$settingName" 
+                                $disabled
+                                autocomplete="off" 
+                                name="$settingName" 
+                                class="form-control custom-select select2-hidden-accessible"
+                                required="required"
+                            >
+                                <option value="0">$noneLabel</option>
 HTML
-            );
-            print("<option value=''>$none</option>");
-            foreach ($classFQN::withoutGlobalScopes()->get() as $model) {
-                $selected = ($setting == $model->id ? 'selected' : '');
-                print("<option value='$model->id' $selected>$model->name</option>");
+                );
+                foreach ($classFQN::withoutGlobalScopes()->get() as $model) {
+                    $selected = ($setting == $model->id ? 'selected="1"' : '');
+                    print("<option value='$model->id' $selected>$model->name</option>");
+                }
+                print("</select></div></form>");
             }
-            print("</select></form>");
         }
     }
 }

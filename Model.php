@@ -2,64 +2,37 @@
 
 use Winter\Storm\Database\Model as BaseModel;
 use Winter\Storm\Database\Pivot;
-use BackendAuth;
-use \Backend\Models\User;
-use \Backend\Models\UserGroup;
-use ApplicationException;
 use Winter\Storm\Support\Facades\Schema;
-use Illuminate\Support\Facades\Redirect;
 use Winter\Storm\Exception\ValidationException;
+use Winter\Storm\Database\TreeCollection;
 
-use Illuminate\Support\Str;
-use Acorn\Builder;
-use Acorn\Collection;
-
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use \Acorn\Relationships\HasManyDeep;
-
 use Illuminate\Database\QueryException;
-use Winter\Storm\Database\QueryBuilder;
-use Acorn\Scopes\GlobalChainScope;
-use DB;
-use Request;
-use Config;
-use Carbon\Carbon;
-
-use BadMethodCallException;
-use Illuminate\Database\Eloquent\RelationNotFoundException;
-use InvalidArgumentException;
-
-use Illuminate\Support\Facades\Route;
-use Backend\Classes\BackendController;
-use Acorn\BackendRequestController;
-
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
-use Request as BaseRequest;
 
-// Allowed __get/set() caller classes
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Winter\Storm\Router\Helper;
-use Backend\Widgets\Lists;
-use Backend\Classes\ListColumn;
-use Backend\Widgets\Form;
-use Backend\Classes\FormField;
-use Backend\Behaviors\FormController;
-use Winter\Storm\Database\TreeCollection;
-use Backend\Widgets\Filter;
-use \Acorn\Backendlocalization\Class\TranslateBackend;
-
-use Exception;
+use Str;
+use BackendAuth;
+use DB;
+use Request;
 use Flash;
 
+use Exception;
+use InvalidArgumentException;
+
+// Allowed __get/set() caller classes
+use Backend\Behaviors\FormController;
+
+use Acorn\Relationships\HasManyDeep;
+use Acorn\Backendlocalization\Class\TranslateBackend;
+use Acorn\Builder;
+use Acorn\Collection;
+use Acorn\BackendRequestController;
 use Acorn\Events\UserNavigation;
-use Acorn\Events\DataChange;
 use Acorn\Events\ModelBeforeSave;
 use Acorn\Events\ModelAfterSave;
 use Acorn\Models\Server;
+use Acorn\Scopes\GlobalChainScope;
 
 /*
 class Saving {
@@ -884,6 +857,13 @@ SQL;
         return $this->parent?->id;
     }
 
+    public function getParentIdAttribute()
+    {
+        // When there is a globalScope in action on NestedTrees
+        // we need to fake chroot() using a NULL parent
+        return (GlobalChainScope::isEndSelectedFrom($this) ? NULL : $this->attributes['parent_id']);
+    }
+
     public function getChildren()
     {
         $this->load('children');
@@ -959,23 +939,24 @@ SQL;
         return $list;
     }
 
-    public function actionFunctions(string $type = NULL, string $fnName = NULL): array {
-        // Direct model action functions
+    public function actionFunctions(string $typeLimit = NULL, string $fnName = NULL): array {
+        // Direct (this) model action functions
         $actionFunctions = ($this->actionFunctions ?: array());
         foreach ($actionFunctions as $name => &$actionFunctionDefinition) {
-            $condition = $actionFunctionDefinition['condition'] ?? NULL; 
-            if ((  is_null($type) 
-                || (isset($actionFunctionDefinition['type']) && $type == $actionFunctionDefinition['type'])
-                || (!isset($actionFunctionDefinition['type']) && $type == 'row')
-                )
-                && (!$condition || $this::where('id', $this->id)->whereRaw($condition)->count() != 0)
+            $type = $actionFunctionDefinition['type'] ?? NULL;
+            if (   is_null($typeLimit) 
+                || ( $type && $typeLimit == $type)
+                || (!$type && $typeLimit == 'row')
             ) {
-                // Populate the Model/Id for correct lookup later
-                $actionFunctionDefinition['model']    = get_class($this);
-                $actionFunctionDefinition['model_id'] = $this->id;
-            } else {
-                unset($actionFunctions[$name]);
-            }
+                $condition = $actionFunctionDefinition['condition'] ?? NULL;
+                if ($condition && !$this->exists) 
+                    throw new Exception('Model does not exist during row type condition evaluation');
+                if (!$condition || $this->whereRaw($condition)->count() != 0) {
+                    // Populate the Model/Id for correct lookup later
+                    $actionFunctionDefinition['model']    = get_class($this);
+                    $actionFunctionDefinition['model_id'] = $this->id;
+                } else unset($actionFunctions[$name]);
+            } else unset($actionFunctions[$name]);
         }
 
         // Inherit 1to1 BelongsTo relations model action functions
@@ -987,17 +968,21 @@ SQL;
                         // Existing actions take precedence
                         // Write the sub-model id
                         foreach ($relatedModel->actionFunctions as $name => &$actionFunctionDefinition) {
-                            $condition = $actionFunctionDefinition['condition'] ?? NULL;
-                            if ((  is_null($type) 
-                                || (isset($actionFunctionDefinition['type']) && $type == $actionFunctionDefinition['type'])
-                                || (!isset($actionFunctionDefinition['type']) && $type == 'row')
-                                )
-                                && (!$condition || $relatedModel::where('id', $relatedModel->id)->whereRaw($condition)->count() != 0)
+                            $type = $actionFunctionDefinition['type'] ?? NULL;
+                            
+                            if (   is_null($typeLimit) 
+                                || ( $type && $typeLimit == $type)
+                                || (!$type && $typeLimit == 'row')
                             ) {
-                                // Populate the Model/Id for correct lookup later
-                                $actionFunctionDefinition['model']    = get_class($relatedModel);
-                                $actionFunctionDefinition['model_id'] = $relatedModel->id;
-                                $actionFunctions[$name] = $actionFunctionDefinition;
+                                $condition = $actionFunctionDefinition['condition'] ?? NULL;
+                                if ($condition && !$relatedModel->exists) 
+                                    throw new Exception('Related Model does not exist during row type condition evaluation');
+                                if (!$condition || ($relatedModel->whereRaw($condition)->count() != 0)) {
+                                    // Populate the Model/Id for correct lookup later
+                                    $actionFunctionDefinition['model']    = get_class($relatedModel);
+                                    $actionFunctionDefinition['model_id'] = $relatedModel->id;
+                                    $actionFunctions[$name] = $actionFunctionDefinition;
+                                }
                             }
                         }
                     }

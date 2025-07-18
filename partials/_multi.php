@@ -9,10 +9,18 @@ if (!isset($record)) throw new Exception("_multi.php is a column partial only");
 $multiId    = "$record->id-$column->columnName";
 $multiClass = Str::kebab($column->columnName);
 $isNested   = (strstr($column->columnName, '[') !== FALSE);
-// Custom config settings
-$limit      = (isset($column->config['limit'])  ? $column->config['limit']  : 4);
-$action     = (isset($column->config['action']) ? $column->config['action'] : 'update');
-$useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->config['use-linked-popups'] : FALSE);
+
+// --------------------------- Custom config settings
+$multiConfig = (isset($column->config['multi']) ? $column->config['multi'] : array());
+$sum         = (isset($multiConfig['sum'])   ? new ListColumn($multiConfig['sum'], '') : FALSE);
+$limit       = (isset($multiConfig['limit']) ? $multiConfig['limit']  : 4);
+$isHTML      = (isset($multiConfig['html']) && $multiConfig['html']);
+$modelClass  = (isset($multiConfig['model']) ? $multiConfig['model'] : NULL);
+
+// TODO: Linked popups for list view are currently not being used
+$useLinkedPopups = (isset($multiConfig['use-linked-popups']) ? $multiConfig['use-linked-popups'] : FALSE);
+$action          = (isset($multiConfig['action']) ? $multiConfig['action'] : 'update');
+
 // We do not respect the values passed in value
 // instead, we create a collection and re-apply the valueFrom/select logic
 // this is to standardise the Collection display
@@ -21,27 +29,18 @@ $useLinkedPopups = (isset($column->config['use-linked-popups']) ? $column->confi
 // Value selection failover: nestedValueFrom, valueFrom, select, 'name' 
 // WinterCMS default behaviour with multi-level relations is to apply the valueFrom/select to the top level relation only
 // we apply it to the final Collection result
-$hasNestedDirective = ($isNested && isset($column->config['nestedValueFrom']));
-$hasManyDirective   = isset($column->config['multi']['valueFrom']);
+$hasNestedDirective = ($isNested && isset($multiConfig['nestedValueFrom']));
+$hasManyDirective   = isset($multiConfig['valueFrom']);
 $valueFrom = (
-    $hasManyDirective    ? $column->config['multi']['valueFrom'] :
-    ($hasNestedDirective ? $column->config['nestedValueFrom'] :
+    $hasManyDirective    ? $multiConfig['valueFrom'] :
+    ($hasNestedDirective ? $multiConfig['nestedValueFrom'] :
     ($column->valueFrom  ? $column->valueFrom :
     ($column->sqlSelect  ? $column->sqlSelect :
     'name'
 ))));
-$isHTML   = (isset($column->config['multi']['html']) && $column->config['multi']['html']);
 $relation = $column->relation;
 
-// Custom multi directives
-$sum   = FALSE;
-$total = NULL;
-if (isset($column->config['multi'])) {
-    $multi = $column->config['multi'];
-    if (isset($multi['sum'])) $sum = new ListColumn($multi['sum'], '');
-}
-
-// The field name is the name of the Model relation
+// --------------------------- The field name is the name of the Model relation
 // so the relation is automatically used
 // Some considered scenarios:
 //   1) relation & valueFrom => array(id => valueFrom, ...)
@@ -96,6 +95,8 @@ if (!is_null($value)) {
         throw new Exception("$column->columnName has type [$valueType] which cannot be rendered by _multi");
     }
 
+    // --------------------------- Main loop
+    $total = NULL;
     $count = $value->count();
     if ($count) {
         $i          = 0;
@@ -109,6 +110,9 @@ if (!is_null($value)) {
         }
         print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
         foreach ($value as $model) {
+            // id array => models
+            if ($modelClass) $model = $modelClass::find($model);
+
             if (is_null($model)) continue;
 
             // Name resolution

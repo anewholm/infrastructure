@@ -7,7 +7,7 @@ fields:
         type: mediafinder
         span: storm
         cssClass: col-xs-6
-        default: /ActionTemplates/Acorn/Exam/Models/DataEntryScore/BakeloriaCertificateTemplate.fodt
+        default: /ActionTemplates/Acorn/Exam/Models/Certificate/BakeloriaCertificateTemplate.fodt
         required: true
         mode: document
         comment: Must be a valid <a href="https://wiki.documentfoundation.org/Documentation/ODF_Markup">Flat XML ODF Text Document</a> (.fodt) produced by <a href="https://www.libreoffice.org/">LibreOffice</a>

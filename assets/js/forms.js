@@ -155,11 +155,17 @@ function acorn_ready(){
     event.stopPropagation();
     return false;
   });
-  $('.select-and-go').change(function(event){
-    if ($(this).find(':input').val()) {
-      // trigger('submit') on the <form> doesn't seem to trigger the popup
-      var jSubmitButton = $(this).closest('form').find('input[type=submit]');
-      jSubmitButton.trigger('click');
+  $('.select-and-go, .select-and-go-clear').change(function(event){
+    // trigger('submit') on the <form> doesn't seem to trigger the popup
+    var jSubmitButton = $(this).closest('form').find('input[type=submit]');
+    jSubmitButton.trigger('click');
+
+    // Clear the value ready for another direct selection
+    // TODO: Show the placeholder
+    if ($(this).hasClass('select-and-go-clear')) {
+      var jSelect = $(this).find('select');
+      var select2;
+      if (select2 = jSelect.data().select2) setTimeout(select2.selection.clear(), 0);
     }
   });
 

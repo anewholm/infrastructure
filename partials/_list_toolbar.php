@@ -85,13 +85,15 @@ HTML
                 print(<<<HTML
                     <form class="inline-block"
                         data-control="popup"
+                        data-size="huge"
                         data-handler="onListActionTemplate"
                         data-load-indicator="$dataLoadIndicator"
                     >
                         <input type="submit" value="submit" class="hidden"/>
-                        <div class="form-group dropdown-field select-and-go" data-field-name="template">
+                        <div class="form-group dropdown-field select-and-go-clear" data-field-name="template">
                             <select name="template" 
                                 class="form-control select-no-search custom-select select2-hidden-accessible" 
+                                autocomplete="off" 
                                 required="required" 
                                 data-placeholder="$print" 
                                 data-disposable="data-disposable"
@@ -103,34 +105,32 @@ HTML
             }
             
             foreach ($mlis as $mli) {
-                $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
-                $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
-                $dataRequestData = e(substr(json_encode(array(
-                    'template'   => $mli->path,
-                )), 1,-1));
+                if ($mli->getFileType() == "document") {
+                    $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
+                    $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
+                    $dataRequestData = e(substr(json_encode(array(
+                        'template'   => $mli->path,
+                    )), 1,-1));
 
-                // if ($pdfTemplate->forContext($this->action)) {
-                    if ($useDropDown) {
-                        print("<option value='$mli->path'>$print $printName...</option>");
-                    } else              print(<<<HTML
-                        <button
-                            data-control="popup"
-                            data-request-data='$dataRequestData'
-                            data-handler="onListActionTemplate"
-                            data-load-indicator="$dataLoadIndicator"
-                            class="btn">
-                            $print $printName...
-                        </button>
+                    if ($pdfTemplate->forContext($this->action)) {
+                        if ($useDropDown) {
+                            print("<option value='$mli->path'>$print $printName...</option>");
+                        } else              print(<<<HTML
+                            <button
+                                data-control="popup"
+                                data-size="huge"
+                                data-request-data='$dataRequestData'
+                                data-handler="onListActionTemplate"
+                                data-load-indicator="$dataLoadIndicator"
+                                class="btn">
+                                $print $printName...
+                            </button>
 HTML
-                    );
-                // }
+                        );
+                    }
+                }
             } 
-            if ($useDropDown) print(<<<HTML
-                            </select>
-                        </div>  
-                    </form>                      
-HTML                    
-            );
+            if ($useDropDown) print('</select></div></form>');
         }
     ?>
 

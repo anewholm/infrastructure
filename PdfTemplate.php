@@ -15,6 +15,7 @@ use DOMNode;
 use DOMXPath;
 
 class PdfTemplate {
+    protected $mediaDir;
     protected $templateFilePath;
     protected $templateDOM, $xpath;
     protected $formControls, $textBoxes;
@@ -29,9 +30,9 @@ class PdfTemplate {
     public $title;
     public $templateLocale;
 
-    public function __construct(string $templateFilePath = NULL, string $dir = 'media')
+    public function __construct(string $templateFilePath = NULL, string $mediaDir = 'media')
     {
-        if ($templateFilePath) $this->loadTemplate($templateFilePath, $dir);
+        if ($templateFilePath) $this->loadTemplate($templateFilePath, $mediaDir);
     }
 
     protected function getSingleNode(string $xpath, DOMNode $xStartNode = NULL): DOMNode|null
@@ -100,21 +101,24 @@ class PdfTemplate {
         );
     }
 
-
-    public function loadTemplate(string $templateFilePath, string $dir = 'media'): DOMDocument
+    public function loadTemplate(string $templateFilePath, string $mediaDir = 'media'): DOMDocument
     {
         // Load template
-        $this->templateFilePath = $templateFilePath;
-        $storageTemplatePath    = "$dir/$templateFilePath";
+        $this->mediaDir         = $mediaDir;
+        $this->templateFilePath = trim($templateFilePath, '/');
+        $storageTemplatePath    = "$this->mediaDir/$this->templateFilePath";
+
         if (!Storage::exists($storageTemplatePath)) {
             Log::error("[$storageTemplatePath] template not found");
             throw new Exception("[$storageTemplatePath] template not found");
         }
+        
         $templateContents    = Storage::get($storageTemplatePath);
         if (!$templateContents) {
             Log::error("[$storageTemplatePath] template empty");
             throw new Exception("[$storageTemplatePath] template empty");
         }
+        
         $this->templateDOM   = new DOMDocument();
         if (!$this->templateDOM->loadXML($templateContents)) {
             Log::error("[$storageTemplatePath] failed to loadXML()");
@@ -316,6 +320,18 @@ class PdfTemplate {
     {
         foreach ($this->formControls as $xFormControl) $xFormControl->setAttribute('form:current-value', '');
         foreach ($this->textBoxes    as $xDrawTextBox) $xDrawTextBox->nodeValue = '';
+    }
+
+    public function getTemplateThumbnail(): string
+    {
+        $storageTemplatePath = "$this->mediaDir/$this->templateFilePath";
+        $storagePngPath      = preg_replace('/\.[a-z]+$/', '.png', $storageTemplatePath);
+        if (!Storage::exists($storagePngPath)) {
+            $fullTemplatePath = Storage::path($storageTemplatePath);
+            $storagePngDir    = dirname($fullTemplatePath);
+            $execOutput = exec("libreoffice --headless --convert-to png $fullTemplatePath --outdir $storagePngDir");
+        }
+        return Storage::url($storagePngPath);
     }
 
     public function writePDF(string $outName, string $filename, bool $prepend_uniqid = TRUE): string
