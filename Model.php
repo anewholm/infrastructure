@@ -857,11 +857,13 @@ SQL;
         return $this->parent?->id;
     }
 
-    public function getParentIdAttribute()
+    public function getParentIdAttribute($parent_id)
     {
         // When there is a globalScope in action on NestedTrees
         // we need to fake chroot() using a NULL parent
-        return (GlobalChainScope::isEndSelectedFrom($this) ? NULL : $this->attributes['parent_id']);
+        if (GlobalChainScope::isEndSelectedFrom($this)) 
+            $parent_id = NULL;
+        return $parent_id;
     }
 
     public function getChildren()

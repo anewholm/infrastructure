@@ -128,6 +128,10 @@ class GenerateSeed extends Command
                                         $export = preg_replace('/[\n\r]+/', ' ', $export);
                                         break;
                                 }
+                                // var_export() uses \ escaping
+                                // So we tell Postges to use C-style character escaping, including \n, \\
+                                // https://www.postgresql.org/docs/8.3/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
+                                if (is_string($value)) print('E'); 
                                 print($export);
                                 $first = FALSE;
                             }
