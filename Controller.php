@@ -95,9 +95,11 @@ class Controller extends BackendController
     // ------------------------------------------ Custom Actions
     public function qrcodescan(): string
     {
-        // buttons={"Create and Scan another QR Code": "/backend/acorn/enrollment/courseentryrequirements/qrcodescan"}'
-        $buttons = (isset($_REQUEST['buttons']) ? e($_REQUEST['buttons']) : '');
-        return "<div id='my-qr-reader' buttons='$buttons'></div>";
+        $buttons = array(
+            "acorn::lang.models.general.save_and_scan_qrcode" => '/' . Request::path()
+        );
+        $buttonsAttr = e(json_encode($buttons));
+        return "<div id='my-qr-reader' buttons='$buttonsAttr'></div>";
     }
 
     // ------------------------------------------ Leaf models

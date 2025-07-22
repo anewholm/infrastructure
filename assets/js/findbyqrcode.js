@@ -11,7 +11,7 @@ function onScanSuccess(decodeText, decodeResult) {
     var formSelector  = jQrScanner.attr("form-selector");
     var jQrReader     = $("#my-qr-reader")
     var buttons       = jQrReader.attr('buttons');
-    var hasQuery      = controllerURL.indexOf('?');
+    var hasQuery      = (controllerURL.indexOf('?') !== -1);
     var extraQuery    = (hasQuery ? '&' : '?');
 
     if (buttons) controllerURL += extraQuery + 'buttons=' + buttons;

@@ -25,6 +25,11 @@ body .field-multilingual .ml-btn {
     color: #f00;
 }
 
+.fake-readonly *[readonly] {
+    background-color: inherit !important;
+    cursor: inherit;
+}
+
 .control-toolbar .form-group {
     padding-bottom: 0px;
 }

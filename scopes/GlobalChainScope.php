@@ -88,7 +88,7 @@ class GlobalChainScope implements Scope
         $isSelected = FALSE;
         foreach (self::endGlobalScopeClasses($model) as $scopeModel) {
             $setting    = self::getSettingFor($scopeModel);
-            $isSelected = ($scopeModel->id == $setting);
+            $isSelected = ($setting && $scopeModel->id == $setting);
             if ($isSelected) break;
         }
 
@@ -106,8 +106,9 @@ class GlobalChainScope implements Scope
         
         $globalScopeRelations = self::globalScopeRelationsOn($model);
         foreach ($globalScopeRelations as $name => $relation) {
-            if ($model->exists) $relatedModel = $model->{$name};
-            else                $relatedModel = $relation->getRelated();
+            $relatedModel = NULL;
+            if ($model->exists) $relatedModel = $model->{$name}()->first();
+            if (!$relatedModel) $relatedModel = $relation->getRelated();
             $relatedClass   = get_class($relatedModel);
             if (isset($fromEndChainModels[$relatedClass])) {
                 $chain = implode(' => ', array_keys($fromEndChainModels));
@@ -131,8 +132,9 @@ class GlobalChainScope implements Scope
             // Chain all global_scope relations
             // For calling class
             // We traverse the existing models if possible, for $isThis
-            if ($model->exists) $relatedModel = $model->{$name};
-            else                $relatedModel = $relation->getRelated();
+            $relatedModel = NULL;
+            if ($model->exists) $relatedModel = $model->{$name}()->first();
+            if (!$relatedModel) $relatedModel = $relation->getRelated();
 
             // TODO: It's possible that it has no model set, what to do?
             if ($relatedModel) {
