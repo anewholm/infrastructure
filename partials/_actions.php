@@ -18,11 +18,20 @@ if (method_exists($model, 'actionFunctions')) {
     if (count($actionFunctions) || $formMode || $model->printable) {
         print('<ul class="action-functions">');
 
+        // --------------------------------- Advanced
+        if ($model->advanced 
+            && $this->action == 'update'
+            && $user->hasPermission('acorn_advanced')
+        ) {
+            $advanced = e(trans('acorn::lang.models.general.advanced'));
+            print("<li><a id='advanced'>$advanced</a></li>");
+        }
+
         // --------------------------------- Actions
-        foreach ($actionFunctions as $name => &$definition) {
+        foreach ($actionFunctions as $fnName => &$definition) {
             $enDevLabel      = e(trans($definition['label']));
             $dataRequestData = e(substr(json_encode(array(
-                'name'       => $name, // SECURITY: We do not want to reveal the full function name
+                'name'       => $fnName, // SECURITY: We do not want to reveal the full function name
                 'arrayname'  => $modelArrayName,
                 'modelId'    => $definition['model_id'],
                 'model'      => $definition['model']
@@ -30,7 +39,6 @@ if (method_exists($model, 'actionFunctions')) {
 
             // TODO: Translateable comments
             $title   = (isset($definition['comment']['en']) ? $definition['comment']['en'] : NULL);
-            $class   = ($title ? 'hover-indicator' : NULL);
             $tooltip = ($title 
                 ? "<div class='tooltip fade top'>
                     <div class='tooltip-arrow'></div>
@@ -38,6 +46,10 @@ if (method_exists($model, 'actionFunctions')) {
                 </div>"
                 : NULL
             );
+
+            $class  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
+            $class .= ($title ? ' hover-indicator' : NULL);
+            $class .= (isset($definition['advanced']) && $definition['advanced'] ? ' advanced' : '');
 
             print(<<<HTML
                 <li>
@@ -54,12 +66,6 @@ if (method_exists($model, 'actionFunctions')) {
                 </li>
 HTML
             );
-        }
-
-        // --------------------------------- Advanced
-        if ($model->advanced && $this->action == 'update') {
-            $advanced = e(trans('acorn::lang.models.general.advanced'));
-            print("<li><a id='advanced'>$advanced</a></li>");
         }
 
         // --------------------------------- Printing

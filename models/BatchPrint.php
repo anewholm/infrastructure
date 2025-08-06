@@ -73,13 +73,64 @@ class BatchPrint extends ExportModel
         }
     }
 
+    protected function updatedPrintedArray($model, $pdfTemplate): void {
+        // Record that this template has been printed
+        $storageTemplatePath = $pdfTemplate->storageTemplatePath();
+        
+        $modelClass = get_class($model);
+        if (!$model->readOnly && $model->hasAttribute('printed')) {
+            $printed = $model->printed;
+            if (is_null($printed)) $printed = array();
+            if (is_array($printed)) {
+                array_push($printed, $storageTemplatePath);
+                $model->printed = $printed;
+                $model->save();
+                Log::info("$modelClass::printed array updated ($storageTemplatePath)");
+            } else if ($model->printed instanceof Collection) {
+                $model->printed->add($storageTemplatePath);
+                $model->save();
+                Log::info("$modelClass::printed collection updated ($storageTemplatePath)");
+            } else {
+                Log::error("$modelClass::printed is not an array");
+            }
+        }
+
+        foreach ($model->belongsTo as $name => $config) {
+            if ($relatedModel = $model->$name) {
+                if ($relatedModel instanceof \Winter\Storm\Database\Model) {
+                    $relatedModelClass = get_class($relatedModel);
+                    if (!$relatedModel->readOnly && $relatedModel->hasAttribute('printed')) {
+                        $printed = $relatedModel->printed;
+                        if (is_null($printed)) $printed = array();
+                        if (is_array($printed)) {
+                            array_push($printed, $storageTemplatePath);
+                            $relatedModel->printed = $printed;
+                            $relatedModel->save();
+                            Log::info("$relatedModelClass::printed array updated ($storageTemplatePath)");
+                        } else if ($relatedModel->printed instanceof Collection) {
+                            $relatedModel->printed->add($storageTemplatePath);
+                            $relatedModel->save();
+                            Log::info("$relatedModelClass::printed collection updated ($storageTemplatePath)");
+                        } else {
+                            $type = \gettype($relatedModel->printed);
+                            Log::error("$relatedModelClass::printed is not an array: $type");
+                            Log::error($relatedModel->printed);
+                        }
+                    }
+                }
+            } else {
+                Log::error("Failed to retrieve valid $name relation");
+            }
+        }
+    }
+
     protected function processExportData($columns, $results, $options)
     {
         static $first = TRUE;
         if ($first) {
             Log::info('BatchPrint::processExportData()');
-            Log::info($options);
-            Log::info(\Session::all());
+            // Log::info($options);
+            // Log::info(\Session::all());
         }
         $first = FALSE;
 
@@ -127,8 +178,13 @@ class BatchPrint extends ExportModel
             // before writing the PDF
             if (!$first) {
                 if (!$groupBy || !$model->$groupBy || $lastGroupBy != $model->$groupBy) {
+                    Log::info("---------------------------------- Finishing");
+                    $this->updatedPrintedArray($model, $pdfTemplate);
+                    
                     // Save generated FODT into the storage/temp directory
-                    array_push($files, $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid));
+                    $pdfLocation = $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid);
+                    array_push($files, $pdfLocation);
+
                     // Reset all form values
                     $pdfTemplate->resetTemplate();
                 }
@@ -141,7 +197,12 @@ class BatchPrint extends ExportModel
             $first = FALSE;
         }
         // Save last generated FODT into the storage/temp directory
-        if (!$first) array_push($files, $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid));
+        if (!$first) {
+            Log::info("---------------------------------- Finishing");
+            $this->updatedPrintedArray($model, $pdfTemplate);
+            $pdfLocation = $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid);
+            array_push($files, $pdfLocation);
+        }
 
         // Compression
         ZIP::make("$tempPath/$outName", $files);

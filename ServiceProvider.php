@@ -110,6 +110,16 @@ class ServiceProvider extends ModuleServiceProvider
             ]);
         });
 
+        BackendAuth::registerCallback(function ($manager) {
+            $manager->registerPermissions('Acorn', [
+                'acorn_advanced' => [
+                    'label' => 'acorn::lang.permissions.view_advanced_fields',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+            ]);
+        });
+
+
         // VERSION: Winter 1.2.6: send also parameter ('acorn');
         // But does not seem to cause a problem if ommitted
         parent::boot(); 

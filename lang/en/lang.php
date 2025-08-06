@@ -20,6 +20,10 @@
         'infrastructure' => 'Infrastructure',
         'seeding_functions' => 'Seeding functions',
     ],
+    'permissions' => [
+        'view_advanced_fields' => 'View Advanced Fields',
+        'tab' => 'acorn',
+    ],
     'models' => [
         'general' => [
             'id' => 'ID',
@@ -27,6 +31,7 @@
             'noname' => 'no name',
             'description' => 'Notes',
             'notes' => 'Notes',
+            'empty' => 'Empty',
             'type' => 'Type',
             'image' => 'Image',
             'select' => 'Select',
@@ -63,6 +68,10 @@
             ],        
             'children' => 'Children',
             'parent' => 'Parent',
+            'global_scopes' => 'Global Scopes',
+            'no_restriction' => 'No Restriction',
+            'nothing_linked' => 'Nothing linked',
+            'all_controllers' => 'All models',
         ],
         'server' => [
             'label' => 'Server',
@@ -92,6 +101,8 @@
             'coursecode' => 'Organisation Code',
             'coursename' => 'Organisation Name',
             'locale'     => 'Template locale',
+            'boxnames'   => 'Dynamic box names',
+            'boxwarnings' => 'Box Warnings',
         ],
     ],
     'errors' => [

@@ -102,6 +102,54 @@ class Controller extends BackendController
         return "<div id='my-qr-reader' buttons='$buttonsAttr'></div>";
     }
 
+    public function all(): string
+    {
+        $pluginPathAbsolute = $this->pluginPathAbsolute();
+        $controllerDir      = new \DirectoryIterator("$pluginPathAbsolute/controllers");
+        $thisFQN            = get_class($this);
+        
+        // Sorted list
+        $orderedFileList    = array();
+        foreach ($controllerDir as $fileinfo) {
+            if ($fileinfo->isFile()) {
+                $filename = $fileinfo->getFilename();
+                $className  = preg_replace('/\.php$/', '', $filename);
+                $classFQN   = preg_replace('/\\\[^\\\]+$/', "\\$className", $thisFQN);
+                try {
+                    $controller    = new $classFQN();
+                    $listName      = $controller->translateControllerKey();
+                    $orderedFileList[$listName] = $controller;
+                } catch (Exception $ex) {}
+            }
+        }
+        ksort($orderedFileList);
+
+        // Display with some values
+        $empty = e(trans('acorn::lang.models.general.empty'));
+        $html  = '<ul id="all-controllers">';
+        foreach ($orderedFileList as $listName => $controller) {
+            $controllerUrl = $controller->controllerUrl();
+            $modelClass    = $controller->modelFullyQualifiedClass();
+            $count         = $modelClass::count();
+            $class         = ($count ? '' : 'empty');
+            $listHTML      = '<ul class="values">';
+            if ($count == 0) {
+                $listHTML .= "<li>$empty</li>";
+            } else {
+                $first10 = $modelClass::limit(10)->get();
+                foreach ($first10 as $model) {
+                    $modelUpdateUrl = $controller->controllerUrl('update', $model->id);
+                    $listHTML .= "<li><a href='$modelUpdateUrl'>$model->name</a></li>";
+                }
+                if ($count > 10) $listHTML .= "<li><a href='$controllerUrl'>more...</a></li>";
+            }
+            $listHTML .= '</ul>';
+            $html .= "<li class='$class'><a href='$controllerUrl'>$listName <span class='counter'>$count</span></a>$listHTML</li>";
+        }
+        $html .= '</ul>';
+        return $html;
+    }
+
     // ------------------------------------------ Leaf models
     public function update($id)
     {
@@ -122,6 +170,24 @@ class Controller extends BackendController
     }
 
     // ------------------------------------------ Event Handlers
+    public static function extendFormFieldsGeneral($callback)
+    {
+        // We always call this callback, for all Controllers showing manage forms
+        // This means that relationmanagers on _other_ controllers will still add these manage fields(s)
+        Event::listen('backend.form.extendFields', function ($widget) use ($callback) {
+            call_user_func_array($callback, [$widget, $widget->model, $widget->getContext()]);
+        });
+    }
+
+    public static function extendListColumnsGeneral($callback)
+    {
+        // We always call this callback, for all Controllers showing lists
+        // This means that relationmanagers on _other_ controllers will still add these column(s)
+        Event::listen('backend.list.extendColumns', function (\Backend\Widgets\Lists $widget) use ($callback) {
+            call_user_func_array($callback, [$widget, $widget->model]);
+        });
+    }
+
     public function onListActionTemplate()
     {
         // Options popup for multi-printing of this 
@@ -181,7 +247,8 @@ class Controller extends BackendController
         foreach ($pdfTemplate->details() as $transKey => $value) {
             $labelEscaped = e(trans($transKey));
             $valueEscaped = e($value);
-            $pdfTemplateDetails .= "<li><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
+            $class        = (stristr($transKey, 'warning') === FALSE ? '' : 'warning'); 
+            $pdfTemplateDetails .= "<li class='$class'><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
         }
         if ($pdfTemplate->templateLocale && $hasLanguageFilter) {
             if (!$filterLanguage) {

@@ -94,7 +94,21 @@ body .field-multilingual .ml-btn {
     width:450px;
 }
 
-#advanced.shown {
+.comment-icon {
+    float: left;
+    margin: 8px 8px 0px 0px;
+}
+
+/* -------------------------- Advanced */
+/* Fields */
+.form-group.advanced {
+    display: none;
+}
+body.advanced .form-group.advanced {
+    display: inherit;
+}
+/* Button */
+body.advanced #advanced {
     font-weight: bold;
     background-image: url(/modules/acorn/assets/images/smalltick.png);
     background-repeat: no-repeat;
@@ -102,17 +116,28 @@ body .field-multilingual .ml-btn {
     padding-left: 16px;
     transition: padding-left 0.2s;
 }
-.form-group.advanced {
-    display: none;
-}
-.nav-tabs > li.advanced-hidden {
+.nav-tabs > li.advanced-empty {
     /* Override any .active class */
     display: none!important;
 }
 
-.comment-icon {
-    float: left;
-    margin: 8px 8px 0px 0px;
+/* ID column select */
+.modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=id]),
+.modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=version]),
+.modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=current]) {
+    display: none;
+}
+body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=id]),
+body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=version]),
+body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=current]) {
+    display: inherit;
+}
+/* Advanced action functions */
+.action-functions > li:has(a.advanced) {
+    display: none;
+}
+body.advanced .action-functions > li:has(a.advanced) {
+    display: inline;
 }
 
 /* ------------------------------------- Sidebar */

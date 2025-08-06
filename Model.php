@@ -861,7 +861,7 @@ SQL;
     {
         // When there is a globalScope in action on NestedTrees
         // we need to fake chroot() using a NULL parent
-        if (GlobalChainScope::isEndSelectedFrom($this)) 
+        if (GlobalChainScope::isEndSelectedFrom($this, 'hierarchy')) 
             $parent_id = NULL;
         return $parent_id;
     }
@@ -940,6 +940,17 @@ SQL;
 
         return $list;
     }
+
+    public static function menuitemCountFor(string $class, bool $force = FALSE): mixed {
+        $count = NULL;
+        if (isset($_GET["count"]) || $force) {
+            try { // Materialized views can error on this
+                $count = $class::count();
+            } catch (Exception $ex) {}
+         }
+        return $count;
+    }
+
 
     public function actionFunctions(string $typeLimit = NULL, string $fnName = NULL): array {
         // Direct (this) model action functions

@@ -4,6 +4,7 @@ use Str;
 use Backend\Facades\Backend;
 use Exception;
 use Model;
+use Controller;
 use Winter\Storm\Html\Helper as HtmlHelper;
 
 Trait PathsHelper {
@@ -131,12 +132,15 @@ Trait PathsHelper {
     public function translateModelKey(string $name = 'label', Model|NULL $model = NULL): string
     {
         if (is_null($model)) $model = &$this;
-        if (!method_exists($this, 'translationDomainModel')) {
-            $modelClass = get_class($model);
-            throw new Exception("Model [$modelClass] does not have a translationDomainModel() method");
-        }
-        
         return trans($this->translationDomainModel($name, $model));
+    }
+
+    public function translateControllerKey(string $name = 'label_plural', Controller|NULL $controller = NULL): string
+    {
+        if (is_null($controller)) $controller = &$this;
+        $modelName = strtolower($this->modelClassName($controller));
+        $authorDotPlugin = $controller->pluginAuthorDotPlugin(); // acorn.lojistiks
+        return trans("$authorDotPlugin::lang.models.$modelName.$name");
     }
 
     public function transBackend(string $name): string

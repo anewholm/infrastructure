@@ -11,8 +11,8 @@ if (isset($this->controller->widget->list->model)) {
     if ($globalScopeClasses) {
         // TODO: Translation
         foreach ($globalScopeClasses as $classFQN => $model) {
-            $settingName = "$classFQN::globalScope";
-            $setting     = Session::get($settingName);
+            $settingName = GlobalChainScope::settingNameFor($model);
+            $setting     = GlobalChainScope::getSettingFor($model);
             $classLabel  = trans($model->translationDomainModel());
             $noLabel     = trans('system::lang.plugins.check_no');
             $noneLabel   = e("$noLabel $classLabel");
