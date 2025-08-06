@@ -32,7 +32,8 @@ class GenerateSeed extends Command
         {--f|format=YAML : YAML or SQL, default: YAML.}
         {--c|condition=true : SQL where clause to limit records, Default: all records}
         {--x|onconflict= : on conflict on constraint do nothing clause. SQL format only}
-        {--i|id=yes : Use the id field. Without the id, no existence check is possible. default: yes}
+        {--d|delete : SQL format only: Delete all records first, Default: false}
+        {--i|id : Use the id field. Without the id, no existence check is possible. default: yes}
         {--w|white-space=normalize : Normalize in-array white-space, including replacing new-lines with a space. Options: normalize, no-new-lines}';
 
     /**
@@ -46,14 +47,15 @@ class GenerateSeed extends Command
      */
     public function handle()
     {
-        $table      = $this->argument('table');
-        $format     = $this->option( 'format');
-        $condition  = $this->option( 'condition');
-        $onConflict = $this->option( 'onconflict');
-        $whiteSpace = $this->option( 'white-space');
-        $useIdField = ($this->option( 'id') == 'yes');
+        $table       = $this->argument('table');
+        $format      = $this->option( 'format');
+        $condition   = $this->option( 'condition');
+        $onConflict  = $this->option( 'onconflict');
+        $whiteSpace  = $this->option( 'white-space');
+        $useIdField  = $this->option( 'id');
+        $deleteFirst = $this->option( 'delete');
 
-        $results      = DB::select("select * from $table where $condition");
+        $results     = DB::select("select * from $table where $condition");
 
         if ($results) {
             switch ($format) {
@@ -102,6 +104,7 @@ class GenerateSeed extends Command
                             : ''
                         )
                     );
+                    if ($deleteFirst) print("  DELETE FROM $table;\n");
                     $insert     = "INSERT INTO $table(";
                     $first      = TRUE;
                     foreach ($results[0] as $name => $value) {

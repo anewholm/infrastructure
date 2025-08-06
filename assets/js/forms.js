@@ -107,17 +107,10 @@ $(document).ready(acorn_dynamicElements);
 $(window).on('ajaxUpdateComplete', acorn_dynamicElements);
 $(document).on('change', ':input', acorn_updateViewSelectionLink);
 
-function acorn_setAdvanced(show, delay) {
-    if (delay === undefined) delay = 0;
-
-    // Fields
-    var jAdvancedFields  = $('.form-group.advanced');
-    if (show) jAdvancedFields.slideDown(delay, function(){
-      jAdvancedFields.removeClass('hidden');
-    });
-    else jAdvancedFields.slideUp(delay, function(){
-      jAdvancedFields.addClass('hidden');
-    });
+function acorn_setAdvanced(newAdvancedState, delay) {
+    var jBody = $(document.body);
+    if (newAdvancedState) jBody.addClass('advanced');
+    else                  jBody.removeClass('advanced');
 
     // Show/hide empty tabs
     $('.nav-tabs').children('li').each(function() {
@@ -131,16 +124,18 @@ function acorn_setAdvanced(show, delay) {
       // Tab contents disappear
       var hasNormalFields = jTab.find('.form-group').not('.advanced').length;
       if (!hasNormalFields) {
-        if (show) {
-          jLI.removeClass('advanced-hidden');
+        if (newAdvancedState) {
+          jLI.removeClass('advanced-empty');
           jLI.slideDown(delay, function(){
             jLI.removeAttr('style');
           });
         } else jLI.slideUp(delay, function(){
-          jLI.addClass('advanced-hidden');
+          jLI.addClass('advanced-empty');
         });
       }
     });
+
+    Snowboard.cookie().set('advanced', newAdvancedState);
 }
 
 function acorn_ready(){
@@ -183,15 +178,10 @@ function acorn_ready(){
   });
 
   $('.action-functions #advanced').click(function(event){
-    // Show/hide fields
-    var jButton          = $(this);
-    var jAdvancedFields  = $('.form-group.advanced');
-    var fieldsAreVisible = jAdvancedFields.not('.hidden').length;
+    var advancedState    = (Snowboard.cookie().get('advanced') == 'true');
 
-    acorn_setAdvanced(!fieldsAreVisible, 400);
-
-    if (fieldsAreVisible) jButton.removeClass('shown');
-    else                  jButton.addClass('shown');
+    // Toggle
+    acorn_setAdvanced(!advancedState, 400);
 
     // That's quite enough of that
     event.stopPropagation();
@@ -200,8 +190,10 @@ function acorn_ready(){
     return false;
   });
 
-  // Cookie remember advanced state
-  acorn_setAdvanced(false, 0);
+  // Immediate apply current advanced state on load
+  // false needs to hide fields
+  var advancedState = (Snowboard.cookie().get('advanced') == 'true');
+  acorn_setAdvanced(advancedState, 0);
 }
 $(document).ready(acorn_ready);
 

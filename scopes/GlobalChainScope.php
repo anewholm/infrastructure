@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Session;
 use Exception;
 use Flash;
+use Str;
+use BackendAuth;
+use \Acorn\User\Models\User;
 
 class GlobalChainScope implements Scope
 {
@@ -17,7 +20,7 @@ class GlobalChainScope implements Scope
     public const IS_THIS = TRUE;
 
     // ------------------------------------ Direct situation on this model
-    public static function globalScopeRelationsOn(Model $model): array
+    public static function globalScopeRelationsOn(Model $model, string $flag = NULL): array
     {
         // These can branch in to a tree of multiple global scopes
         $globalScopeRelations = array();
@@ -27,6 +30,10 @@ class GlobalChainScope implements Scope
             if (isset($relationConfig['global_scope']) 
                 && $relationConfig['global_scope'] 
                 && isset($relationConfig[0])
+                && (
+                    is_null($flag) || 
+                    (isset($relationConfig['flags']) && in_array($flag, $relationConfig['flags']))
+                )
             ) {
                 $globalScopeRelations[$relationName] = $model->$relationName();
             }
@@ -60,11 +67,45 @@ class GlobalChainScope implements Scope
         return $chainScopes;
     }
 
+    public static function globalScopeSettingOn(User $user, Model $model): string|NULL {
+        // Acorn/University/Models/Entity => global_scope_entity_id
+        $globalScopeSetting = NULL;
+
+        // Copied from create-system subNameSingular() & nameSingular()
+        $tableNameParts  = explode('_', Str::singular($model->table));
+        if (count($tableNameParts) >= 3) {
+            $subName = implode('_', array_slice($tableNameParts, 2));
+
+            // Copied from create-system adornOtherCustomPlugins()
+            $usersColumnStub    = "global_scope_$subName"; 
+            $usersColumnName    = "{$usersColumnStub}_id";
+            
+            $globalScopeSetting = $user->{$usersColumnName};
+        }
+
+        return $globalScopeSetting;
+    }
+
+    public static function settingNameFor(Model $model): string
+    {
+        $class = get_class($model);
+        return "$class::globalScope";
+    }
+
     public static function getSettingFor(Model $model): string|NULL
     {
-        $class       = get_class($model);
-        $settingName = "$class::globalScope";
-        return Session::get($settingName);
+        $setting = NULL;
+
+        if ($user = User::authUser()) {
+            $setting = self::globalScopeSettingOn($user, $model);
+        }
+        
+        if (!$setting) {
+            $settingName = self::settingNameFor($model);
+            $setting     = Session::get($settingName);
+        }
+        
+        return $setting;
     }
 
     public static function hasSessionFor(Model $model, bool $isThis = FALSE): bool
@@ -83,10 +124,10 @@ class GlobalChainScope implements Scope
 
     // --------------------------------------------- Recursive
     // Searching down global-scope relations to the end
-    public static function isEndSelectedFrom(Model $model): bool
+    public static function isEndSelectedFrom(Model $model, string $flag = NULL): bool
     {
         $isSelected = FALSE;
-        foreach (self::endGlobalScopeClasses($model) as $scopeModel) {
+        foreach (self::endGlobalScopeClasses($model, $flag) as $scopeModel) {
             $setting    = self::getSettingFor($scopeModel);
             $isSelected = ($setting && $scopeModel->id == $setting);
             if ($isSelected) break;
@@ -95,7 +136,7 @@ class GlobalChainScope implements Scope
         return $isSelected;
     }
 
-    public static function endGlobalScopeClasses(Model $model, array $fromEndChainModels = NULL): array
+    public static function endGlobalScopeClasses(Model $model, string $flag = NULL, array $fromEndChainModels = NULL): array
     {
         // Recursive
         // Get the (existing) Models on the ends of the global-scope relation chain(s)
@@ -104,7 +145,7 @@ class GlobalChainScope implements Scope
         if (property_exists($model, 'globalScope') && $model::$globalScope)
             $endChainModels[get_class($model)] = $model;
         
-        $globalScopeRelations = self::globalScopeRelationsOn($model);
+        $globalScopeRelations = self::globalScopeRelationsOn($model, $flag);
         foreach ($globalScopeRelations as $name => $relation) {
             $relatedModel = NULL;
             if ($model->exists) $relatedModel = $model->{$name}()->first();
@@ -114,7 +155,7 @@ class GlobalChainScope implements Scope
                 $chain = implode(' => ', array_keys($fromEndChainModels));
                 throw new Exception("Infinite global-scope recursion on $chain");
             }
-            $endChainModels = array_merge($endChainModels, self::endGlobalScopeClasses($relatedModel, $endChainModels));
+            $endChainModels = array_merge($endChainModels, self::endGlobalScopeClasses($relatedModel, $flag, $endChainModels));
         }
 
         return $endChainModels;

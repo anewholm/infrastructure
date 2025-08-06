@@ -5,6 +5,7 @@ use Str;
 use Lang;
 
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App;
 use Model;
 use File;
 use Log;
@@ -18,28 +19,37 @@ class PdfTemplate {
     protected $mediaDir;
     protected $templateFilePath;
     protected $templateDOM, $xpath;
-    protected $formControls, $textBoxes;
-    protected $xQrCodeNode, $qrCodeHeightPX;
+    protected $textBoxes, $xQrCodeNode, $qrCodeHeightPX;
+    protected $boxWarnings = array();
 
     public $comment;
+    // Limit to a course, if relevant
     public $courseCode;
     public $courseName;
     // Where the action should appear, like fields.yaml
     // create, update, index
     public $contexts = array(); 
     public $title;
-    public $templateLocale;
+    public $templateLocale, $localeFallback;
 
     public function __construct(string $templateFilePath = NULL, string $mediaDir = 'media')
     {
         if ($templateFilePath) $this->loadTemplate($templateFilePath, $mediaDir);
     }
 
-    protected function getSingleNode(string $xpath, DOMNode $xStartNode = NULL): DOMNode|null
+    public function storageTemplatePath(): string
+    {
+        return "$this->mediaDir/$this->templateFilePath";
+    }
+
+    protected function getSingleNode(string $xpath, DOMNode $xStartNode = NULL, bool $throwIfMultiple = FALSE): DOMNode|null
     {
         $xNode     = NULL;
         $xNodeList = $this->xpath->query($xpath, $xStartNode);
         if (count($xNodeList)) $xNode = $xNodeList[0];
+
+        if ($throwIfMultiple && count($xNodeList) > 1)
+            throw new Exception("Multiple nodes returned during [$xpath] request");
 
         return $xNode;
     }
@@ -57,13 +67,11 @@ class PdfTemplate {
     {
         $label    = NULL;
         $labelSet = ($plural ? 'labels-plural' : 'labels');
-        $locale   = Lang::getLocale();
-        $localeFallback = Lang::getFallback();
 
         if (isset($this->comment[$labelSet])) {
             $labels = $this->comment[$labelSet];
-            if      (isset($labels[$locale]))         $label = $labels[$locale];
-            else if (isset($labels[$localeFallback])) $label = $labels[$localeFallback];
+            if      (isset($labels[$this->templateLocale]))         $label = $labels[$this->templateLocale];
+            else if (isset($labels[$this->localeFallback])) $label = $labels[$this->localeFallback];
         } 
         
         if (is_null($label)) {
@@ -74,6 +82,11 @@ class PdfTemplate {
         }
 
         return $label;
+    }
+
+    public function boxNames(): array
+    {
+        return array_keys($this->textBoxes);
     }
 
     public function forContext(string $context): bool
@@ -94,10 +107,12 @@ class PdfTemplate {
     public function details(): array
     {
         return array(
-            'acorn::lang.models.pdftemplate.title'      => $this->label(),
-            'acorn::lang.models.pdftemplate.coursecode' => $this->courseCode,
-            'acorn::lang.models.pdftemplate.coursename' => $this->courseName,
-            'acorn::lang.models.pdftemplate.locale'     => $this->templateLocale,
+            'acorn::lang.models.pdftemplate.title'       => $this->label(),
+            'acorn::lang.models.pdftemplate.coursecode'  => $this->courseCode,
+            'acorn::lang.models.pdftemplate.coursename'  => $this->courseName,
+            'acorn::lang.models.pdftemplate.locale'      => $this->templateLocale,
+            'acorn::lang.models.pdftemplate.boxnames'    => implode(', ', $this->boxNames()),
+            'acorn::lang.models.pdftemplate.boxwarnings' => implode(', ', $this->boxWarnings),
         );
     }
 
@@ -106,7 +121,7 @@ class PdfTemplate {
         // Load template
         $this->mediaDir         = $mediaDir;
         $this->templateFilePath = trim($templateFilePath, '/');
-        $storageTemplatePath    = "$this->mediaDir/$this->templateFilePath";
+        $storageTemplatePath    = $this->storageTemplatePath();
 
         if (!Storage::exists($storageTemplatePath)) {
             Log::error("[$storageTemplatePath] template not found");
@@ -129,35 +144,53 @@ class PdfTemplate {
         $this->xpath = new DOMXPath($this->templateDOM);
         if ($xOfficeMETA = $this->getSingleNode('/office:document/office:meta')) {
             $comment = $this->getNodeValue('dc:description', $xOfficeMETA);
+            // Usually contains labels
             $this->comment    = ($comment ? Yaml::parse($comment) : array());
+            // Limiting to a Course, if relevant
             $this->courseCode = $this->getNodeValue('dc:identifier', $xOfficeMETA);
             $this->courseName = $this->getNodeValue('dc:type', $xOfficeMETA);
+            // English Name, not really used
             $this->title      = $this->getNodeValue('dc:title', $xOfficeMETA);
+            // WinterCMS Model contexts: create, update, preview
             $this->contexts   = array_filter(preg_split('/ *, */', $this->getNodeValue('dc:coverage', $xOfficeMETA)));
-        }
-        // Language
-        // Set on each text element
-        // fo:language="en" fo:country="US"
-        if ($xLanguage = $this->getSingleNode('//*/@fo:language')) {
-            $this->templateLocale = $xLanguage->nodeValue;
-            Log::info("Template locale: $this->templateLocale");
-        } else {
-            Log::warning("Template locale not stated");
-        }
+            // Overall default language, if applicable
+            //
+            // Also can be set on each text element
+            // Language information, set with the Character... dialog is stored separately
+            // in an associated <style> element in <office:automatic-styles>
+            // @fo:language="en" and @fo:country="US"
+            //   <style:style style:name="T5" style:family="text">
+            //     <style:text-properties fo:color="#808080" loext:opacity="100%" fo:language="ast" fo:country="ES" fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+            //   </style:style>
+            $this->templateLocale = $this->getNodeValue('dc:relation', $xOfficeMETA);
 
-        // Locate form controls
-        //   <form:textarea form:name="scores.kurdish" form:control-implementation="ooo:com.sun.star.form.component.TextField" xml:id="control3" form:id="control3" form:input-required="false" form:convert-empty-to-null="true">
-        // and text boxes
-        //   <draw:frame text:anchor-type="paragraph" draw:z-index="0" draw:name="student_code" draw:style-name="gr3" draw:text-style-name="P10" svg:width="3.028cm" svg:height="1.848cm" svg:x="2.469cm" svg:y="3.454cm">
-        //     <draw:text-box>
-        //       <text:p>test</text:p>
-        //     </draw:text-box>
-        //     <svg:title>student_code</svg:title>
-        //   </draw:frame>
+            // Older LibreOffice does not support the comments above
+            // in this case we check the user defined values
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='comment']", $xOfficeMETA))
+                $this->comment = Yaml::parse($comment);
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:identifier']", $xOfficeMETA))
+                $this->courseCode = $value;
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:type']", $xOfficeMETA))
+                $this->courseName = $value;
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:title']", $xOfficeMETA))
+                $this->title = $value;
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:coverage']", $xOfficeMETA))
+                $this->contexts = array_filter(preg_split('/ *, */', $value));
+            if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:relation']", $xOfficeMETA))
+                $this->templateLocale = $value;
+
+            // Set global language
+            if ($this->templateLocale) {
+                Lang::setLocale($this->templateLocale);
+                Log::info("Template locale: $this->templateLocale");
+            }
+        }
+        if (!$this->templateLocale) Log::warning("Template locale not stated");
+        $this->localeFallback = Lang::getFallback();
+
+        Log::info("---------------------------------- Searching for dynamic elements");
         $xPageNode      = $this->getSingleNode('/office:document/office:body/office:text');
-        $xFormNode      = $this->getSingleNode('office:forms/form:form', $xPageNode);
-        $xFormControls  = $this->xpath->query('form:textarea', $xFormNode);
-        $xDrawTextBoxes = $this->xpath->query('text:p/draw:frame', $xPageNode);
+        $xDrawTextBoxes = $this->xpath->query('.//text:p/draw:frame', $xPageNode);
 
         // QRCode
         // <draw:frame draw:name="QRCode" svg:height="2.968cm" ...>
@@ -175,26 +208,71 @@ class PdfTemplate {
             }
         }
 
-        $this->formControls = array();
-        foreach ($xFormControls as $xFormControl) {
-            $objectName = $xFormControl->getAttribute('form:name');
-            if (!$objectName) {
-                Log::error("Nameless control");
-                throw new Exception("Nameless control");
-            }
-            $this->formControls[$objectName] = $xFormControl;
-            Log::info("$objectName form control found");
-        }
-
+        // Locate text boxes
+        //  <text:p>
+        //   <draw:frame text:anchor-type="paragraph" draw:z-index="0" draw:name="student_code" draw:style-name="gr3" draw:text-style-name="P10" svg:width="3.028cm" svg:height="1.848cm" svg:x="2.469cm" svg:y="3.454cm">
+        //     <draw:text-box>
+        //       <text:p>[<text:span text:style-name="T5">]test</text:p>
+        //     </draw:text-box>
+        //     <svg:title>student_code</svg:title>
+        //   </draw:frame>
+        //  </text:p>
+        //
+        // Language information, set with the Character... dialog is stored separately
+        // in an associated <style> element in <office:automatic-styles>
+        // referenced from text:span/text:style-name
+        //   <style:style style:name="T5" style:family="text">
+        //     <style:text-properties fo:color="#808080" loext:opacity="100%" fo:language="ast" fo:country="ES" fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+        //   </style:style>
         $this->textBoxes = array();
         foreach ($xDrawTextBoxes as $xDrawTextBox) {
             if ($objectName = $xDrawTextBox->getAttribute('draw:name')) {
+                // text-box names are unique in LibreOffice
+                // allow for box.name 1 auto renaming in LibreOffice
+                $objectName = preg_replace('/ [0-9]+$/', '', $objectName);
+
                 // <text:p text:style-name="P15"><text:span text:style-name="T3"><text:s/></text:span></text:p>
                 if ($xTextP = $this->getSingleNode('draw:text-box/text:p', $xDrawTextBox)) {
                     // A child <text:span ...> allows paragraph and character formatting
-                    if ($xTextSP = $this->getSingleNode('text:span', $xTextP)) $xTextP = $xTextSP;
-                    $this->textBoxes[$objectName] = $xTextP;
-                    Log::info("$objectName text-box found");
+                    // and language setting through the <style> link
+                    $language = NULL;
+                    $xTextSPs = $this->xpath->query('text:span', $xTextP);
+                    if (count($xTextSPs) == 1) {
+                        $xTextP = $xTextSPs[0];
+
+                        if ($styleName = $xTextP->getAttribute('text:style-name')) {
+                            if ($xStyle = $this->getSingleNode(".//style:style[@style:name='$styleName']")) {
+                                if ($xTextProperties = $this->getSingleNode("./style:text-properties", $xStyle)) {
+                                    // @style:language-complex, @style:country-complex 
+                                    // & @fo:language, @fo:country can exist together
+                                    // language complex takes precedence
+                                    $country  = $xTextProperties->getAttribute('style:country-complex');
+                                    $language = $xTextProperties->getAttribute('style:language-complex');
+                                    if ($language && $country != 'none') {
+                                        // Set the language directly on the text-box for easy access later
+                                        $xTextP->setAttribute('fo:language', $language);
+                                    } else {
+                                        $country  = $xTextProperties->getAttribute('fo:country');
+                                        $language = $xTextProperties->getAttribute('fo:language');
+                                        if ($language && $country != 'none') {
+                                            // Set the language directly on the text-box for easy access later
+                                            $xTextP->setAttribute('fo:language', $language);
+                                        }
+                                    }
+                                } else {
+                                    Log::error("<style:style style:name=$styleName> without style:text-properties");
+                                }
+                            } else {
+                                Log::error("<style:style style:name=$styleName> not found");
+                            }
+                        }
+                    } else if (count($xTextSPs) > 1) {
+                        array_push($this->boxWarnings, "Multiple <text:span>s in <text:p> box [$objectName]");
+                    }
+
+                    if (isset($this->textBoxes[$objectName])) array_push($this->textBoxes[$objectName], $xTextP);
+                    else $this->textBoxes[$objectName] = array($xTextP);
+                    Log::info("'$objectName' text-box found ($language)");
                 } else {
                     Log::warning("draw:frame without text:p");
                 }
@@ -208,6 +286,8 @@ class PdfTemplate {
 
     public function writeAttributes(Model $model): void
     {
+        Log::info("---------------------------------- Writing attributes");
+
         // Write QR Code
         if ($this->xQrCodeNode) {
             // Failovers for the link to the data model edit / view screen
@@ -231,100 +311,68 @@ class PdfTemplate {
         }
 
         // Fill form values
-        $locale         = Lang::getLocale();
-        $localeFallback = Lang::getFallback();
-        $attributes     = $model->attributesToArray();
-        foreach ($attributes as $name => $value) {
-            if (is_array($value)) {
-                // JSONable field
-                // scores => geography|history|math => id|title|value
-                $i = 1;
-                foreach ($value as $subName => $subValues) {
-                    $subValue = (is_array($subValues)
-                        ? (isset($subValues['value']) ? $subValues['value'] : NULL)
-                        : $subValues
-                    );
-
-                    // Translation
-                    if (is_array($subValue)) {
-                        if      (isset($subValue[$locale]))         $subValue = $subValue[$locale];
-                        else if (isset($subValue[$localeFallback])) $subValue = $subValue[$localeFallback];
-                        else $subValue = implode(',', array_keys($subValue));
+        foreach ($this->textBoxes as $name => $xTextBoxes) {
+            foreach ($xTextBoxes as $xTextBox) {
+                $itemLocale  = $xTextBox->getAttribute('fo:language');
+                $locale      = ($itemLocale ?: $this->templateLocale);
+                
+                $nameParts = explode('.', $name);
+                if (count($nameParts) == 1) {
+                    if ($model->hasAttribute($name)) {
+                        $value = $model->getAttributeTranslated($name, $locale);
+                        if ($value) {
+                            $xTextBox->nodeValue = $value;
+                            Log::info("Text box $name => $value ($locale)");
+                        } else {
+                            Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
+                        }
                     }
-
-                    // scores.geography|history|math
-                    $embeddedName = "$name.$subName"; 
-                    if (isset($this->formControls[$embeddedName])) {
-                        Log::info("Form control attribute $embeddedName => $subValue");
-                        $this->formControls[$embeddedName]->setAttribute('form:current-value', $subValue);
+                } else {
+                    // JSONable field: scores.Kurdish
+                    // scores => geography|history|math|... => id|title|value
+                    // scores => @1|@2|@3|...               => id|title|value
+                    $modelAttribute = $nameParts[0]; // scores
+                    $arrayItem      = $nameParts[1]; // Kurdish
+                    $content        = (count($nameParts) > 2 ? $nameParts[2] : 'value'); // title|value|minimum|...
+                    if ($model->hasAttribute($modelAttribute)) {
+                        $objectArray = $model->{$modelAttribute};
+                        if ($arrayItem[0] == '@') {
+                            $offset    = (int) substr($arrayItem, 1);
+                            $keys      = array_keys($objectArray);
+                            if (isset($keys[$offset])) $arrayItem = $keys[$offset];
+                        }
+                        if (isset($objectArray[$arrayItem])) {
+                            $object = $objectArray[$arrayItem];
+                            Log::info($objectArray);
+                            $value  = (is_array($object) ? $object[$content] : $object);
+                            if (is_array($value)) {
+                                if      (isset($value[$locale]))               $value = $value[$locale];
+                                else if (isset($value[$this->localeFallback])) $value = $value[$this->localeFallback];
+                                else $value = implode(',', array_keys($value));
+                            }
+                            if ($value) {
+                                $xTextBox->nodeValue = $value;
+                                Log::info("Text box $name => $value ($locale)");
+                            } else {
+                                Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
+                            }
+                        } else {
+                            Log::error("{$modelAttribute}[$arrayItem] not found");
+                        }
                     }
-                    else if (isset($this->textBoxes[$embeddedName])) {
-                        Log::info("Text box $embeddedName => $subValue");
-                        $this->textBoxes[$embeddedName]->nodeValue = $subValue;
-                    }
-                    else {
-                        Log::warning("Text box $embeddedName => $subValue not found");
-                    }
-
-                    // scores.@x
-                    $embeddedName = "$name.@$i"; 
-                    if (isset($this->formControls[$embeddedName])) {
-                        Log::info("Form control attribute $embeddedName => $subValue");
-                        $this->formControls[$embeddedName]->setAttribute('form:current-value', $subValue);
-                    }
-                    else if (isset($this->textBoxes[$embeddedName])) {
-                        Log::info("Text box $embeddedName => $subValue");
-                        $this->textBoxes[$embeddedName]->nodeValue = $subValue;
-                    }
-                    $i++;
-                }
-            } else {
-                if (isset($this->formControls[$name])) {
-                    // this => that
-                    Log::info("Form control attribute $name => $value");
-                    $this->formControls[$name]->setAttribute('form:current-value', $value);
-                }
-                else if (isset($this->textBoxes[$name])) {
-                    Log::info("Text box $name => $value");
-                    $this->textBoxes[$name]->nodeValue = $value;
-                }
-                else {
-                    Log::warning("Text box $name => $value not found");
                 }
             }
         }
     }
 
-    public function notify(Model $model): bool
-    {
-        // TODO: Notify all Models that they have been printed
-        // TODO: This should be an event. A separate table should log prints, model and model_id
-        $notified = FALSE;
-
-        if (method_exists($model, 'pdfTemplatePrintNotify')) {
-            $model->printed($model);
-            $notified = TRUE;
-        }
-        $attributes = $model->attributesToArray();
-        foreach ($attributes as $name => $value) {
-            if ($value instanceof Model && method_exists($model, 'pdfTemplatePrintNotify')) {
-                $value->printed($model);
-                $notified = TRUE;
-            }
-        }
-
-        return $notified;
-    }
-    
     public function resetTemplate(): void
     {
-        foreach ($this->formControls as $xFormControl) $xFormControl->setAttribute('form:current-value', '');
         foreach ($this->textBoxes    as $xDrawTextBox) $xDrawTextBox->nodeValue = '';
     }
 
     public function getTemplateThumbnail(): string
     {
-        $storageTemplatePath = "$this->mediaDir/$this->templateFilePath";
+        $storageTemplatePath = $this->storageTemplatePath();
         $storagePngPath      = preg_replace('/\.[a-z]+$/', '.png', $storageTemplatePath);
         if (!Storage::exists($storagePngPath)) {
             $fullTemplatePath = Storage::path($storageTemplatePath);
