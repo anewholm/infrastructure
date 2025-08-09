@@ -16,6 +16,8 @@ use DOMNode;
 use DOMXPath;
 
 class PdfTemplate {
+    static $logging = FALSE;
+
     protected $mediaDir;
     protected $templateFilePath;
     protected $templateDOM, $xpath;
@@ -124,19 +126,19 @@ class PdfTemplate {
         $storageTemplatePath    = $this->storageTemplatePath();
 
         if (!Storage::exists($storageTemplatePath)) {
-            Log::error("[$storageTemplatePath] template not found");
+            if (self::$logging) Log::error("[$storageTemplatePath] template not found");
             throw new Exception("[$storageTemplatePath] template not found");
         }
         
         $templateContents    = Storage::get($storageTemplatePath);
         if (!$templateContents) {
-            Log::error("[$storageTemplatePath] template empty");
+            if (self::$logging) Log::error("[$storageTemplatePath] template empty");
             throw new Exception("[$storageTemplatePath] template empty");
         }
         
         $this->templateDOM   = new DOMDocument();
         if (!$this->templateDOM->loadXML($templateContents)) {
-            Log::error("[$storageTemplatePath] failed to loadXML()");
+            if (self::$logging) Log::error("[$storageTemplatePath] failed to loadXML()");
             throw new Exception("[$storageTemplatePath] failed to loadXML()");
         }
 
@@ -182,13 +184,13 @@ class PdfTemplate {
             // Set global language
             if ($this->templateLocale) {
                 Lang::setLocale($this->templateLocale);
-                Log::info("Template locale: $this->templateLocale");
+                if (self::$logging) Log::info("Template locale: $this->templateLocale");
             }
         }
-        if (!$this->templateLocale) Log::warning("Template locale not stated");
+        if (!$this->templateLocale && self::$logging) Log::warning("Template locale not stated");
         $this->localeFallback = Lang::getFallback();
 
-        Log::info("---------------------------------- Searching for dynamic elements");
+        if (self::$logging) Log::info("---------------------------------- Searching for dynamic elements");
         $xPageNode      = $this->getSingleNode('/office:document/office:body/office:text');
         $xDrawTextBoxes = $this->xpath->query('.//text:p/draw:frame', $xPageNode);
 
@@ -203,7 +205,7 @@ class PdfTemplate {
             $mimeType          = $xQrCodeDrawImage->getAttribute('draw:mime-type');
             $this->qrCodeHeightPX = floor((double) str_replace('cm', '', $heightCM) / 3.0 * 64);
             if ($mimeType != 'image/png') {
-                Log::info("Changing mime-type to PNG");
+                if (self::$logging) Log::info("Changing mime-type to PNG");
                 $xQrCodeDrawImage->setAttribute('draw:mime-type', 'image/png');
             }
         }
@@ -260,10 +262,10 @@ class PdfTemplate {
                                         }
                                     }
                                 } else {
-                                    Log::error("<style:style style:name=$styleName> without style:text-properties");
+                                    if (self::$logging) Log::error("<style:style style:name=$styleName> without style:text-properties");
                                 }
                             } else {
-                                Log::error("<style:style style:name=$styleName> not found");
+                                if (self::$logging) Log::error("<style:style style:name=$styleName> not found");
                             }
                         }
                     } else if (count($xTextSPs) > 1) {
@@ -272,12 +274,12 @@ class PdfTemplate {
 
                     if (isset($this->textBoxes[$objectName])) array_push($this->textBoxes[$objectName], $xTextP);
                     else $this->textBoxes[$objectName] = array($xTextP);
-                    Log::info("'$objectName' text-box found ($language)");
+                    if (self::$logging) Log::info("'$objectName' text-box found ($language)");
                 } else {
-                    Log::warning("draw:frame without text:p");
+                    if (self::$logging) Log::warning("draw:frame without text:p");
                 }
             } else {
-                Log::error("Nameless control");
+                if (self::$logging) Log::error("Nameless control");
             }
         }
 
@@ -286,7 +288,7 @@ class PdfTemplate {
 
     public function writeAttributes(Model $model): void
     {
-        Log::info("---------------------------------- Writing attributes");
+        if (self::$logging) Log::info("---------------------------------- Writing attributes");
 
         // Write QR Code
         if ($this->xQrCodeNode) {
@@ -304,7 +306,7 @@ class PdfTemplate {
                     ))
                 )
             );
-            Log::info("Writing PNG QRCode ({$this->qrCodeHeightPX}px) $qrCode");
+            if (self::$logging) Log::info("Writing PNG QRCode ({$this->qrCodeHeightPX}px) $qrCode");
             $image  = QrCode::size($this->qrCodeHeightPX)->generate($qrCode); // PNG
             $base64 = base64_encode($image);
             $this->xQrCodeNode->nodeValue = $base64;
@@ -322,9 +324,9 @@ class PdfTemplate {
                         $value = $model->getAttributeTranslated($name, $locale);
                         if ($value) {
                             $xTextBox->nodeValue = $value;
-                            Log::info("Text box $name => $value ($locale)");
+                            if (self::$logging) Log::info("Text box $name => $value ($locale)");
                         } else {
-                            Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
+                            if (self::$logging) Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
                         }
                     }
                 } else {
@@ -343,7 +345,7 @@ class PdfTemplate {
                         }
                         if (isset($objectArray[$arrayItem])) {
                             $object = $objectArray[$arrayItem];
-                            Log::info($objectArray);
+                            if (self::$logging) Log::info($objectArray);
                             $value  = (is_array($object) ? $object[$content] : $object);
                             if (is_array($value)) {
                                 if      (isset($value[$locale]))               $value = $value[$locale];
@@ -352,12 +354,12 @@ class PdfTemplate {
                             }
                             if ($value) {
                                 $xTextBox->nodeValue = $value;
-                                Log::info("Text box $name => $value ($locale)");
+                                if (self::$logging) Log::info("Text box $name => $value ($locale)");
                             } else {
-                                Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
+                                if (self::$logging) Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
                             }
                         } else {
-                            Log::error("{$modelAttribute}[$arrayItem] not found");
+                            if (self::$logging) Log::error("{$modelAttribute}[$arrayItem] not found");
                         }
                     }
                 }
@@ -391,7 +393,7 @@ class PdfTemplate {
         // Generate PDF out to the storage/temp directory
         // will have name $outName-$id.pdf
         $execOutput = exec("libreoffice --headless --convert-to pdf:writer_pdf_Export $tempPath/$filename.fodt --outdir $tempPath");
-        Log::info("LibreOffice PDF generator of [$filename] reported [$execOutput]");
+        if (self::$logging) Log::info("LibreOffice PDF generator of [$filename] reported [$execOutput]");
 
         $pdfPath = "$tempPath/$filename.pdf";
         if (!File::exists($pdfPath))
