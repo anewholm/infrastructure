@@ -99,28 +99,12 @@ body .field-multilingual .ml-btn {
     margin: 8px 8px 0px 0px;
 }
 
-/* -------------------------- Advanced */
-/* Fields */
-.form-group.advanced {
-    display: none;
-}
-body.advanced .form-group.advanced {
-    display: inherit;
-}
-/* Button */
-body.advanced #advanced {
-    font-weight: bold;
-    background-image: url(/modules/acorn/assets/images/smalltick.png);
-    background-repeat: no-repeat;
-    background-position: left center;
-    padding-left: 16px;
-    transition: padding-left 0.2s;
-}
-.nav-tabs > li.advanced-empty {
+.nav-tabs > li.tab-empty {
     /* Override any .active class */
     display: none!important;
 }
 
+/* -------------------------- Advanced */
 /* ID column select */
 .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=id]),
 .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=version]),

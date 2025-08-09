@@ -23,8 +23,11 @@ if (method_exists($model, 'actionFunctions')) {
             && $this->action == 'update'
             && $user->hasPermission('acorn_advanced')
         ) {
+            $toggle   = (Session::get('advanced') ? 0 : 1);
             $advanced = e(trans('acorn::lang.models.general.advanced'));
-            print("<li><a id='advanced'>$advanced</a></li>");
+            $simple   = e(trans('acorn::lang.models.general.simple'));
+            $title    = ($toggle ? $advanced : $simple);
+            print("<li><a id='advanced' href='?advanced=$toggle'>$title</a></li>");
         }
 
         // --------------------------------- Actions

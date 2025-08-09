@@ -3,6 +3,7 @@
 use Acorn\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use Winter\Storm\Database\Relations\BelongsTo;
+use Illuminate\Support\Facades\Session;
 use \Exception;
 use BackendAuth;
 use Str;
@@ -48,35 +49,54 @@ Trait MorphConfig
                     }
 
                     // ------------------------------------------------- Advanced
+                    if (isset($_GET['advanced'])) Session::put('advanced', ($_GET['advanced'] == '1'));
+                    $advanced = Session::get('advanced');
+                    
                     if (isset($config->fields)) {
-                        foreach ($config->fields as &$fieldConfig) {
+                        foreach ($config->fields as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
-                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                                if ($advanced) {
+                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                } else {
+                                    unset($config->fields[$name]);
+                                }
                             }
                         }
                     }
                     if (isset($config->tabs['fields'])) {
-                        foreach ($config->tabs['fields'] as &$fieldConfig) {
+                        foreach ($config->tabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
-                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                                if ($advanced) {
+                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                } else {
+                                    unset($config->tabs['fields'][$name]);
+                                }
                             }
                         }
                     }
                     if (isset($config->secondaryTabs['fields'])) {
-                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) {
+                        foreach ($config->secondaryTabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
-                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                                if ($advanced) {
+                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                } else {
+                                    unset($config->secondaryTabs['fields'][$name]);
+                                }
                             }
                         }
                     }
                     if (isset($config->tertiaryTabs['fields'])) {
-                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) {
+                        foreach ($config->tertiaryTabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
-                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                $fieldConfig['cssClass'] = "$cssClass advanced";
+                                if ($advanced) {
+                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                } else {
+                                    unset($config->tertiaryTabs['fields'][$name]);
+                                }
                             }
                         }
                     }

@@ -107,11 +107,7 @@ $(document).ready(acorn_dynamicElements);
 $(window).on('ajaxUpdateComplete', acorn_dynamicElements);
 $(document).on('change', ':input', acorn_updateViewSelectionLink);
 
-function acorn_setAdvanced(newAdvancedState, delay) {
-    var jBody = $(document.body);
-    if (newAdvancedState) jBody.addClass('advanced');
-    else                  jBody.removeClass('advanced');
-
+function acorn_hideEmptyTabs() {
     // Show/hide empty tabs
     $('.nav-tabs').children('li').each(function() {
       // We want to show/hide any tabs that
@@ -122,20 +118,9 @@ function acorn_setAdvanced(newAdvancedState, delay) {
       var jTab = $(id);
 
       // Tab contents disappear
-      var hasNormalFields = jTab.find('.form-group').not('.advanced').length;
-      if (!hasNormalFields) {
-        if (newAdvancedState) {
-          jLI.removeClass('advanced-empty');
-          jLI.slideDown(delay, function(){
-            jLI.removeAttr('style');
-          });
-        } else jLI.slideUp(delay, function(){
-          jLI.addClass('advanced-empty');
-        });
-      }
+      var hasFields = jTab.find('.form-group').length;
+      if (!hasFields) jLI.addClass('tab-empty');
     });
-
-    Snowboard.cookie().set('advanced', newAdvancedState);
 }
 
 function acorn_ready(){
@@ -177,23 +162,7 @@ function acorn_ready(){
     else jRows.show();
   });
 
-  $('.action-functions #advanced').click(function(event){
-    var advancedState    = (Snowboard.cookie().get('advanced') == 'true');
-
-    // Toggle
-    acorn_setAdvanced(!advancedState, 400);
-
-    // That's quite enough of that
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    event.preventDefault();
-    return false;
-  });
-
-  // Immediate apply current advanced state on load
-  // false needs to hide fields
-  var advancedState = (Snowboard.cookie().get('advanced') == 'true');
-  acorn_setAdvanced(advancedState, 0);
+  acorn_hideEmptyTabs();
 }
 $(document).ready(acorn_ready);
 

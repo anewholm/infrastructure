@@ -59,6 +59,7 @@
             'row_changes_saved' => 'Row changes saved',
             'no_changes' => 'No changes found',
             'advanced' => 'Advanced',
+            'simple' => 'Simple',
             'dateformats' => [
                 'day' => 'Day',
                 'weekinyear' => 'Week In Year',
