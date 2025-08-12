@@ -196,40 +196,6 @@ class GlobalChainScope implements Scope
     }
 
     // --------------------------------------------- Application
-    /*
-    public function shouldApply(Model $model, bool $isThis = FALSE): bool
-    {
-        // Recursive
-        // Works out if the Final Scope(s) have a setting or not
-        // override shouldApply() on an end GlobalScope to return the setting
-        // usually with hasSessionFor()
-        $shouldApply = FALSE;
-        $globalScopeRelations = self::globalScopeRelationsOn($model);
-        foreach ($globalScopeRelations as $name => $relation) {
-            // Chain all global_scope relations
-            // For calling class
-            // We traverse the existing models if possible, for $isThis
-            $relatedModel = NULL;
-            if ($model->exists) $relatedModel = $model->{$name}()->first();
-            if (!$relatedModel) $relatedModel = $relation->getRelated();
-
-            // TODO: It's possible that it has no model set, what to do?
-            if ($relatedModel) {
-                $chainScopes  = self::ourGlobalChainScopesOn($relatedModel);
-                foreach ($chainScopes as $chainScope) {
-                    // Inherit your Scope from GlobalChainScope to activate this chain
-                    $shouldApply = $chainScope->shouldApply($relatedModel, $isThis);
-                    // TODO: This returns the first positive scope setting only, should return...?
-                    if ($shouldApply) break;
-                }
-            }
-            if ($shouldApply) break;
-        }
-        
-        return $shouldApply;
-    }
-    */
-
     public static function applySession(Builder $builder, Model $model): bool 
     {
         // From this model only, Not recursive at all
@@ -253,7 +219,8 @@ class GlobalChainScope implements Scope
                 $settingEscaped  = str_replace("'", "\\'", $setting);
                 $globalScopeSubQuery->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
             } else {
-                $globalScopeSubQuery->where("$model->table.id", '=', $setting);
+                $globalScopeSubQuery->where("$model->table.id", '=', $setting)
+                    ->orWhereNull("$model->table.id");
             }
 
             if ($model->globalScopeSubQuery) {
@@ -305,16 +272,17 @@ class GlobalChainScope implements Scope
         // We store the where on the model
         // because we must pass it down the overridden apply() chain
         // and we cannot add new parameters
-        if (!$model->globalScopeSubQuery || $model->globalScopeSubQuery->wheres) {
+        $topLevel = (!$model->globalScopeSubQuery || $model->globalScopeSubQuery->wheres);
+        if ($topLevel) {
             // Begin our where sub-query
-            $query     = $builder->getQuery();
-            $mainTable = $query->from;
-            $alias     = "global_scope_$mainTable";
-            $model->globalScopeSubQuery = DB::table($mainTable, $alias)->select("$alias.id");
+            // Table references are local to the sub-query
+            // It returns a valid id list only without reference to the external query
+            $query = $builder->getQuery();
+            $model->globalScopeSubQuery = DB::table($query->from)->select("$query->from.id");
         }
 
         $globalScopeRelations = self::globalScopeRelationsOn($model);
-        foreach ($globalScopeRelations as $relation) {
+        foreach ($globalScopeRelations as $name => $relation) {
             // TODO: $relation->addConstraints();
             // TODO: At least $relation->getQualifiedForeignKeyName()
             // $relation->setQuery($builder);
@@ -337,8 +305,9 @@ class GlobalChainScope implements Scope
                 }
             }
 
-            // Join
-            $model->globalScopeSubQuery->join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
+            // LEFT Join in case we have a NULL
+            // See ->orWhereNull() above
+            $model->globalScopeSubQuery->leftJoin($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
             
             // Chain all global_scope relations
             // For calling class
