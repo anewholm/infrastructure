@@ -11,7 +11,9 @@
             'menu_label' => 'Interface',
             'menu_description' => 'Interface settings',
             'multi_max_items' => 'Max items in multi-displays',
-            'enable_websockets' => 'Enable WebSockets'
+            'enable_websockets' => 'Enable WebSockets',
+            'remove_rm_user_filters' => 'Remove all RelationManager user filters',
+            'comment' => 'For performance with large user bases'
         ],
         'phpinfo' => [
             'menu_label' => 'PHP Info',
@@ -60,6 +62,7 @@
             'no_changes' => 'No changes found',
             'advanced' => 'Advanced',
             'simple' => 'Simple',
+            'all_controllers' => 'All',
             'dateformats' => [
                 'day' => 'Day',
                 'weekinyear' => 'Week In Year',
@@ -72,7 +75,6 @@
             'global_scopes' => 'Global Scopes',
             'no_restriction' => 'No Restriction',
             'nothing_linked' => 'Nothing linked',
-            'all_controllers' => 'All models',
         ],
         'server' => [
             'label' => 'Server',

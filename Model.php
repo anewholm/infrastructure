@@ -63,6 +63,7 @@ class Model extends BaseModel
 
     public $printable = FALSE;
     public static $globalScope;
+    public $afterListEditableSaveFunctions = array();
 
     public $readOnly = FALSE; // For VIEWS
     public $advanced = []; // Advanced fields
@@ -272,7 +273,7 @@ class Model extends BaseModel
 
         if (!$qe) {
             if (!isset($options['list-editable']) || $options['list-editable']) {
-                self::listEditableSave();
+                self::listEditableSave($this);
             }
 
             // Useful for auto-completing auto-relations
@@ -362,13 +363,17 @@ class Model extends BaseModel
     {
         $nameModels = array();
         foreach ($this->belongsTo as $name => &$config) {
-            if (isset($config['name']) && $config['name']) 
-                array_push($nameModels, $this->$name);
+            if (isset($config['name']) && $config['name']) {
+                // Global Scopes would load many users 
+                // and hide names of restricted objects
+                // first() because this is a belongsTo
+                array_push($nameModels, $this->$name()->withoutGlobalScopes()->first());
+            }
         }
         return $this->buildName($html, $delimeter, ...$nameModels);
     }
-    
-    public static function listEditableSave(): bool
+
+    public static function listEditableSave(Model $parentModel = NULL): bool
     {
         static $processed = FALSE;
         $changes = FALSE;
@@ -427,7 +432,25 @@ class Model extends BaseModel
             }
         }
 
+        if ($parentModel && $changes) $parentModel->afterListEditableSaves();
+
         return $changes;
+    }
+
+    public function afterListEditableSaves()
+    {
+        // fn_acorn_university_student_ales(p_model_id)
+        foreach ($this->alesFunctions as $fnDatabaseName => $config) {
+            $bindings     = array(
+                $this->id
+            );
+            $placeholders = implode(',', array_fill(0, count($bindings), '?'));
+            try {
+                DB::select("select $fnDatabaseName($placeholders)", $bindings);
+            } catch (QueryException $qe) {
+                $this->throwNiceSqlError($qe);
+            }
+        }
     }
 
     // --------------------------------------------- New Relations

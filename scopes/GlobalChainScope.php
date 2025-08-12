@@ -7,34 +7,53 @@ use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Session;
 use Exception;
-use Flash;
+use DB;
 use Str;
-use BackendAuth;
 use \Acorn\User\Models\User;
 
 class GlobalChainScope implements Scope
 {
-    // TODO: Re-organise this class to just recurse once per model
-    // collecting builder joins on the way
+    // Creates a where (sub-query), joined from the single main table
+    // to limit the scope
+    // Main joins would cause hydration in-consistencies
+    // that is, * would return several ID columns
+    //
+    // Collect builder joins on the way
     // and only applying them back at the root call if necessary
+    //
+    // It does this sub-query:
+    //   SELECT "acorn_university_hierarchies".*
+    //   FROM "acorn_university_hierarchies"
+    //   WHERE acorn_university_hierarchies.id in(
+    //     select acorn_university_hierarchies.id from acorn_university_hierarchies
+    //     INNER JOIN "acorn_university_entities" ON "acorn_university_hierarchies"."entity_id" = "acorn_university_entities"."id"
+    //     INNER JOIN "acorn_university_academic_years" ON "acorn_university_hierarchies"."academic_year_id" = "acorn_university_academic_years"."id"
+    //     where FN_ACORNASSOCIATED_UNIVERSITY_SCOPE_ENTITIES (ACORNASSOCIATED_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249')
+    //   );
+    //
+    // Not this inner join, because of the multiple IDs it would return into the Model hydration process:
+    //   SELECT "acorn_university_hierarchies".*
+    //   FROM "acorn_university_hierarchies"
+    //     INNER JOIN "acorn_university_entities" ON "acorn_university_hierarchies"."entity_id" = "acorn_university_entities"."id"
+    //     INNER JOIN "acorn_university_academic_years" ON "acorn_university_hierarchies"."academic_year_id" = "acorn_university_academic_years"."id"
+    //   WHERE FN_ACORNASSOCIATED_UNIVERSITY_SCOPE_ENTITIES (ACORNASSOCIATED_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249');
+
     public const IS_THIS = TRUE;
 
     // ------------------------------------ Direct situation on this model
     public static function globalScopeRelationsOn(Model $model, string $flag = NULL): array
     {
+        // flag can be 'hierarchy'. This is not used at the moment
         // These can branch in to a tree of multiple global scopes
+        // because several > 1 relation may be a global_scope
         $globalScopeRelations = array();
 
         $relationConfigs = $model->belongsTo + $model->hasMany;
         foreach ($relationConfigs as $relationName => $relationConfig) {
-            if (isset($relationConfig['global_scope']) 
-                && $relationConfig['global_scope'] 
-                && isset($relationConfig[0])
-                && (
-                    is_null($flag) || 
-                    (isset($relationConfig['flags']) && in_array($flag, $relationConfig['flags']))
-                )
-            ) {
+            $flagCheck = (is_null($flag) || (isset($relationConfig['flags']) && in_array($flag, $relationConfig['flags'])));
+            if (isset($relationConfig['global_scope']) && $relationConfig['global_scope'] && $flagCheck) {
+                if (!isset($relationConfig[0]))
+                    throw new Exception("global_scope $relationName has no 0 index class configured");
                 $globalScopeRelations[$relationName] = $model->$relationName();
             }
         }
@@ -44,7 +63,7 @@ class GlobalChainScope implements Scope
 
     protected static function ourGlobalChainScopesOn(Model $model): array
     {
-        // Get _our_ scopes on this $model
+        // Get _our_ GlobalChainScope scopes on this $model
         // Not recursive at all
         $chainScopes = array();
         if ($allChainScopes = $model->getGlobalScopes()) {
@@ -67,7 +86,7 @@ class GlobalChainScope implements Scope
         return $chainScopes;
     }
 
-    public static function globalScopeSettingOn(User $user, Model $model): string|NULL {
+    public static function globalScopeUserSetting(User $user, Model $model): string|NULL {
         // Acorn/University/Models/Entity => global_scope_entity_id
         $globalScopeSetting = NULL;
 
@@ -80,6 +99,7 @@ class GlobalChainScope implements Scope
             $usersColumnStub    = "global_scope_$subName"; 
             $usersColumnName    = "{$usersColumnStub}_id";
             
+            // $user->global_scope_entity_id
             $globalScopeSetting = $user->{$usersColumnName};
         }
 
@@ -88,18 +108,22 @@ class GlobalChainScope implements Scope
 
     public static function settingNameFor(Model $model): string
     {
+        // For Session key
+        // Acorn/University/Models/Entity::globalScope
         $class = get_class($model);
         return "$class::globalScope";
     }
 
     public static function getSettingFor(Model $model): string|NULL
     {
+        // On User or Session
         $setting = NULL;
 
         if ($user = User::authUser()) {
-            $setting = self::globalScopeSettingOn($user, $model);
+            $setting = self::globalScopeUserSetting($user, $model);
         }
         
+        // An empty setting is no setting
         if (!$setting) {
             $settingName = self::settingNameFor($model);
             $setting     = Session::get($settingName);
@@ -117,50 +141,62 @@ class GlobalChainScope implements Scope
         // Returing TRUE causes the scope chain to be recursively applied
         $setting = self::getSettingFor($model);
         return ($isThis
-            ? ($setting && $model->id == $setting)
+            ? ($setting && $model->id == $setting) // _Same_ model that is making the request
             : (bool) $setting
         );
     }
 
     // --------------------------------------------- Recursive
     // Searching down global-scope relations to the end
-    public static function isEndSelectedFrom(Model $model, string $flag = NULL): bool
-    {
-        $isSelected = FALSE;
-        foreach (self::endGlobalScopeClasses($model, $flag) as $scopeModel) {
-            $setting    = self::getSettingFor($scopeModel);
-            $isSelected = ($setting && $scopeModel->id == $setting);
-            if ($isSelected) break;
-        }
-
-        return $isSelected;
-    }
-
     public static function endGlobalScopeClasses(Model $model, string $flag = NULL, array $fromEndChainModels = NULL): array
     {
         // Recursive
         // Get the (existing) Models on the ends of the global-scope relation chain(s)
         // Includes this $model parameter, if a $globalScope
-        $endChainModels       = array();
+        $endChainModels = array();
         if (property_exists($model, 'globalScope') && $model::$globalScope)
             $endChainModels[get_class($model)] = $model;
         
         $globalScopeRelations = self::globalScopeRelationsOn($model, $flag);
         foreach ($globalScopeRelations as $name => $relation) {
+            // We attempt to follow exist models if possible
+            // so that checks for equality can be made if necessary
+            // relations might have NULL values
             $relatedModel = NULL;
             if ($model->exists) $relatedModel = $model->{$name}()->first();
             if (!$relatedModel) $relatedModel = $relation->getRelated();
+            
+            // Checks
             $relatedClass   = get_class($relatedModel);
             if (isset($fromEndChainModels[$relatedClass])) {
                 $chain = implode(' => ', array_keys($fromEndChainModels));
                 throw new Exception("Infinite global-scope recursion on $chain");
             }
+
+            // Recurse to end
             $endChainModels = array_merge($endChainModels, self::endGlobalScopeClasses($relatedModel, $flag, $endChainModels));
         }
 
         return $endChainModels;
     }
 
+    public static function isEndSelectedFrom(Model $model, string $flag = NULL): bool
+    {
+        // Test if THIS model is a selected scope model
+        // Useful for display and structure
+        // Used in hierarchies to return a NULL parent_id for scope models
+        $isSelected     = FALSE;
+        $endScopeModels = self::endGlobalScopeClasses($model, $flag);
+        foreach ($endScopeModels as $scopeModel) {
+            $isSelected = self::hasSessionFor($scopeModel, self::IS_THIS);
+            if ($isSelected) break;
+        }
+
+        return $isSelected;
+    }
+
+    // --------------------------------------------- Application
+    /*
     public function shouldApply(Model $model, bool $isThis = FALSE): bool
     {
         // Recursive
@@ -192,25 +228,40 @@ class GlobalChainScope implements Scope
         
         return $shouldApply;
     }
+    */
 
     public static function applySession(Builder $builder, Model $model): bool 
     {
-        // From this model only
-        // Not recursive at all
-        // Usually called with an apply() override:
-        // public function apply(Builder $builder, Model $model): bool {
-        //     return self::applySession($builder, $model);
-        // }
-        // Returing TRUE causes the scope chain to be recursively applied
+        // From this model only, Not recursive at all
+        // Scope classes should apply() override:
+        //   class EntityScope {
+        //     public function apply(Builder $builder, Model $model): bool {
+        //       return self::applySession($builder, $model);
+        //     }
+        //   }
         $setting = self::getSettingFor($model);
 
         if ($setting) {
+            // Can be a direct where clause only
+            $globalScopeSubQuery = &$builder;
+            // Or an entire joined sub-query
+            if ($model->globalScopeSubQuery) $globalScopeSubQuery = &$model->globalScopeSubQuery;
+            
+            // Finish off the sub-query|direct where clause
             if (isset($model::$globalScope::$scopingFunction)) {
                 $scopingFunction = $model::$globalScope::$scopingFunction;
                 $settingEscaped  = str_replace("'", "\\'", $setting);
-                $builder->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
+                $globalScopeSubQuery->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
             } else {
-                $builder->where("$model->table.id", '=', $setting);
+                $globalScopeSubQuery->where("$model->table.id", '=', $setting);
+            }
+
+            if ($model->globalScopeSubQuery) {
+                // Apply the sub-query to the main builder
+                // This will translate the QueryBuilder in to a string Illuminate\Database\Query\Expression
+                $query     = $builder->getQuery();
+                $mainTable = $query->from;
+                $builder->whereIn("$mainTable.id", $model->globalScopeSubQuery, 'and');
             }
 
             // TODO: Allow NULLs on the first join to show Models without an explicit setting
@@ -230,20 +281,38 @@ class GlobalChainScope implements Scope
                 }
             }
             */
+        } else {
+            // To make sure the sub-query is reset
+            // as the test is for a where below
+            if ($model->globalScopeSubQuery) $model->globalScopeSubQuery->where(1, '=', 1);
         }
 
         return (bool) $setting;
     }
 
     public function apply(Builder $builder, Model $model): void {
-        // Follow global_scope => TRUE relation(s)
-        // This is overridden by
-        //   YearScope::apply(...)
-        if ($this->shouldApply($model)) 
-            $this->applyRecursive($builder, $model);
+        // Any point in the chain can override this standard WinterCMS apply() call
+        // Scope classes should apply() override:
+        //   class EntityScope {
+        //     public function apply(Builder $builder, Model $model): bool {
+        //       return self::applySession($builder, $model);
+        //     }
+        //   }
+        $this->applyRecursiveMaybe($builder, $model);
     }
 
-    public function applyRecursive(Builder $builder, Model $model): void {
+    public function applyRecursiveMaybe(Builder $builder, Model $model): void {
+        // We store the where on the model
+        // because we must pass it down the overridden apply() chain
+        // and we cannot add new parameters
+        if (!$model->globalScopeSubQuery || $model->globalScopeSubQuery->wheres) {
+            // Begin our where sub-query
+            $query     = $builder->getQuery();
+            $mainTable = $query->from;
+            $alias     = "global_scope_$mainTable";
+            $model->globalScopeSubQuery = DB::table($mainTable, $alias)->select("$alias.id");
+        }
+
         $globalScopeRelations = self::globalScopeRelationsOn($model);
         foreach ($globalScopeRelations as $relation) {
             // TODO: $relation->addConstraints();
@@ -256,13 +325,30 @@ class GlobalChainScope implements Scope
             $columnTo     = ($reverse ? 'id' : $key);
             $fqTableFrom  = "$model->table.$columnFrom";
             $fqTableTo    = "$relatedModel->table.$columnTo";
-            $builder->join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
+
+            // Checks
+            if (env('APP_DEBUG') && is_array($model->globalScopeSubQuery->joins)) {
+                $mainTable = preg_replace('/ .*/', '', $model->globalScopeSubQuery->from);
+                if ($mainTable == $relatedModel->table)
+                    throw new Exception("Re-join to from");
+                foreach ($model->globalScopeSubQuery->joins as $join) {
+                    if ($join->table == $relatedModel->table)
+                        throw new Exception("Double join");
+                }
+            }
+
+            // Join
+            $model->globalScopeSubQuery->join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
             
             // Chain all global_scope relations
             // For calling class
             $chainScopes  = self::ourGlobalChainScopesOn($relatedModel);
             foreach ($chainScopes as $chainScope) {
                 // Inherit your Scope from GlobalChainScope to activate this chain
+                // Any point in the chain can override-intercept this standard WinterCMS apply() call
+                // Recursuve!
+                // Pass down the globalScopeSubQuery
+                $relatedModel->globalScopeSubQuery = $model->globalScopeSubQuery;
                 $chainScope->apply($builder, $relatedModel);
             }
         }

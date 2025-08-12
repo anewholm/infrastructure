@@ -104,9 +104,11 @@ class Controller extends BackendController
 
     public function all(): string
     {
+        $html               = '';
         $pluginPathAbsolute = $this->pluginPathAbsolute();
         $controllerDir      = new \DirectoryIterator("$pluginPathAbsolute/controllers");
         $thisFQN            = get_class($this);
+        $this->pageTitle    = trans('acorn::lang.models.general.all_controllers');
         
         // Sorted list
         $orderedFileList    = array();
@@ -125,8 +127,8 @@ class Controller extends BackendController
         ksort($orderedFileList);
 
         // Display with some values
-        $empty = e(trans('acorn::lang.models.general.empty'));
-        $html  = '<ul id="all-controllers">';
+        $empty  = e(trans('acorn::lang.models.general.empty'));
+        $html  .= '<ul id="all-controllers">';
         foreach ($orderedFileList as $listName => $controller) {
             $controllerUrl = $controller->controllerUrl();
             $modelClass    = $controller->modelFullyQualifiedClass();

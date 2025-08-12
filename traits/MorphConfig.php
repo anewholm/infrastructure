@@ -4,6 +4,7 @@ use Acorn\Behaviors\RelationController;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use Winter\Storm\Database\Relations\BelongsTo;
 use Illuminate\Support\Facades\Session;
+use Acorn\Models\InterfaceSetting;
 use \Exception;
 use BackendAuth;
 use Str;
@@ -15,14 +16,16 @@ Trait MorphConfig
 {
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
-        $debugOutput     = FALSE;
-        $config          = parent::makeConfig($configFile, $requiredConfig);
-        $controllerModel = @$this->controller->widget->form->model;
+        $debugOutput       = FALSE;
+        $config            = parent::makeConfig($configFile, $requiredConfig);
+        $controllerModel   = @$this->controller->widget->form->model;
+        $controllerModelClass = ($controllerModel ? get_class($controllerModel) : NULL);
         // Popup situations, with parent model context
-        $parentModel     = post(RelationController::PARAM_PARENT_MODEL);
-        $parentModelId   = post(RelationController::PARAM_PARENT_MODEL_ID);
+        $parentModel       = post(RelationController::PARAM_PARENT_MODEL);
+        $parentModelId     = post(RelationController::PARAM_PARENT_MODEL_ID);
         // RelationManager aware
-        $modelClass      = ($this instanceof RelationController && $this->relationModel
+        $isRelationManager = ($this instanceof RelationController);
+        $modelClass        = ($isRelationManager && $this->relationModel
             ? get_class($this->relationModel) 
             : $this->getConfig('modelClass')
         );
@@ -34,6 +37,43 @@ Trait MorphConfig
             $configRole      = explode('.', $configFileName)[0];
 
             switch ($configRole) {
+                case 'config_filter':
+                    // RelationManager setup: 1 for 1 update screen
+                    // This is important because they are expensive
+                    if ($isRelationManager) {
+                        $removeRmUserFilters = InterfaceSetting::get('remove_rm_user_filters');
+                        foreach ($config->scopes as $name => &$filterConfig) {
+                            // Remove filters that are equal to the parent screen
+                            if (isset($filterConfig['modelClass'])
+                                && trim($filterConfig['modelClass'], '\\') == $controllerModelClass
+                            ) unset($config->scopes[$name]);
+
+                            // Also expensive: all users
+                            // Will include created_by_user & updated_by_user
+                            if ($removeRmUserFilters 
+                                && isset($filterConfig['modelClass'])
+                                && trim($filterConfig['modelClass'], '\\') == 'Acorn\User\Models\User'
+                            ) unset($config->scopes[$name]);
+
+                            if (isset($filterConfig['noRelationManager']) && $filterConfig['noRelationManager'])
+                                unset($config->scopes[$name]);
+                        }
+                    }
+
+                    // --------------------------- Advanced
+                    if (!Session::get('advanced')) {
+                        foreach ($config->scopes as $name => &$filterConfig) {
+                            if (isset($filterConfig['advanced']) && $filterConfig['advanced'])
+                                unset($config->scopes[$name]);
+
+                            // Always advanced
+                            if (isset($filterConfig['modelClass'])
+                                && trim($filterConfig['modelClass'], '\\') == 'Acorn\Models\Server'
+                            ) unset($config->scopes[$name]);
+                        }
+                    }
+
+                    break;
                 case 'config_form':
                     // ------------------------------------------------- Action functions
                     if (property_exists($this->controller, 'actionFunctions') && property_exists($config, 'actionFunctions'))
