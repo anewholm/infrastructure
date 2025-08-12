@@ -13,3 +13,7 @@ fields:
         label: acorn::lang.settings.interface.enable_websockets
         span: auto
         type: checkbox
+    remove_rm_user_filters:
+        label: acorn::lang.settings.interface.remove_rm_user_filters
+        span: auto
+        type: checkbox
