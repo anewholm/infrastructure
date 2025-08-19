@@ -1,0 +1,27 @@
+columns:
+  model_type:
+    label: acorn::lang.models.name.model_type
+    type: text
+    searchable: true
+    sortable: false
+  model_id:
+    label: acorn::lang.models.name.model_id
+    type: text
+    searchable: true
+    sortable: false
+  table_name:
+    label: acorn::lang.models.name.table
+    type: text
+    searchable: true
+    sortable: false
+    select: '"table"'
+  field:
+    label: acorn::lang.models.name.field
+    type: text
+    searchable: true
+    sortable: false
+  content:
+    label: acorn::lang.models.name.content
+    type: text
+    searchable: true
+    sortable: false

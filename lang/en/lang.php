@@ -13,6 +13,7 @@
             'multi_max_items' => 'Max items in multi-displays',
             'enable_websockets' => 'Enable WebSockets',
             'remove_rm_user_filters' => 'Remove all RelationManager user filters',
+            'log_all_changes' => 'Log all changes to any model',
             'comment' => 'For performance with large user bases'
         ],
         'phpinfo' => [
@@ -24,7 +25,7 @@
     ],
     'permissions' => [
         'view_advanced_fields' => 'View Advanced Fields',
-        'tab' => 'acorn',
+        'tab' => 'Acorn',
     ],
     'models' => [
         'general' => [
@@ -106,6 +107,15 @@
             'locale'     => 'Template locale',
             'boxnames'   => 'Dynamic box names',
             'boxwarnings' => 'Box Warnings',
+        ],
+        'name' => [
+            'label_plural' => 'Names',
+            'settings_description' => 'All the text content in the system',
+            'model_type' => 'Model',
+            'model_id' => 'ID',
+            'table' => 'Table',
+            'field' => 'Field',
+            'content' => 'Content',
         ],
     ],
     'errors' => [

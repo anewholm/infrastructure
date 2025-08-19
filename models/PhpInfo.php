@@ -1,23 +1,7 @@
 <?php namespace Acorn\Models;
 
-use App;
-use Backend;
-use Url;
-use File;
-use Lang;
 use Acorn\Model;
-use Cache;
-use Config;
-use Less_Parser;
-use Exception;
 
-/**
- * Brand settings that affect all users
- *
- * @package winter\wn-backend-module
- * @author Alexey Bobkov, Samuel Georges
- * @author Winter CMS
- */
 class PhpInfo extends Model
 {
     use \System\Traits\ViewMaker;
@@ -27,8 +11,11 @@ class PhpInfo extends Model
      * @var array Behaviors implemented by this model.
      */
     public $implement = [
-        \System\Behaviors\SettingsModel::class
+        \System\Behaviors\SettingsModel::class,
+        \Winter\Translate\Behaviors\TranslatableModel::class
     ];
+
+    public $translatable = [];
 
     /**
      * @var string Unique code
