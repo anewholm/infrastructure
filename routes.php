@@ -2,6 +2,7 @@
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Http\Request;
 use Acorn\Controllers\DB;
+use Acorn\Controllers\Names;
 use BeyondCode\LaravelWebSockets\Dashboard\Http\Controllers\ShowDashboard;
 
 class AuthWrapper
@@ -18,6 +19,7 @@ class AuthWrapper
 Event::listen('system.route', function () {
     Event::fire('acorn.beforeRoute');
 
+    // -------------------------------- WebSockets infrastructure
     Route::get('/api/datachange', DB::class . '@datachange');
     // TODO: Route::get('/laravel-dashboard', ShowDashboard::class);
 
@@ -28,6 +30,9 @@ Event::listen('system.route', function () {
 
     Route::get( '/api/comment', DB::class . '@comment');
     Route::post('/api/comment', DB::class . '@comment');
+
+    // -------------------------------- Views
+    Route::get( '/backend/acorn/names', Names::class . '@index');
 
     Event::fire('acorn.route');
 }, PHP_INT_MIN);

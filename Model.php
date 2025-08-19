@@ -16,6 +16,7 @@ use BackendAuth;
 use DB;
 use Request;
 use Flash;
+use Log;
 
 use Exception;
 use InvalidArgumentException;
@@ -33,6 +34,7 @@ use Acorn\Events\ModelBeforeSave;
 use Acorn\Events\ModelAfterSave;
 use Acorn\Models\Server;
 use Acorn\Scopes\GlobalChainScope;
+use Acorn\Models\InterfaceSetting;
 
 /*
 class Saving {
@@ -221,8 +223,18 @@ class Model extends BaseModel
     // --------------------------------------------- Advanced record control
     public function delete()
     {
-        if ($user = BackendAuth::user())
-            $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
+        $user = BackendAuth::user();
+
+        if ($user) $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
+
+        // -------------------------------------------- Logging
+        if (InterfaceSetting::get('log_all_changes')) {
+            $class    = get_class($this);
+            $name     = '<no name>';
+            try {$name = $this->name;} catch (Exception $ex) {}
+            $user     = ($user ? "$user->login($user->id)" : '<unknown>');
+            Log::info("DELETE of $class", array("Model: $name($this->id)", "User: $user"));
+        }
 
         // We also allow RelationShip 'delete' for belongsTo relations
         // https://wintercms.com/docs/v1.2/docs/database/relations#detailed-relation-methods
@@ -241,6 +253,9 @@ class Model extends BaseModel
 
     public function save(?array $options = [], $sessionKey = null)
     {
+        $user   = BackendAuth::user();
+        $exists = $this->exists;
+
         // Useful for auto-completing auto-relations
         // like created_by_user and created_by_event
         ModelBeforeSave::dispatch($this);
@@ -250,10 +265,10 @@ class Model extends BaseModel
             $this->server_id = Server::singleton()->id;
         }
 
-        // Object locking
+        // -------------------------------------------- Object locking and dirty writing
+        // Does not save(), may throw ObjectIsLocked()
         if (!isset($options['UNLOCK']) || $options['UNLOCK'] == TRUE) {
-            if ($user = BackendAuth::user())
-                $this->unlock($user); // Does not save(), may throw ObjectIsLocked()
+            if ($user) $this->unlock($user); 
         }
 
         // Dirty Writing checks in fill() include a passed original updated_at field
@@ -261,6 +276,8 @@ class Model extends BaseModel
         // This would error on create new
         if (!property_exists($this, 'timestamps') || $this->timestamps) $this->updated_at = NULL;
 
+        // -------------------------------------------- Main parent save
+        // model->exists => TRUE
         $qe     = NULL;
         $result = NULL;
         try {
@@ -279,6 +296,16 @@ class Model extends BaseModel
             // Useful for auto-completing auto-relations
             // like created_by_user and created_by_event
             ModelAfterSave::dispatch($this);
+        }
+
+        // -------------------------------------------- Logging
+        if (InterfaceSetting::get('log_all_changes')) {
+            $update   = ($exists ? 'UPDATE' : 'CREATE');
+            $class    = get_class($this);
+            $name     = '<no name>';
+            try {$name = $this->name;} catch (Exception $ex) {}
+            $user     = ($user ? "$user->login($user->id)" : '<unknown>');
+            Log::info("$update of $class", array("Model: $name($this->id)", "User: $user"));
         }
 
         return $result;
@@ -414,8 +441,10 @@ class Model extends BaseModel
                                 if ($delete) {
                                     // Delete models with NULL data
                                     // this is usually because the score=NULL
-                                    $model->delete();
-                                    $changes = TRUE;
+                                    if ($model->exists) {
+                                        $model->delete();
+                                        $changes = TRUE;
+                                    }
                                 } else {
                                     $model->fill($columns);
                                     if ($model->isDirty()) {

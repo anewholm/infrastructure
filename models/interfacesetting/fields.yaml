@@ -7,13 +7,25 @@
 fields:
     multi_max_items:
         label: acorn::lang.settings.interface.multi_max_items
-        span: auto
+        span: storm
+        default: 4
+        class: col-xs-6 col-md-3
         type: number
     enable_websockets:
         label: acorn::lang.settings.interface.enable_websockets
-        span: auto
+        span: storm
+        default: false
+        class: col-xs-6 col-md-3
         type: checkbox
     remove_rm_user_filters:
         label: acorn::lang.settings.interface.remove_rm_user_filters
-        span: auto
+        span: storm
+        default: true
+        class: col-xs-6 col-md-3
+        type: checkbox
+    log_all_changes:
+        label: acorn::lang.settings.interface.log_all_changes
+        span: storm
+        default: true
+        class: col-xs-6 col-md-3
         type: checkbox

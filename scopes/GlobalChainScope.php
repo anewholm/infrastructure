@@ -219,6 +219,10 @@ class GlobalChainScope implements Scope
                 $settingEscaped  = str_replace("'", "\\'", $setting);
                 $globalScopeSubQuery->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
             } else {
+                // orWhereNull() handles cases where 
+                // the parent model global-scope id is NULL:
+                //   Calculation.academic_year_id is NULL
+                // as we have LEFT joined all the way
                 $globalScopeSubQuery->where("$model->table.id", '=', $setting)
                     ->orWhereNull("$model->table.id");
             }

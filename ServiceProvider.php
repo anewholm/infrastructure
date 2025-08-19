@@ -2,13 +2,8 @@
 
 use DB;
 use App;
-use Url;
 use Lang;
-use File;
 use Event;
-use Config;
-use Backend;
-use BackendMenu;
 use BackendAuth;
 use Backend\Models\User;
 use Backend\Models\UserRole;
@@ -20,6 +15,8 @@ use Backend\Classes\FormTabs;
 use Acorn\FormWidgets\QrCode;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as SimpleSoftwareQrCode;
 use Backend\Widgets\Lists as BackendLists;
+use Backend\Widgets\Filter;
+use Backend\Classes\FilterScope;
 
 use Winter\Storm\Support\ModuleServiceProvider;
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
@@ -35,6 +32,9 @@ class ServiceProvider extends ModuleServiceProvider
 {
     public function boot()
     {
+        // Register localization
+        Lang::addNamespace('acorn', realpath('modules/acorn/lang'));
+
         // -------------------------------------- Global CSS
         if (self::isDebugAny()) {
             Event::listen('backend.page.beforeDisplay', function ($controller, $action, $params) {
@@ -92,6 +92,22 @@ class ServiceProvider extends ModuleServiceProvider
             }
         });
 
+        Event::listen('backend.filter.extendQuery', function (Filter $filterWidget, $query, FilterScope $scope) {
+            // 1to1 filter search term support
+            // nameFrom: indicates the name of the item in the list
+            // AND the column to search. That does not work with 1to1
+            // So we allow an injection of a SQL statement during term search
+            // For example:
+            //   label: acorn.university::lang.models.course.label_plural
+            //   conditions: 'exists(select * from acorn_user_user_group_version ugv inner join acorn_university_hierarchies hi on hi.user_group_version_id = ugv.user_group_version_id where hi.entity_id in(:filtered) and ugv.user_id = acorn_university_students.user_id)'
+            //   modelClass: Acorn\University\Models\Entity
+            //   searchNameSelect: select ugs.name from acorn_user_user_groups ugs where ugs.id = acorn_university_entities.user_group_id
+            if (isset($scope->config['searchNameSelect'])) {
+                $searchNameSelect = $scope->config['searchNameSelect'];
+                $scope->nameFrom  = "($searchNameSelect)";
+            }
+        });
+
         Updates::extendListColumns(function ($widget, $model) {
             // We need to be careful when using the database
             // during migrations, tables may not exist
@@ -118,7 +134,6 @@ class ServiceProvider extends ModuleServiceProvider
                 ],
             ]);
         });
-
 
         // VERSION: Winter 1.2.6: send also parameter ('acorn');
         // But does not seem to cause a problem if ommitted
@@ -190,6 +205,16 @@ class ServiceProvider extends ModuleServiceProvider
                     'permissions' => ['acorn.manage_reporting'],
                     'order'       => 500,
                     'keywords'    => 'reporting'
+                ],
+                'names' => [
+                    'label'       => 'acorn::lang.models.name.label_plural',
+                    'description' => 'acorn::lang.models.name.settings_description',
+                    'category'    => 'Acorn',
+                    'url'         => '/backend/acorn/names',
+                    'icon'        => 'icon-search',
+                    'permissions' => ['acorn.view_names'],
+                    'order'       => 500,
+                    'keywords'    => 'search names content'
                 ],
             ]);
         });
