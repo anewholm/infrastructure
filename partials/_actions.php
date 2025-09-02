@@ -14,6 +14,7 @@ if (method_exists($model, 'actionFunctions')) {
     $modelArrayName  = $model->unqualifiedClassName();
     $actionFunctions = $model->actionFunctions('row'); // Includes inherited 1to1 action functions
     $user            = BackendAuth::user();
+    $advancedDisplay = ($user->hasPermission('acorn.advanced') && Session::get('advanced'));
 
     if (count($actionFunctions) || $formMode || $model->printable) {
         print('<ul class="action-functions">');
@@ -21,7 +22,7 @@ if (method_exists($model, 'actionFunctions')) {
         // --------------------------------- Advanced
         if ($model->advanced 
             && $this->action == 'update'
-            && $user->hasPermission('acorn_advanced')
+            && $user->hasPermission('acorn.advanced')
         ) {
             $toggle   = (Session::get('advanced') ? 0 : 1);
             $advanced = e(trans('acorn::lang.models.general.advanced'));
@@ -41,8 +42,9 @@ if (method_exists($model, 'actionFunctions')) {
             )), 1,-1));
 
             // TODO: Translateable comments
-            $title   = (isset($definition['comment']['en']) ? $definition['comment']['en'] : NULL);
-            $tooltip = ($title 
+            $title      = (isset($definition['comment']['en']) ? $definition['comment']['en'] : NULL);
+            $advancedFn = (isset($definition['advanced']) && $definition['advanced']);
+            $tooltip    = ($title 
                 ? "<div class='tooltip fade top'>
                     <div class='tooltip-arrow'></div>
                     <div class='tooltip-inner'>$title</div>
@@ -51,24 +53,26 @@ if (method_exists($model, 'actionFunctions')) {
             );
 
             $class  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
-            $class .= ($title ? ' hover-indicator' : NULL);
-            $class .= (isset($definition['advanced']) && $definition['advanced'] ? ' advanced' : '');
+            $class .= ($title      ? ' hover-indicator' : NULL);
+            $class .= ($advancedFn ? ' advanced'        : NULL);
 
-            print(<<<HTML
-                <li>
-                    $tooltip
-                    <a
-                        class="$class"
-                        data-control="popup"
-                        data-request-data='$dataRequestData'
-                        data-load-indicator='$title...'
-                        data-request-loading="loading-indicator"
-                        data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
-                        data-handler="onActionFunction"
-                    >$enDevLabel</a>
-                </li>
+            if (!$advancedFn || $advancedDisplay) {
+                print(<<<HTML
+                    <li>
+                        $tooltip
+                        <a
+                            class="$class"
+                            data-control="popup"
+                            data-request-data='$dataRequestData'
+                            data-load-indicator='$title...'
+                            data-request-loading="loading-indicator"
+                            data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                            data-handler="onActionFunction"
+                        >$enDevLabel</a>
+                    </li>
 HTML
-            );
+                );
+            }
         }
 
         // --------------------------------- Printing
@@ -125,7 +129,7 @@ HTML
         } 
 
         // --------------------------------- QR scan
-        if ($formMode) {
+        if ($formMode && $user->hasPermission('acorn.scan_qrcode')) {
             $popupQrScan = $this->makePartial('popup_qrscan', array(
                 'actions'       => array('form-field-complete'),
             ));

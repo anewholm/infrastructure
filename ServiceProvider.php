@@ -128,8 +128,28 @@ class ServiceProvider extends ModuleServiceProvider
 
         BackendAuth::registerCallback(function ($manager) {
             $manager->registerPermissions('Acorn', [
-                'acorn_advanced' => [
+                'acorn.advanced' => [
                     'label' => 'acorn::lang.permissions.view_advanced_fields',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+                'acorn.manage_interface' => [
+                    'label' => 'acorn::lang.settings.interface.menu_label',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+                'acorn.php_info' => [
+                    'label' => 'acorn::lang.settings.phpinfo.menu_label',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+                'acorn.view_names' => [
+                    'label' => 'acorn::lang.models.name.label_plural',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+                'acorn.view_qrcode' => [
+                    'label' => 'acorn::lang.permissions.view_qrcode',
+                    'tab'   => 'acorn::lang.permissions.tab',
+                ],
+                'acorn.scan_qrcode' => [
+                    'label' => 'acorn::lang.permissions.scan_qrcode',
                     'tab'   => 'acorn::lang.permissions.tab',
                 ],
             ]);
@@ -202,7 +222,7 @@ class ServiceProvider extends ModuleServiceProvider
                     'category'    => 'Acorn',
                     'icon'        => 'icon-chart-simple',
                     'class'       => 'Acorn\Models\PhpInfo',
-                    'permissions' => ['acorn.manage_reporting'],
+                    'permissions' => ['acorn.php_info'],
                     'order'       => 500,
                     'keywords'    => 'reporting'
                 ],

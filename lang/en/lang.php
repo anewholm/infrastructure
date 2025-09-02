@@ -26,6 +26,8 @@
     'permissions' => [
         'view_advanced_fields' => 'View Advanced Fields',
         'tab' => 'Acorn',
+        'view_qrcode' => 'View QRCodes',
+        'scan_qrcode' => 'Scan QRCodes',
     ],
     'models' => [
         'general' => [

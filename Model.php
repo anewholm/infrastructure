@@ -351,6 +351,7 @@ class Model extends BaseModel
 
             if ($model) { // Guard from NULLs
                 if ($model instanceof BaseModel) {
+                    // TODO: 1-1 model translatable fields do not work
                     if ($html) $modelName  = ($model->htmlName ?: e($model->name));
                     else       $modelName  = $model->name;
                     $classParts = explode('\\', get_class($model));

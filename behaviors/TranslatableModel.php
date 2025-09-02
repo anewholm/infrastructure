@@ -102,4 +102,34 @@ class TranslatableModel extends WinterTranslatableModel
 
         return $result;
     }
+
+    protected function loadTranslatableData($locale = null)
+    {
+        // This is copied from the parent method
+        // with manual relation below
+        if (!$locale) {
+            $locale = $this->translatableContext;
+        }
+
+        if (!$this->model->exists) {
+            return $this->translatableAttributes[$locale] = [];
+        }
+
+        // If running within a noConstraints() callback
+        // like makeRenderFormField() for simple form fields like dropdowns
+        // then all translations will be loaded everytime
+        // addConstraints() will have no effect due to the static::$constraints == FALSE in RelationBase
+        //
+        // So we manually addConstraints() of the winter attributes table request
+        $translationsRelation = $this->model->translations()
+            ->where('model_type', get_class($this->model))
+            ->where('model_id',   $this->model->id)
+            ->where('locale',     $locale);
+
+        $obj = $translationsRelation->first();
+
+        $result = $obj ? json_decode($obj->attribute_data, true) : [];
+
+        return $this->translatableOriginals[$locale] = $this->translatableAttributes[$locale] = $result;
+    }
 }

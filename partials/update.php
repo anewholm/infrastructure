@@ -1,5 +1,9 @@
 <?php 
 // If $this->fatalError, vars will not be available
+$user              = BackendAuth::user();
+$modelIsCreateSystem = (isset($formModel) && $formModel instanceof \Acorn\Model);
+
+// Labels etc.
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $controllerListUrl = $this->actionUrl('');
@@ -82,13 +86,15 @@ HTML
                     <?= e(trans('backend::lang.form.save_and_close')); ?>
                 </button>
 
-                <button
-                    type="button"
-                    class="wn-icon-trash-o btn-icon danger pull-right"
-                    data-request="onDelete"
-                    data-load-indicator="<?= e(trans('backend::lang.form.deleting_name', ['name' => $modelLabelKey])); ?>"
-                    data-request-confirm="<?= e(trans('backend::lang.form.confirm_delete')); ?>">
-                </button>
+                <?php if (!$modelIsCreateSystem || $user->hasPermission($formModel->permissionFQN('delete'))): ?>
+                    <button
+                        type="button"
+                        class="wn-icon-trash-o btn-icon danger pull-right"
+                        data-request="onDelete"
+                        data-load-indicator="<?= e(trans('backend::lang.form.deleting_name', ['name' => $modelLabelKey])); ?>"
+                        data-request-confirm="<?= e(trans('backend::lang.form.confirm_delete')); ?>">
+                    </button>
+                <?php endif ?>
 
                 <span class="btn-text">
                     or <a href="<?= $controllerListUrl ?>"><?= e(trans('backend::lang.form.cancel')); ?></a>

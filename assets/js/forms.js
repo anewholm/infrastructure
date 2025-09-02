@@ -28,6 +28,14 @@ function acorn_dynamicElements(){
 
   $('.goto-form-group-selection').hide();
 
+  $('select[default]').each(function(){
+    // Problems with the default and [maybe] UUIDs
+    // Set attributes: default: instead
+    var def = $(this).attr('default');
+    $(this).children('option[value="' + def + '"]').attr('selected', 'selected');
+    $(this).trigger('change');
+  });
+
   // We do not know what was updated
   $(':input').each(acorn_updateViewSelectionLink);
 
