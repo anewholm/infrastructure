@@ -116,13 +116,6 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=current]) {
     display: inherit;
 }
-/* Advanced action functions */
-.action-functions > li:has(a.advanced) {
-    display: none;
-}
-body.advanced .action-functions > li:has(a.advanced) {
-    display: inline;
-}
 
 /* ------------------------------------- Sidebar */
 .form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {

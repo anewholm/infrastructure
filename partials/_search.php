@@ -1,5 +1,9 @@
 <div class="search-qrscan-container">
-    <?= $this->makePartial('popup_qrscan'); ?>
+<?php
+    $user = BackendAuth::user();
+    if ($user->hasPermission('acorn.scan_qrcode'))
+        print($this->makePartial('popup_qrscan'));
+?>
 </div>
 
 <div class="search-global-scope-selectors-container">

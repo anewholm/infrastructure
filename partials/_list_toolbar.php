@@ -1,8 +1,8 @@
 <div data-control="toolbar">
     <?php // TODO: This should maybe be the toolbar.extend event instead?
     $user              = BackendAuth::user();
-    $controllerListUrl = $this->actionUrl('');
     $model             = $this->widget?->list?->model;
+    $controllerListUrl = $this->actionUrl('');
     $isReadOnly        = ((property_exists($this, 'readOnly') && $this->readOnly) 
         || ($model && property_exists($model, 'readOnly') && $model->readOnly));
     $modelIsCreateSystem = ($model instanceof \Acorn\Model);

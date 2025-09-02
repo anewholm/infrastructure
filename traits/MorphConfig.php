@@ -113,7 +113,42 @@ Trait MorphConfig
                         }
                     }
 
-                    // ------------------------------------------------- Advanced
+                    // ------------------------------------------------- Defaults for drop-downs
+                    // For some reason they do not work, maybe because of UUIDs
+                    // So forms.js supports select[@default] HTML attribute
+                    if (isset($config->fields)) {
+                        foreach ($config->fields as &$fieldConfig) {
+                            if (   isset($fieldConfig['type']) 
+                                && $fieldConfig['type'] == 'dropdown' 
+                                && isset($fieldConfig['default'])
+                            ) {
+                                $default = $fieldConfig['default'];
+                                if (isset($fieldConfig['attributes'])) {
+                                    $fieldConfig['attributes']['default'] = $default;
+                                } else {
+                                    $fieldConfig['attributes'] = array('default' => $default);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as $name => &$fieldConfig) {
+                            if (   isset($fieldConfig['type']) 
+                                && $fieldConfig['type'] == 'dropdown' 
+                                && isset($fieldConfig['default'])
+                            ) {
+                                $default = $fieldConfig['default'];
+                                if (isset($fieldConfig['attributes'])) {
+                                    $fieldConfig['attributes']['default'] = $default;
+                                } else {
+                                    $fieldConfig['attributes'] = array('default' => $default);
+                                }
+                            }
+                        }
+                    }
+
+                    // ------------------------------------------------- Advanced fields toggle
                     if (isset($_GET['advanced'])) Session::put('advanced', ($_GET['advanced'] == '1'));
                     $advanced = Session::get('advanced');
                     
