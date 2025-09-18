@@ -3,13 +3,13 @@
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $controllerListUrl = $this->actionUrl('');
-$count             = NULL; //(isset($formModel) ? $formModel::menuItemCount() : NULL);
+$count             = (isset($formModel) ? $formModel::count() : NULL);
 
 Block::put('breadcrumb') ?>
     <ul>
         <li>
             <a href="<?= $controllerListUrl ?>"><?= e($modelsLabelKey); ?></a>
-            <span class="counter"><?= $count; ?></span>
+            <?php if (!is_null($count)) print("<span class='counter'>$count</span>"); ?>
         </li>
         <li><?= e($this->pageTitle) ?></li>
     </ul>
@@ -20,7 +20,6 @@ Block::put('breadcrumb') ?>
     <?php Block::put('form-contents') ?>
 
         <div class="layout-row">
-            <?= $this->makePartial('actions'); ?>
             <?= $this->formRender() ?>
         </div>
 
@@ -64,6 +63,9 @@ Block::put('breadcrumb') ?>
     <?php Block::endPut() ?>
 
     <?php Block::put('body') ?>
+        <!-- <ul> May contain forms -->
+        <?= $this->makePartial('actions'); ?>
+        
         <?= Form::open(['class'=>'layout stretch']) ?>
             <?= $this->makeLayout('form-with-sidebar') ?>
         <?= Form::close() ?>

@@ -18,27 +18,35 @@ fields:
         label: acorn::lang.models.export.prepend_uniqid
         type: checkbox
         default: false
+        readOnly: true
         span: storm
         cssClass: col-xs-4 new-row
-        comment: Useful when the first field, used for the filename, is not unique
+        comment: <i>Not implemented yet. Leave as default</i>. Useful when the first field, used for the filename, is not unique
+        commentHtml: true
     output_mode:
         label: acorn::lang.models.export.output_mode
         type: radio
         span: storm
         cssClass: col-xs-4
         default: multi
+        readOnly: true
         required: true
         options:
             multi: One document per row
             single: One page in the document per row (Smaller)
             row: One row in the document per row (Lists)
+        comment: <i>Not implemented yet. Leave as default</i>
+        commentHtml: true
     compression:
         label: acorn::lang.models.export.compression
         type: radio
         span: storm
         cssClass: col-xs-4
         default: zip
+        readOnly: true
         required: true
         options:
             zip: ZIP (MicroSoft Windows)
             tarGz: TAR+GZIP (Linux)
+        comment: <i>Only ZIP implemented so far. Leave as default</i>
+        commentHtml: true

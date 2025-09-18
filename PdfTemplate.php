@@ -16,7 +16,7 @@ use DOMNode;
 use DOMXPath;
 
 class PdfTemplate {
-    static $logging = FALSE;
+    static $logging = TRUE;
 
     protected $mediaDir;
     protected $templateFilePath;
@@ -121,6 +121,7 @@ class PdfTemplate {
     public function loadTemplate(string $templateFilePath, string $mediaDir = 'media'): DOMDocument
     {
         // Load template
+        $previousLocale         = NULL;
         $this->mediaDir         = $mediaDir;
         $this->templateFilePath = trim($templateFilePath, '/');
         $storageTemplatePath    = $this->storageTemplatePath();
@@ -136,10 +137,16 @@ class PdfTemplate {
             throw new Exception("[$storageTemplatePath] template empty");
         }
         
-        $this->templateDOM   = new DOMDocument();
-        if (!$this->templateDOM->loadXML($templateContents)) {
-            if (self::$logging) Log::error("[$storageTemplatePath] failed to loadXML()");
-            throw new Exception("[$storageTemplatePath] failed to loadXML()");
+        $domLoadException  = NULL;
+        $this->templateDOM = new DOMDocument();
+        try {
+            $this->templateDOM->loadXML($templateContents);
+        } catch (Exception $ex) {
+            $domLoadException = $ex->getMessage();
+        }
+        if ($domLoadException) {
+            if (self::$logging) Log::error("[$storageTemplatePath] failed to loadXML() with [$domLoadException]");
+            throw new Exception("[$storageTemplatePath] failed to loadXML() with [$domLoadException]");
         }
 
         // META info
@@ -183,6 +190,7 @@ class PdfTemplate {
 
             // Set global language
             if ($this->templateLocale) {
+                $previousLocale = Lang::getLocale();
                 Lang::setLocale($this->templateLocale);
                 if (self::$logging) Log::info("Template locale: $this->templateLocale");
             }
@@ -232,58 +240,76 @@ class PdfTemplate {
                 // text-box names are unique in LibreOffice
                 // allow for box.name 1 auto renaming in LibreOffice
                 $objectName = preg_replace('/ [0-9]+$/', '', $objectName);
+                $objectName = preg_replace('/\*$/', '', $objectName);
 
-                // <text:p text:style-name="P15"><text:span text:style-name="T3"><text:s/></text:span></text:p>
-                if ($xTextP = $this->getSingleNode('draw:text-box/text:p', $xDrawTextBox)) {
-                    // A child <text:span ...> allows paragraph and character formatting
-                    // and language setting through the <style> link
-                    $language = NULL;
-                    $xTextSPs = $this->xpath->query('text:span', $xTextP);
-                    if (count($xTextSPs) == 1) {
-                        $xTextP = $xTextSPs[0];
+                if ($objectName != 'Text Frame') {
+                    // <text:p text:style-name="P15"><text:span text:style-name="T3"><text:s/></text:span></text:p>
+                    if ($xTextP = $this->getSingleNode('draw:text-box/text:p', $xDrawTextBox)) {
+                        // A child <text:span ...> allows paragraph and character formatting
+                        // and language setting through the <style> link
+                        $language = NULL;
+                        $xTextSPs = $this->xpath->query('text:span', $xTextP);
+                        if (count($xTextSPs) == 1) {
+                            $xTextP = $xTextSPs[0];
 
-                        if ($styleName = $xTextP->getAttribute('text:style-name')) {
-                            if ($xStyle = $this->getSingleNode(".//style:style[@style:name='$styleName']")) {
-                                if ($xTextProperties = $this->getSingleNode("./style:text-properties", $xStyle)) {
-                                    // @style:language-complex, @style:country-complex 
-                                    // & @fo:language, @fo:country can exist together
-                                    // language complex takes precedence
-                                    $country  = $xTextProperties->getAttribute('style:country-complex');
-                                    $language = $xTextProperties->getAttribute('style:language-complex');
-                                    if ($language && $country != 'none') {
-                                        // Set the language directly on the text-box for easy access later
-                                        $xTextP->setAttribute('fo:language', $language);
-                                    } else {
-                                        $country  = $xTextProperties->getAttribute('fo:country');
-                                        $language = $xTextProperties->getAttribute('fo:language');
+                            if ($styleName = $xTextP->getAttribute('text:style-name')) {
+                                if ($xStyle = $this->getSingleNode(".//style:style[@style:name='$styleName']")) {
+                                    if ($xTextProperties = $this->getSingleNode("./style:text-properties", $xStyle)) {
+                                        // @style:language-complex, @style:country-complex 
+                                        // & @fo:language, @fo:country can exist together
+                                        // language complex takes precedence
+                                        $country  = $xTextProperties->getAttribute('style:country-complex');
+                                        $language = $xTextProperties->getAttribute('style:language-complex');
                                         if ($language && $country != 'none') {
                                             // Set the language directly on the text-box for easy access later
-                                            $xTextP->setAttribute('fo:language', $language);
+                                            $xTextP->setAttribute('fo:language', $this->translateLanguageCode($language));
+                                        } else {
+                                            $country  = $xTextProperties->getAttribute('fo:country');
+                                            $language = $xTextProperties->getAttribute('fo:language');
+                                            if ($language && $country != 'none') {
+                                                // Set the language directly on the text-box for easy access later
+                                                $xTextP->setAttribute('fo:language', $this->translateLanguageCode($language));
+                                            }
                                         }
+                                    } else {
+                                        if (self::$logging) Log::error("<style:style style:name=$styleName> without style:text-properties");
                                     }
                                 } else {
-                                    if (self::$logging) Log::error("<style:style style:name=$styleName> without style:text-properties");
+                                    if (self::$logging) Log::error("<style:style style:name=$styleName> not found");
                                 }
-                            } else {
-                                if (self::$logging) Log::error("<style:style style:name=$styleName> not found");
                             }
+                        } else if (count($xTextSPs) > 1) {
+                            array_push($this->boxWarnings, "Multiple <text:span>s in <text:p> box [$objectName]");
                         }
-                    } else if (count($xTextSPs) > 1) {
-                        array_push($this->boxWarnings, "Multiple <text:span>s in <text:p> box [$objectName]");
-                    }
 
-                    if (isset($this->textBoxes[$objectName])) array_push($this->textBoxes[$objectName], $xTextP);
-                    else $this->textBoxes[$objectName] = array($xTextP);
-                    if (self::$logging) Log::info("'$objectName' text-box found ($language)");
-                } else {
-                    if (self::$logging) Log::warning("draw:frame without text:p");
+                        if (isset($this->textBoxes[$objectName])) array_push($this->textBoxes[$objectName], $xTextP);
+                        else $this->textBoxes[$objectName] = array($xTextP);
+                        if (self::$logging) Log::info("'$objectName' text-box found ($language)");
+                    } else {
+                        if (self::$logging) Log::warning("draw:frame without text:p");
+                    }
                 }
             } else {
                 if (self::$logging) Log::error("Nameless control");
             }
         }
 
+        if ($previousLocale)
+            Lang::setLocale($previousLocale);
+
         return $this->templateDOM;
+    }
+
+    public function translateLanguageCode(string $code): string
+    {
+        switch ($code) {
+            case 'kmr': 
+            case 'ckb': 
+            case 'sdh': 
+                $code = 'ku';
+                break;
+        }
+        return $code;
     }
 
     public function writeAttributes(Model $model): void
@@ -293,7 +319,7 @@ class PdfTemplate {
         // Write QR Code
         if ($this->xQrCodeNode) {
             // Failovers for the link to the data model edit / view screen
-            $qrCodeMode   = ($model->hasAttribute('qrcodemode') ? $model->qrcodemode : 'update');
+            $qrCodeMode   = ($model->hasAttribute('qrcodemode')   ? $model->qrcodemode : 'update');
             $qrCodeObject = ($model->hasAttribute('qrCodeObject') ? $model->{$model->qrCodeObject} : $model);
             $qrCode       = ($model->hasAttribute('qrcode') 
                 ? $model->qrcode
@@ -306,6 +332,8 @@ class PdfTemplate {
                     ))
                 )
             );
+            if (!$qrCode) 
+                throw new Exception("QR Code URL is blank for [$model->id]. Cannot print the QR Code. Aborting");
             if (self::$logging) Log::info("Writing PNG QRCode ({$this->qrCodeHeightPX}px) $qrCode");
             $image  = QrCode::size($this->qrCodeHeightPX)->generate($qrCode); // PNG
             $base64 = base64_encode($image);
@@ -316,41 +344,92 @@ class PdfTemplate {
         foreach ($this->textBoxes as $name => $xTextBoxes) {
             foreach ($xTextBoxes as $xTextBox) {
                 $itemLocale  = $xTextBox->getAttribute('fo:language');
-                $locale      = ($itemLocale ?: $this->templateLocale);
-                
+                $locale      = $this->translateLanguageCode($itemLocale ?: $this->templateLocale);
+
                 $nameParts = explode('.', $name);
                 if (count($nameParts) == 1) {
+                    // sum_score_name, [sum_score_name_suffix]
                     if ($model->hasAttribute($name)) {
-                        $value = $model->getAttributeTranslated($name, $locale);
-                        if ($value) {
-                            $xTextBox->nodeValue = $value;
-                            if (self::$logging) Log::info("Text box $name => $value ($locale)");
+                        // $value may be a model
+                        // We cannot directly ask for the un-translated model
+                        // because maybe there is a select or valueFrom that will force return of the name instead
+                        $attributeType = 'value';
+                        if ($model->hasRelation($name)) {
+                            $attributeType = 'model';
+                            $value         = $model->$name()->first();
+                            if ($value) $value = $value->getAttributeTranslated('name', $locale);
                         } else {
-                            if (self::$logging) Log::warning("Text box $name NOT CHANGED because value was empty ($locale)");
+                            $value = $model->getAttributeTranslated($name, $locale);
+                        }
+                        if ($value) {
+                            $valueSuffix = NULL;
+                            $suffixName  = "{$name}_suffix";
+                            if ($model->hasRelation($suffixName)) {
+                                $valueSuffix = $model->$suffixName()->first();
+                                if ($valueSuffix) $valueSuffix = $valueSuffix->getAttributeTranslated('name', $locale);
+                            } else if ($model->hasAttribute($suffixName)) {
+                                $valueSuffix = $model->getAttributeTranslated($suffixName, $locale);
+                            }
+                            if ($valueSuffix) {
+                                $value = "$value $valueSuffix";
+                            }
+
+                            $xTextBox->nodeValue = $value;
+                            if (self::$logging) Log::info("Text box $name => $value ($attributeType/$locale)");
+                        } else {
+                            if (self::$logging) Log::warning("Text box $name NOT CHANGED because value was empty ($attributeType/$locale)");
                         }
                     }
                 } else {
                     // JSONable field: scores.Kurdish
-                    // scores => geography|history|math|... => id|title|value
-                    // scores => @1|@2|@3|...               => id|title|value
+                    // scores => geography|history|math|... => id|title|value [|value_suffix|*_type]
+                    // scores => @1|@2|@3|...               => id|title|value [|value_suffix|*_type]
                     $modelAttribute = $nameParts[0]; // scores
                     $arrayItem      = $nameParts[1]; // Kurdish
                     $content        = (count($nameParts) > 2 ? $nameParts[2] : 'value'); // title|value|minimum|...
                     if ($model->hasAttribute($modelAttribute)) {
                         $objectArray = $model->{$modelAttribute};
                         if ($arrayItem[0] == '@') {
+                            // @1|@2|@3|... => associative key
                             $offset    = (int) substr($arrayItem, 1);
                             $keys      = array_keys($objectArray);
                             if (isset($keys[$offset])) $arrayItem = $keys[$offset];
                         }
                         if (isset($objectArray[$arrayItem])) {
+                            // object => id|title|value [|value_suffix|*_type]
                             $object = $objectArray[$arrayItem];
                             if (self::$logging) Log::info($objectArray);
-                            $value  = (is_array($object) ? $object[$content] : $object);
-                            if (is_array($value)) {
-                                if      (isset($value[$locale]))               $value = $value[$locale];
-                                else if (isset($value[$this->localeFallback])) $value = $value[$this->localeFallback];
-                                else $value = implode(',', array_keys($value));
+                            $value   = (is_array($object) ? $object[$content] : $object);
+                            $typeKey = "{$content}_type";
+                            if ($value && is_array($object) && isset($object[$typeKey])) {
+                                // TODO: Use $morphsTo = ['value'] comment on view
+                                $valueType = $object[$typeKey];
+                                $valueObj  = $valueType::find($value);
+                                $value     = $valueObj->getAttributeTranslated('name', $locale);
+                            } else {
+                                if (is_array($value)) {
+                                    if      (isset($value[$locale]))               $value = $value[$locale];
+                                    else if (isset($value[$this->localeFallback])) $value = $value[$this->localeFallback];
+                                    else $value = implode(',', array_keys($value));
+                                }
+                            }
+                            $suffixKey = "{$content}_suffix";
+                            if (is_array($object) && isset($object[$suffixKey])) {
+                                $valueSuffix   = $object[$suffixKey];
+                                $suffixTypeKey = "{$suffixKey}_type";
+                                if (isset($object[$suffixTypeKey])) {
+                                    // TODO: Use $morphsTo = ['value_suffix']
+                                    $valueSuffixType = $object[$suffixTypeKey];
+                                    $valueSuffixObj  = $valueSuffixType::find($valueSuffix);
+                                    $valueSuffix     = $valueSuffixObj->getAttributeTranslated('name', $locale);
+                                } else {
+                                    if (is_array($valueSuffix)) {
+                                        if      (isset($valueSuffix[$locale]))               $valueSuffix = $valueSuffix[$locale];
+                                        else if (isset($valueSuffix[$this->localeFallback])) $valueSuffix = $valueSuffix[$this->localeFallback];
+                                        else $valueSuffix = implode(',', array_keys($valueSuffix));
+                                    }
+                                }
+                                $value = "$value $valueSuffix";
                             }
                             if ($value) {
                                 $xTextBox->nodeValue = $value;
@@ -369,7 +448,9 @@ class PdfTemplate {
 
     public function resetTemplate(): void
     {
-        foreach ($this->textBoxes    as $xDrawTextBox) $xDrawTextBox->nodeValue = '';
+        foreach ($this->textBoxes as $axDrawTextBox) {
+            foreach ($axDrawTextBox as $xDrawTextBox) $xDrawTextBox->nodeValue = '';
+        }
     }
 
     public function getTemplateThumbnail(): string
@@ -377,28 +458,121 @@ class PdfTemplate {
         $storageTemplatePath = $this->storageTemplatePath();
         $storagePngPath      = preg_replace('/\.[a-z]+$/', '.png', $storageTemplatePath);
         if (!Storage::exists($storagePngPath)) {
+            // Convert to PNG
             $fullTemplatePath = Storage::path($storageTemplatePath);
             $storagePngDir    = dirname($fullTemplatePath);
-            $execOutput = exec("libreoffice --headless --convert-to png $fullTemplatePath --outdir $storagePngDir");
+            // $height           = 320;
+            // $width            = 400;
+            //$graphicsParams   = "draw_png_Export:{\"PixelHeight\":{\"type\":\"long\",\"value\":\"$height\"},\"PixelWidth\":{\"type\":\"long\",\"value\":\"$width\"}}";
+            // $execOutput       = exec("libreoffice --headless --convert-to 'png:$graphicsParams' $fullTemplatePath --outdir $storagePngDir");
+            $execOutput       = exec("libreoffice --headless --convert-to png \"$fullTemplatePath\" --outdir $storagePngDir");
+            if (self::$logging) Log::info("LibreOffice thumbnail generator of [$fullTemplatePath] reported [$execOutput]");
+
+            // TODO: Resize
+            /*
+            $resizedFile      = "$storagePngPath-resized";
+            $execOutput       = exec("convert -resize 40% \"$resizedFile\" \"$storagePngPath\"");
+            if (self::$logging) Log::info("Convert resize of [$storagePngPath] reported [$execOutput]");
+            File::delete($storagePngPath);
+            File::move($resizedFile, $storagePngPath);
+            */
         }
         return Storage::url($storagePngPath);
     }
 
-    public function writePDF(string $outName, string $filename, bool $prepend_uniqid = TRUE): string
+    public static function cleanTemp(string $tempPath = NULL): array
+    {
+        if (!$tempPath) $tempPath = temp_path();
+
+        $files = array();
+        foreach (File::files($tempPath) as $file) {
+            $pathname = $file->getPathname();
+            switch ($file->getExtension()) {
+                case 'fodt':
+                case 'pdf':
+                    File::delete($pathname);
+                    $files[$file->getFilename()] = $pathname;
+                    break;
+            }
+        }
+
+        return $files;
+    }
+
+    public static function convertAllFodtToPdf(string $tempPath = NULL): array
+    {
+        if (!$tempPath) $tempPath = temp_path();
+
+        // Checks
+        $fodts = array();
+        foreach (File::files($tempPath) as $file) {
+            $pathname = $file->getPathname();
+            switch ($file->getExtension()) {
+                case 'fodt':
+                    Log::info("Found [$pathname]");
+                    $fodts[$file->getFilename()] = $pathname;
+                    break;
+            }
+        }
+        if (!$fodts)
+            throw new Exception("No FODTs found in $tempPath");
+
+        // Convert
+        // We cd to tempPath first because the *.fodt glob process does not honour --outdir
+        $pdfs       = array();
+        $command    = "cd $tempPath; libreoffice --convert-to pdf:writer_pdf_Export *.fodt";
+        if (self::$logging) Log::info($command);
+        $execOutput = exec($command);
+        if (self::$logging) Log::info("LibreOffice PDF generator of [*] reported [$execOutput]");
+
+        // Gather and delete
+        foreach (File::files($tempPath) as $file) {
+            $pathname = $file->getPathname();
+            switch ($file->getExtension()) {
+                case 'fodt':
+                    Log::info("Deleteing [$pathname]");
+                    //File::delete($pathname);
+                    break;
+                case 'pdf':
+                    Log::info("Adding [$pathname]");
+                    $pdfs[$file->getFilename()] = $pathname;
+                    break;
+            }
+        }
+
+        return $pdfs;
+    }
+
+    public function writeFODT(string $outName, string $filename, bool $prepend_uniqid = TRUE): string
     {
         $tempPath = temp_path();
-        $filename = preg_replace('/[^a-zA-Z0-9-_]+/', '-', $filename);
+        $filename = preg_replace("/[^\x{0600}-\x{06FF}a-zA-Z0-9_êçşîûÊÇŞÎÛ-]+/u", '-', $filename);
         $filename = ($prepend_uniqid ? "$outName-$filename" : $filename);
-        File::put("$tempPath/$filename.fodt", $this->templateDOM->saveXML());
+        $fodtPath = "$tempPath/$filename.fodt";
+
+        try {
+            File::put($fodtPath, $this->templateDOM->saveXML());
+        } catch (Exception $ex) {
+            $message = $ex->getMessage();
+            throw new Exception("Failed to write [$fodtPath] with [$message]");
+        }
+        
+        return $fodtPath;
+    }
+
+    public function convertFodtToPdf(string $fodtPath): string
+    {
         // Generate PDF out to the storage/temp directory
         // will have name $outName-$id.pdf
-        $execOutput = exec("libreoffice --headless --convert-to pdf:writer_pdf_Export $tempPath/$filename.fodt --outdir $tempPath");
-        if (self::$logging) Log::info("LibreOffice PDF generator of [$filename] reported [$execOutput]");
+        // --headless is implied by --convert-to
+        $tempPath   = dirname($fodtPath);
+        $execOutput = exec("libreoffice --convert-to pdf:writer_pdf_Export $fodtPath --outdir $tempPath");
+        if (self::$logging) Log::info("LibreOffice PDF generator of [$fodtPath] reported [$execOutput]");
 
-        $pdfPath = "$tempPath/$filename.pdf";
+        $pdfPath = preg_replace('/\.fodt$/', '.pdf', $fodtPath);
         if (!File::exists($pdfPath))
             throw new Exception("LibreOffice PDF output at [$pdfPath] does not exist with [$execOutput]");
-        File::delete("$tempPath/$filename.fodt");
+        File::delete($fodtPath);
 
         return $pdfPath;
     }

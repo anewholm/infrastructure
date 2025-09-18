@@ -65,6 +65,18 @@ function acorn_dynamicElements(){
     $(this).children('.tooltip').fadeOut();
   });
 
+  // Adorn some field names with more info
+  $('input[name="visible_columns\\[\\]"]').each(function(){
+    var fieldName = $(this).val();
+    var jDiv      = $('<div>').addClass('field-name').text(fieldName);
+    var jParent   = $(this).parent();
+    if (!jParent.children('.field-name').length) jParent.append(jDiv);
+  });
+  $('table.table.data > thead > tr > th').each(function(){
+    var fieldName = $(this).attr('class').replace(/list-cell-type-[a-z]+|list-cell-name-/g, '').trim();
+    $(this).attr('title', fieldName);
+  });
+
   // list-editable
   var fCheckDirty = function(event){
     var jTable = $(this).closest('table');
@@ -134,6 +146,18 @@ function acorn_hideEmptyTabs() {
 function acorn_ready(){
   // Permissions screen
   $('.permissioneditor > table').addClass('collapsable');
+  $('.permissioneditor > table > tbody > tr').each(function(){
+    var jTr = $(this);
+    var jTd = jTr.children('td.permission-name');
+    if (jTd.length) {
+      var text = jTd.text().trim();
+      if (text.substr(0,14) == 'View menu for ') {
+        var model = text.substr(14);
+        jTd.html('View menu for <span class="model-name">' + model + '</span>');
+        jTr.addClass('sub-section');
+      }
+    }
+  });
   // README.md screen
   $('.plugin-details-content > h1').addClass('collapsable');
   
@@ -145,8 +169,13 @@ function acorn_ready(){
   });
   $('.select-and-go, .select-and-go-clear').change(function(event){
     // trigger('submit') on the <form> doesn't seem to trigger the popup
-    var jSubmitButton = $(this).closest('form').find('input[type=submit]');
-    jSubmitButton.trigger('click');
+    var jForm         = $(this).closest('form');
+    var jSubmitButton = jForm.find('input[type=submit]');
+    if (jSubmitButton.length) jSubmitButton.trigger('click');
+    else $.wn.flashMsg({
+          'text': 'No submit button found on form',
+          'class': 'error'
+        });
 
     // Clear the value ready for another direct selection
     // TODO: Show the placeholder

@@ -16,6 +16,7 @@ use File;
 use Form;
 use Request;
 use Redirect;
+use Response;
 use Session;
 use ReflectionClass;
 use Flash;
@@ -100,6 +101,18 @@ class Controller extends BackendController
         );
         $buttonsAttr = e(json_encode($buttons));
         return "<div id='my-qr-reader' buttons='$buttonsAttr'></div>";
+    }
+
+    public function download($name, $outputName = null)
+    {
+        $downloadPath = temp_path() . '/' . $name;
+        if (!file_exists($downloadPath)) {
+            throw new ApplicationException(Lang::get('backend::lang.import_export.file_not_found_error') . " [$downloadPath]");
+        }
+        $mimeType = mime_content_type($downloadPath);
+
+        return Response::download($downloadPath, $outputName, ['Content-Type' => $mimeType])
+            ->deleteFileAfterSend(true);
     }
 
     public function all(): string
@@ -194,49 +207,63 @@ class Controller extends BackendController
     {
         // Options popup for multi-printing of this 
         // controller's List context
-        // TODO: This is not complete! Just copied from somwhere else
         $template    = post('template');
         $breadcrumb  = post('breadcrumb');
         $popupParams = (post('params') ?: array());
         $popupAction = 'export';
         $unqualifiedControllerName = $this->unqualifiedClassName();
-        $locale      = App::getLocale();
 
         // ------------------------------- Input checks
         if (!$template)
             throw new Exception('onListActionTemplate requires an explicit template');
         if (!property_exists($this->widget, 'list'))
             throw new Exception('onListActionTemplate requires a list widget');
-        $list   = &$this->widget->list;
-        $filter = &$this->widget->listFilter;
-        $model  = &$list->model;
+        $list   = $this->widget->list;
+        $filter = $this->widget?->listFilter;
+        $model  = $list->model;
         if (!$model)
             throw new Exception('onListActionTemplate requires a list model');
 
-        // ------------------------------- List and filter details
-        $recordCount  = $list->prepareQuery()->count();
-        $timeMins     = ceil($recordCount * 4 / 60);
-        $warning      = ($recordCount > 2000 ? 'warning' : '');
-        $listDetails  = '<ul class="list-details">';
-        $listDetails .= "<li class='$warning'><label>Record count</label>: $recordCount <i class='duration'>($timeMins minutes)</i></li>";
-        $filterNames  = array();
-        $filterLanguage    = NULL;
-        $hasLanguageFilter = FALSE;
-        foreach ($filter->getScopes() as $name => &$scope) {
-            if ($scope->value) {
-                array_push($filterNames, $name);
-            }
-            if (isset($scope->config['modelClass']) && $scope->config['modelClass'] == Language::class) {
-                $hasLanguageFilter = TRUE;
-                if ($scope->value && is_array($scope->value)) {
-                    $id = array_keys($scope->value)[0];
-                    $filterLanguage = Language::find($id);
+        // ------------------------------- List details
+        $recordCount   = $list->prepareQuery()->count();
+        $timeMins      = ceil($recordCount / 60);
+        $warning       = ($recordCount > 2000 ? 'warning' : '');
+        $listDetails   = '<ul class="list-details">';
+        $listDetails  .= "<li class='$warning'><label>Record count</label>: $recordCount <i class='duration'>($timeMins minutes)</i></li>";
+
+        $visibleColumns = $list->getVisibleColumns();
+        $hiddenColumns  = array();
+        foreach ($list->columns as $columnName => $column) {
+            $invisibleInConfig = (isset($column['invisible']) && $column['invisible']);
+            $isVisible         = isset($visibleColumns[$columnName]);
+            if (!$invisibleInConfig && !$isVisible) $hiddenColumns[$columnName] = trans($column['label']);
+        }
+        if ($hiddenColumns) {
+            $hiddenColumnsString = implode(', ', $hiddenColumns);
+            $listDetails  .= "<li class='warning'><label>Hidden columns</label>: $hiddenColumnsString</li>";
+        }
+
+        // ------------------------------- Filter details
+        if ($filter) {
+            $filterNames  = array();
+            $filterLanguage    = NULL;
+            $hasLanguageFilter = FALSE;
+            foreach ($filter->getScopes() as $name => &$scope) {
+                if ($scope->value) {
+                    array_push($filterNames, $name);
+                }
+                if (isset($scope->config['modelClass']) && $scope->config['modelClass'] == Language::class) {
+                    $hasLanguageFilter = TRUE;
+                    if ($scope->value && is_array($scope->value)) {
+                        $id = array_keys($scope->value)[0];
+                        $filterLanguage = Language::find($id);
+                    }
                 }
             }
+            $filterNamesString = implode(', ', $filterNames);
+            if ($filterNames) $listDetails .= "<li><label>Filter(s)</label>: $filterNamesString</li>";
+            else              $listDetails .= "<li class='warning'><label>Filter(s)</label>: none</li>";
         }
-        $filterNamesString = implode(', ', $filterNames);
-        if ($filterNames) $listDetails .= "<li><label>Filter(s)</label>: $filterNamesString</li>";
-        else              $listDetails .= "<li class='warning'><label>Filter(s)</label>: none</li>";
         $listDetails .= '</ul>';
 
         // ------------------------------- Template details
@@ -247,10 +274,12 @@ class Controller extends BackendController
         }
         $pdfTemplateDetails .= '<ul class="template-details">';
         foreach ($pdfTemplate->details() as $transKey => $value) {
-            $labelEscaped = e(trans($transKey));
-            $valueEscaped = e($value);
-            $class        = (stristr($transKey, 'warning') === FALSE ? '' : 'warning'); 
-            $pdfTemplateDetails .= "<li class='$class'><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
+            if ($value) {
+                $labelEscaped = e(trans($transKey));
+                $valueEscaped = e($value);
+                $class        = (stristr($transKey, 'warning') === FALSE ? '' : 'warning'); 
+                $pdfTemplateDetails .= "<li class='$class'><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
+            }
         }
         if ($pdfTemplate->templateLocale && $hasLanguageFilter) {
             if (!$filterLanguage) {
@@ -294,16 +323,11 @@ class Controller extends BackendController
 
         // ------------------------------- Render
         $postUrl        = $this->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
-        $closeName      = $this->transBackend('close');
         $actionName     = trans("acorn::lang.models.export.batch_print");
         $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label_plural', $model) : last(explode('\\', get_class($model))));
         $popupTitle     = "$actionName $modelTitle";
-        $breadcrumbHTML = "";
         if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
         else             $breadcrumbs = array($unqualifiedControllerName, $popupTitle);
-        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
-        $eventJs   = 'popup';
-        $initJs    = "$('body > .control-popup').trigger('$eventJs');";
         
         // Winter\Storm\Html\FormBuilder
         // The @action makes the onExport AJAX post to the ../export controller
@@ -322,6 +346,76 @@ class Controller extends BackendController
         // because the export AJAX does this:
         //     var $form = $('#exportColumns').closest('form')
         //     $form.request('onExport', {...})
+        $body = <<<HTML
+            $formOpen
+            $pdfTemplateDetails
+            $listDetails
+            <hr id="exportColumns" class="clear"/>
+            $formCustomHtml
+            $formClose
+HTML
+        ;
+        $footer = <<<HTML
+            <a
+                data-control="popup"
+                data-handler="onExportLoadForm"
+                data-request-form='.modal-body form'
+                class='btn btn-primary'
+                href='javascript:;'
+            >$actionName</a>
+HTML
+        ;
+        return $this->makePopup($breadcrumbs, $body, $footer);
+    }
+
+    public function onActionTemplate()
+    {
+        // Direct print template for single current model
+        $template   = post('template');
+        $modelClass = post('model');
+        $modelId    = post('model_id');
+        $outName    = uniqid('oc');
+        $filename   = basename($template);
+        $returnUrl  = Request::url();
+
+        // Checks
+        if (!$template)
+            throw new Exception('onActionTemplate requires an explicit template');
+
+        if ($model = $modelClass::find($modelId)) {
+            $pdfTemplate = new PdfTemplate($template);
+            $pdfTemplate->writeAttributes($model);
+            $fodtPath    = $pdfTemplate->writeFODT($outName, $filename);
+            $pdfPath     = $pdfTemplate->convertFodtToPdf($fodtPath);
+            if (!File::exists($pdfPath))
+                throw new Exception("PDF [$pdfPath] not found");
+            $pdfName     = basename($pdfPath);
+            $fileUrl     = $this->actionUrl(
+                'download',
+                $pdfName
+            );
+        } else {
+            throw new Exception("Model [$modelClass/$modelId] not found");
+        }
+
+        $exportResultForm = $this->makePartial('export_result_form', array(
+            'returnUrl' => $returnUrl,
+            'fileUrl'   => $fileUrl
+        ));
+        $print = 'acorn::lang.models.export.batch_print';
+
+        return $this->makePopup(array($print, $filename), $exportResultForm, '', FALSE);
+    }
+
+    public function makePopup(array $breadcrumbs, string $body, string $footer = '', bool $hasClose = TRUE, string $type = 'info'): string
+    {
+        $eventJs        = 'popup';
+        $initJs         = "$('body > .control-popup').trigger('$eventJs');";
+        $closeName      = $this->transBackend('close');
+        $closeHTML      = ($hasClose ? "<button type='button' data-dismiss='popup' class='btn btn-default'>$closeName</button>" : '');
+        $breadcrumbHTML = '';
+        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
+
         return <<<HTML
             <div class="modal-header compact">
                 <button type="button" class="close" data-dismiss="popup">&times;</button>
@@ -330,55 +424,14 @@ class Controller extends BackendController
                 </h4>
             </div>
             <div class="modal-body">
-                $formOpen
-                $pdfTemplateDetails
-                $listDetails
-                <hr id="exportColumns" class="clear"/>
-                $formCustomHtml
-                $formClose
+                $body
             </div>
             <div class="modal-footer">
-                <a
-                    data-control="popup"
-                    data-handler="onExportLoadForm"
-                    data-request-form='.modal-body form'
-                    class='btn btn-primary'
-                    href='javascript:;'
-                >$actionName</a>
-
-                <button type='button' data-dismiss='popup' class='btn btn-default'>$closeName</button>
-                
+                $footer
+                $closeHTML
                 <script>$initJs</script>
             </div>
 HTML;
-    }
-
-    public function onActionTemplate()
-    {
-        // Direct print template for single current model
-        $template   = post('template');
-        $modelClass = post('model');
-        $modelId    = post('modelId');
-        $outName    = uniqid('oc');
-        $filename   = basename($template);
-
-        if ($model = $modelClass::find($modelId)) {
-            $pdfTemplate = new PdfTemplate($template);
-            $pdfTemplate->writeAttributes($model);
-            $reference   = $pdfTemplate->writePDF($outName, $filename);
-            $fileUrl     = $this->actionUrl(
-                'download',
-                "$outName/$filename"
-            );
-        } else {
-            throw new Exception("Model not found");
-        }
-
-        // TODO: This export_result_form does not work yet. The fileUrl is not a file, so it 404s
-        return $this->makePartial('export_result_form', array(
-            'returnUrl' => '.',
-            'fileUrl'   => ''
-        ));
     }
     
     // TODO: These were made for the list view _multi editing popups. Is there not another way?
@@ -514,17 +567,12 @@ HTML;
         $this->addCss('/plugins/winter/translate/assets/css/multilingual.css?v2.1.6');
 
         // ------------------------------- Render
-        $postUrl = $controller->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
-        $closeName      = $this->transBackend('close');
+        $postUrl        = $controller->controllerUrl($popupAction); // /backend/acorn/finance/invoices/create
         $actionName     = $this->transBackend($popupAction);
         $modelTitle     = (method_exists($this, 'translateModelKey') && $model instanceof Model ? $this->translateModelKey('label', $model) : last(explode('\\', get_class($model))));
         $popupTitle     = "$actionName $modelTitle";
-        $breadcrumbHTML = "";
         if ($breadcrumb) $breadcrumbs = explode(',', $breadcrumb);
         else             $breadcrumbs = array($unqualifiedControllerName, $popupTitle);
-        foreach ($breadcrumbs as $crumb) $breadcrumbHTML .= '<li>' . trans($crumb) . '</li>';
-        $eventJs   = 'popup';
-        $initJs    = "$('body > .control-popup').trigger('$eventJs');";
         $formOpen  = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
         $formHtml  = $form->render();
         $formClose = Form::close();
@@ -543,38 +591,26 @@ HTML;
         $dataRequestDataString   = e(substr(json_encode($dataRequestData), 1, -1));
         $dataRequestUpdateString = e($dataRequestUpdate ? substr(json_encode($dataRequestUpdate), 1, -1) : '');
 
-        return <<<HTML
-            <div class="modal-header compact">
-                <button type="button" class="close" data-dismiss="popup">&times;</button>
-                <h4 class="modal-title">
-                    <div class='control-breadcrumb'><ul>$breadcrumbHTML</ul></div>
-                </h4>
-            </div>
-            <div class="modal-body">
-                $formOpen
-                $formHtml
-                $formClose
-            </div>
-            <div class="modal-footer">
-                <button
-                    type='submit'
-                    data-request-url='$postUrl'
-                    data-request='onControllerSave'
-                    data-request-form='.modal-body form'
-                    data-request-data='$dataRequestDataString'
-                    data-request-update='$dataRequestUpdateString'
-                    data-hotkey='ctrl+s, cmd+s'
-                    data-load-indicator='$popupTitle...'
-                    data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
-                    data-dismiss='popup'
-                    class='btn btn-primary'
-                >
-                    $actionName
-                </button>
-                <button type='button' data-dismiss='popup' class='btn btn-default'>$closeName</button>
-                <script>$initJs</script>
-            </div>
-HTML;
+        $body   = "$formOpen$formHtml$formClose";
+        $footer = <<<HTML
+            <button
+                type='submit'
+                data-request-url='$postUrl'
+                data-request='onControllerSave'
+                data-request-form='.modal-body form'
+                data-request-data='$dataRequestDataString'
+                data-request-update='$dataRequestUpdateString'
+                data-hotkey='ctrl+s, cmd+s'
+                data-load-indicator='$popupTitle...'
+                data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
+                data-dismiss='popup'
+                class='btn btn-primary'
+            >
+                $actionName
+            </button>
+HTML; 
+
+        return $this->makePopup($breadcrumbs, $body, $footer);
     }
 
     public function onControllerSave()
@@ -625,10 +661,6 @@ HTML;
         $fnName      = post('name');
         $postParams  = post('parameters') ?? array();
         $user        = User::authUser();
-        $closeName   = $this->transBackend('close');
-        $eventJs     = 'popup';
-        $initJs      = "$('body > .control-popup').trigger('$eventJs');";
-        $refresh     = 'document.location.reload()';
         $fnNameParts = explode('_', $fnName);
         $nameParts   = array_slice($fnNameParts, 5);
         $title       = e(trans(Str::title(implode(' ', $nameParts))));
@@ -646,6 +678,7 @@ HTML;
         $returnType     = $actionFunctionDefinition['returnType'];
         $title          = trans($actionFunctionDefinition['label']);
         $resultAction   = $actionFunctionDefinition['resultAction'] ?? NULL;
+        $defFields      = $actionFunctionDefinition['fields'] ?? array();
         $classParts     = explode('\\', get_class($model));
         $shortClass     = end($classParts);
         $classField     = Str::snake($shortClass); // academic_year
@@ -660,12 +693,14 @@ HTML;
         foreach ($fnParams as $paramName => $paramType) {
             switch ($paramName) {
                 case 'model_id':
+                case 'p_model_id':
                     $paramsMerged[$paramName] = array(
                         'value' => $model->id,
                         'type'  => $paramType,
                     );
                     break;
                 case 'user_id':
+                case 'p_user_id':
                     $paramsMerged[$paramName] = array(
                         'value' => $user->id,
                         'type'  => $paramType,
@@ -710,6 +745,10 @@ HTML;
                         'type'    => 'dropdown',
                         'options' => "$modelClass::dropdownOptions",
                     ));
+                } else if (isset($defFields[$paramName])) {
+                    $config = array_merge($config, $defFields[$paramName]);
+                } else if (isset($defFields[$baseParamName])) {
+                    $config = array_merge($config, $defFields[$baseParamName]);
                 } else {
                     switch ($paramType) {
                         case 'double precision':
@@ -768,7 +807,6 @@ HTML;
             $formOpen   = Form::open(['class' => 'layout popup-form']); // Winter\Storm\Html\FormBuilder
             $formHtml   = $form->render();
             $formClose  = Form::close();
-            $cancelName = $this->transBackend('cancel');
                 
             // Data-request
             $dataRequest           = __FUNCTION__;
@@ -789,23 +827,12 @@ HTML;
             );
 
             // Render
-            $response = <<<HTML
-                <div class="modal-header compact">
-                    <button type="button" class="close" data-dismiss="popup">&times;</button>
-                    <h4 class="modal-title">
-                        <div class='control-breadcrumb'><ul><li>$title</li></ul></div>
-                    </h4>
-                </div>
-                <div class="modal-body">
-                    $formOpen
-                    $formHtml
-                    $formClose
-                    $commentHtml
-                </div>
-                <div class="modal-footer">
+            $body   = "$formOpen$formHtml$formClose$commentHtml";
+            $footer = <<<HTML
                     <button
                         type='submit'
-                        data-request='$dataRequest'
+                        data-control='popup'
+                        data-handler='$dataRequest'
                         data-request-form='.modal-body form'
                         data-request-data='$dataRequestDataString'
                         data-hotkey='ctrl+s, cmd+s'
@@ -814,10 +841,8 @@ HTML;
                     >
                         $title
                     </button>
-                    <button type='button' data-dismiss='popup' class='btn btn-default'>$cancelName</button>
-                    <script>$initJs</script>
-                </div>
 HTML;
+            $response = $this->makePopup(array($title), $body, $footer);
         } 
         
         else {
@@ -850,26 +875,25 @@ HTML;
                     $response   = Redirect::refresh();
                     break;
                 default:
-                    $response   = <<<HTML
-                    <div class="modal-header compact">
-                        <button type="button" class="close" data-dismiss="popup">&times;</button>
-                        <h4 class="modal-title">
-                            <div class='control-breadcrumb'><ul><li>$modelName</li><li>$title</li>></ul></div>
-                        </h4>
-                    </div>
-                    <div class="modal-body">
-                        SUCCESS
-                    </div>
-                    <div class="modal-footer">
-                        <button
-                        type='button'
-                        data-dismiss='popup'
-                        class='btn btn-default'
-                        onclick='$refresh'
-                        >$closeName</button>
-                        <script>$initJs</script>
-                    </div>
-HTML;
+                    $message    = trans('acorn::lang.models.general.success');
+                    $type       = 'info';
+                    $flash      = NULL;
+                    if (count($results)) {
+                        $firstResult = $results[0];
+                        if (property_exists($firstResult, 'result'))
+                            $message = $firstResult->result;
+                        if (property_exists($firstResult, 'type'))
+                            $type    = $firstResult->type;
+                        if (property_exists($firstResult, 'flash'))
+                            $flash = $firstResult->flash;
+                    }
+
+                    if ($message) {
+                        $response = $this->makePopup(array($modelName, $title), $message, NULL, TRUE, $type);
+                    }
+                    if ($flash) {
+                        Flash::$type($flash);
+                    }
             }
         }
 
@@ -886,7 +910,6 @@ HTML;
         // The popup will JavaScript trigger(change) on the form field after inserting it into
         // the destsination form
         $actions        = post('actions');
-        $eventJs        = 'popup';
         $actionsList    = '';
         $translationBaseKey = 'acorn::lang.models.general';
         foreach ($actions as $action) {
@@ -895,26 +918,9 @@ HTML;
             $actionsList .= e(trans("$translationBaseKey.$actionKey")); // str_replace('-', ' ', Str::title($action));
         }
         $scanQrCode     = e(trans('acorn::lang.models.general.scan_qrcode'));
-        $breadcrumbHTML = "<li>$scanQrCode</li><li>$actionsList</li>";
-        ///modal genreal scan_qrcode
-        $closeName      = $this->transBackend('close');
-        $initJs         = "$('body > .control-popup').trigger('$eventJs');";
-        $qrScanPartial  = $this->makePartial('qrscan', post());
+        $body  = $this->makePartial('qrscan', post());
 
-        return <<<HTML
-            <div class="modal-header compact">
-                <button type="button" class="close" data-dismiss="popup">&times;</button>
-                <h4 class="modal-title">
-                    <div class='control-breadcrumb'><ul>$breadcrumbHTML</ul></div>
-                </h4>
-            </div>
-            <div class="modal-body">
-                $qrScanPartial
-            </div>
-            <div class="modal-footer">
-                <script>$initJs</script>
-            </div>
-HTML;
+        return $this->makePopup(array($scanQrCode, $actionsList), $body);
     }
 
     public function onWebSocket()

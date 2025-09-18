@@ -22,10 +22,18 @@ $localeFallback = Lang::getFallback();
 // Title can be a locale array
 $titleEscaped = NULL;
 if (isset($title)) {
-    if (is_array($title)) {
-        if      (isset($title[$locale]))         $title = $title[$locale];
-        else if (isset($title[$localeFallback])) $title = $title[$localeFallback];
-        else $title = '';
+    $typeKey = "title_type";
+    if (!is_array($title) && is_array($values) && isset($values[$typeKey])) {
+        // TODO: Use $morphsTo = ['value'] comment on view
+        $titleType = $values[$typeKey];
+        $titleObj  = $titleType::find($title);
+        $title     = $titleObj->getAttributeTranslated('name', $locale);
+    } else {
+        if (is_array($title)) {
+            if      (isset($title[$locale]))         $title = $title[$locale];
+            else if (isset($title[$localeFallback])) $title = $title[$localeFallback];
+            else $title = '';
+        }
     }
     $titleEscaped = e($title);
 }
@@ -33,12 +41,40 @@ if (isset($title)) {
 // Value can be a locale array
 $valueEscaped = NULL;
 if (isset($value)) {
-    if (is_array($value)) {
-        if      (isset($value[$locale]))         $value = $value[$locale];
-        else if (isset($value[$localeFallback])) $value = $value[$localeFallback];
-        else $value = '';
+    $typeKey = "value_type";
+    if (!is_array($value) && is_array($values) && isset($values[$typeKey])) {
+        // TODO: Use $morphsTo = ['value'] comment on view
+        $valueType = $values[$typeKey];
+        $valueObj  = $valueType::find($value);
+        $value     = $valueObj->getAttributeTranslated('name', $locale);
+    } else {
+        if (is_array($value)) {
+            if      (isset($value[$locale]))         $value = $value[$locale];
+            else if (isset($value[$localeFallback])) $value = $value[$localeFallback];
+            else $value = '';
+        }
     }
     $valueEscaped = e($value);
+}
+
+$valueSuffixEscaped = NULL;
+if (is_array($values) && isset($values['value_suffix'])) {
+    $valueSuffix = $values['value_suffix'];
+    $typeKey     = "value_suffix_type";
+    if (isset($values[$typeKey])) {
+        // TODO: Use $morphsTo = ['value'] comment on view
+        $valueSuffixType = $values[$typeKey];
+        $valueSuffixObj  = $valueSuffixType::find($valueSuffix);
+        $valueSuffix     = $valueSuffixObj->getAttributeTranslated('name', $locale);
+    } else {
+        if (is_array($valueSuffix)) {
+            if      (isset($valueSuffix[$locale]))         $valueSuffix = $valueSuffix[$locale];
+            else if (isset($valueSuffix[$localeFallback])) $valueSuffix = $valueSuffix[$localeFallback];
+            else $valueSuffix = '';
+        }
+    }
+    $valueSuffixEscaped = e($valueSuffix);
+    $valueEscaped .= " $valueSuffixEscaped";
 }
 
 $checked = NULL;
@@ -54,6 +90,8 @@ switch ($type) {
         $inputType = 'checkbox';
         $checked   = ($value ? 'checked' : '');
         break;
+    case 'string':
+        $inputType = 'text';
 }
 
 $readOnlyClass = ($readOnly ? 'read-only' : '');
@@ -87,8 +125,13 @@ foreach ($createValues as $name => $value) {
 foreach ($values as $name => $value) {
     switch ($name) {
         case 'id':
+        case 'type':
         case 'title':
+        case 'title_type':
         case 'value':
+        case 'value_type':
+        case 'value_suffix':
+        case 'value_suffix_type':
         case 'createValues':
             // Special handling
             break;

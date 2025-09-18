@@ -2,8 +2,11 @@
 use Acorn\Scopes\GlobalChainScope;
 use Backend\Facades\BackendAuth;
 
+$relationController = $this->controller->getClassExtension('\Acorn\Behaviors\RelationController');
+$isRelationManager  = ($relationController && $relationController->relationModel);
+
 // Only works for lists at the moment
-if (isset($this->controller->widget->list->model)) {
+if (isset($this->controller->widget->list->model) && !$isRelationManager) {
     $listModel          = $this->controller->widget->list->model;
     $globalScopeClasses = GlobalChainScope::endGlobalScopeClasses($listModel);
     $user = BackendAuth::user();

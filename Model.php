@@ -1014,15 +1014,28 @@ SQL;
                 || ( $type && $typeLimit == $type)
                 || (!$type && $typeLimit == 'row')
             ) {
-                $condition = $actionFunctionDefinition['condition'] ?? NULL;
-                if ($condition && !$this->exists) 
-                    throw new Exception('Model does not exist during row type condition evaluation');
-                if (!$condition || $this->whereRaw($condition)->count() != 0) {
-                    // Populate the Model/Id for correct lookup later
-                    $actionFunctionDefinition['model']    = get_class($this);
-                    $actionFunctionDefinition['model_id'] = $this->id;
-                } else unset($actionFunctions[$name]);
-            } else unset($actionFunctions[$name]);
+                // Populate the Model/Id for correct lookup later
+                $actionFunctionDefinition['model']    = get_class($this);
+                $actionFunctionDefinition['model_id'] = $this->id; // NULL if _list_toolbar
+
+                // Conditionally unset
+                if (isset($actionFunctionDefinition['condition'])) {
+                    $condition = $actionFunctionDefinition['condition'];
+                    if ($this->exists) {
+                        // Per-model query
+                        if ($this->whereRaw($condition)->count() == 0) 
+                            unset($actionFunctions[$name]);
+                    } else {
+                        // Normal independent select query
+                        // _list_toolbar will send through the empty model
+                        $results = DB::select($condition);
+                        if (!isset($results[0]) || array_values((array)$results[0])[0] == 0) 
+                            unset($actionFunctions[$name]);
+                    }
+                }
+            } else {
+                unset($actionFunctions[$name]);
+            }
         }
 
         // Inherit 1to1 BelongsTo relations model action functions

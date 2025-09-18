@@ -119,7 +119,7 @@ class BatchPrint extends ExportModel
                     }
                 }
             } else {
-                Log::error("Failed to retrieve valid $name relation");
+                Log::info("$name relation value was empty");
             }
         }
     }
@@ -139,12 +139,8 @@ class BatchPrint extends ExportModel
         $outName  = uniqid('oc'); // oc68247db892897
         $groupBy  = (isset($this->config['groupBy']) ? $this->config['groupBy'] : 'filename');
 
-        // TODO: Support options compression and output_mode
+        // TODO: Support options output_mode
         // TODO: Check for LibreOffice binary
-        if ($this->compression != 'zip') {
-            Log::error("Compression mode [$this->compression] is not supported yet. Only ZIP");
-            throw new Exception("Compression mode [$this->compression] is not supported yet. Only ZIP");
-        }
         if ($this->output_mode != 'multi') {
             Log::error("Only multi output mode is supported, not [$this->output_mode]");
             throw new Exception("Only multi output mode is supported, not [$this->output_mode]");
@@ -168,6 +164,9 @@ class BatchPrint extends ExportModel
         //     throw new Exception('No automatic page break styles');
         // $pageBreakStyle = $xPageBreakStyles[0]->getAttribute('style:name'); 
         
+        // Delete all fodt and pdf
+        PdfTemplate::cleanTemp();
+
         // Generate multi Libre Office document => ZIP
         $lastGroupBy = NULL;
         $first       = TRUE;
@@ -178,11 +177,11 @@ class BatchPrint extends ExportModel
             // before writing the PDF
             if (!$first) {
                 if (!$groupBy || !$model->$groupBy || $lastGroupBy != $model->$groupBy) {
-                    Log::info("---------------------------------- Finishing");
-                    $this->updatedPrintedArray($model, $pdfTemplate);
-                    
                     // Save generated FODT into the storage/temp directory
-                    $pdfLocation = $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid);
+                    Log::info("---------------------------------- Finishing");
+                    $fodtPath    = $pdfTemplate->writeFODT($outName, $filename, $this->prepend_uniqid);
+                    $pdfLocation = $pdfTemplate->convertFodtToPdf($fodtPath);
+                    $this->updatedPrintedArray($model, $pdfTemplate);
                     array_push($files, $pdfLocation);
 
                     // Reset all form values
@@ -199,16 +198,56 @@ class BatchPrint extends ExportModel
         // Save last generated FODT into the storage/temp directory
         if (!$first) {
             Log::info("---------------------------------- Finishing");
+            $fodtPath    = $pdfTemplate->writeFODT($outName, $filename, $this->prepend_uniqid);
+            $pdfLocation = $pdfTemplate->convertFodtToPdf($fodtPath);
             $this->updatedPrintedArray($model, $pdfTemplate);
-            $pdfLocation = $pdfTemplate->writePDF($outName, $filename, $this->prepend_uniqid);
             array_push($files, $pdfLocation);
         }
 
+        // Bulk PDF convert
+        // $files = PdfTemplate::convertAllFodtToPdf();
+
+        // Check output
+        if (!$files) {
+            $tempPath = temp_path();
+            throw new Exception("conversion to PDF($tempPath) returned no files");
+        }
+        foreach ($files as $file) {
+            if (!File::exists($file)) {
+                Log::error("Converted [$file] not found");
+                throw new Exception("Converted [$file] not found");
+            }
+        }
+
         // Compression
-        ZIP::make("$tempPath/$outName", $files);
+        $destination = "$tempPath/$outName";
+        switch ($this->compression) {
+            case 'tar.gz':
+                // TODO: tar.gz returns print.zip still because the config_import_export.yaml says print.zip
+                $this->compression = 'tar.gz';
+                $this->tarGz($destination, $files);
+                break;
+            case 'zip':
+            default:
+                ZIP::make($destination, $files);
+                break;
+        }
+        if (!File::exists($destination)) 
+            throw new Exception("Compression process [$this->compression] did not create the output file [$destination]");
+        $this->config['fileName'] = basename($destination);
+
+        // Double copy
+        $outputFile = "$tempPath/print.$this->compression";
+        if (File::exists($outputFile)) File::delete($outputFile);
+        File::copy($destination, $outputFile);
 
         // Tidy up
-        foreach ($files as $file) File::delete($file);
+        /*
+        foreach ($files as $file) {
+            if (File::exists($file)) File::delete($file);
+            else Log::error("[$file] not found during cleanup");
+        }
+        */
 
         // Move the ZIP to the correct position for the download() action
         // config_import_export.yaml fileName: print.pdf
@@ -218,10 +257,23 @@ class BatchPrint extends ExportModel
         //     => storage/temp/oc68248694e0ac3
         // >> storage/temp/oc68248694e0ac3
         //File::move("$tempPath/$outName.zip", "$tempPath/$outName");
+        Log::info("Returning ZIP file [$destination] for download pickup and serve from [$outputFile]");
         
         // ImportExportController::onExport()
         //   => download/<reference>/<exportFileName>
         //   => download/oc68248694e0ac3/print.zip
         return $outName; 
+    }
+
+    public function tarGz(string $destination, array|string $source): string
+    {
+        if (!is_array($source)) $source = [$source];
+
+        $phar = new \PharData("$destination.tar");
+        foreach ($source as $file) $phar->addFile($file);
+        $phar->compress(\Phar::GZ);
+        File::move("$destination.tar.gz", $destination);
+        File::delete("$destination.tar");
+        return $destination;
     }
 }

@@ -387,6 +387,10 @@ SQL
         // TODO: created_by_user_id field and trigger
     }
 
+    public function updatedByUserField() {
+        // TODO: created_by_user_id field and trigger
+    }
+
     // ------------------------------------------ Extended Fields
     // TODO: Make these methods on an Acorn Table Class
     public function setFunctionDefault(string $table, string $column, string $function)

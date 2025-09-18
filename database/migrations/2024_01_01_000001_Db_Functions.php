@@ -132,6 +132,32 @@ SQL
 SQL
       );
 
+      $this->createFunction('fn_acorn_updated_by_user_id', [], 'trigger', [], <<<SQL
+        -- On update of tables with updated_by_user_id
+        -- DBAuth required
+        if regexp_like(CURRENT_USER, '^token_[0-9]+$') then
+          select u.id into new.updated_by_user_id 
+            from public.backend_users b
+            inner join public.acorn_user_users u on b.acorn_user_user_id = u.id
+            where b.id = regexp_replace(CURRENT_USER, 'token_', '')::int;
+        end if;
+        return new;
+SQL
+      );
+
+      $this->createFunction('fn_acorn_created_by_user_id', [], 'trigger', [], <<<SQL
+        -- On update of tables with updated_by_user_id
+        -- DBAuth required
+        if regexp_like(CURRENT_USER, '^token_[0-9]+$') then
+          select u.id into new.created_by_user_id 
+            from public.backend_users b
+            inner join public.acorn_user_users u on b.acorn_user_user_id = u.id
+            where b.id = regexp_replace(CURRENT_USER, 'token_', '')::int;
+        end if;
+        return new;
+SQL
+      );
+
       // Useful aggregates
       // string $baseName, array $parameters, string $body, ?array $declares, ?string $parameterType, ?string $parallel, ?string $language, ?array $modifiers
       $this->createFunctionAndAggregate('acorn_first', ['anyelement', 'anyelement'], 'SELECT $1;');

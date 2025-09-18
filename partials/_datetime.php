@@ -2,7 +2,7 @@
 use System\Helpers\DateTime as DateTimeHelper;
 
 if ($value) {
-    if (! $value instanceof \DateTime) $value = new \DateTime($value);
+    if (! $value instanceof \DateTime) $value = new \DateTime($value, new DateTimeZone('UTC'));
     $value = Backend::makeCarbon($value); // To set the user / cms timezone preference also
 
     $current       = new \DateTime();

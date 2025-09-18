@@ -5,10 +5,10 @@
     $controllerListUrl = $this->actionUrl('');
     $isReadOnly        = ((property_exists($this, 'readOnly') && $this->readOnly) 
         || ($model && property_exists($model, 'readOnly') && $model->readOnly));
-    $modelIsCreateSystem = ($model instanceof \Acorn\Model);
+    $modelIsAcornModel = ($model instanceof \Acorn\Model);
 
     if (!$isReadOnly): ?>
-        <?php if (!$modelIsCreateSystem || $user->hasPermission($model->permissionFQN('create'))): ?>
+        <?php if (!$modelIsAcornModel || $user->hasPermission($model->permissionFQN('create'))): ?>
         <a
             href="<?= $this->controllerUrl('create'); ?>"
             class="btn btn-primary wn-icon-plus">
@@ -16,7 +16,7 @@
         </a>
         <?php endif ?>
 
-        <?php if (!$modelIsCreateSystem || $user->hasPermission($model->permissionFQN('delete'))): ?>
+        <?php if (!$modelIsAcornModel || $user->hasPermission($model->permissionFQN('delete'))): ?>
         <button
             class="btn btn-danger wn-icon-trash-o"
             disabled="disabled"
@@ -83,7 +83,7 @@ HTML
             $class    = get_class($model);
             $location = "ActionTemplates\\$class";
             // MediaLibraryItem s
-            $mlis        = $ml->listFolderContents($location, 'title', NULL, TRUE);
+            $mlis        = $ml->listFolderContents($location, 'title', 'document', TRUE);
             $useDropDown = (count($mlis) > 2);
             $print       = e(trans('acorn::lang.models.general.batch_print'));
             $dataLoadIndicator = e(trans('backend::lang.form.saving_name', ['name' => trans('{{ model_lang_key }}.label')]));;
@@ -112,27 +112,50 @@ HTML
             
             foreach ($mlis as $mli) {
                 if ($mli->getFileType() == "document") {
-                    $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
-                    $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
-                    $dataRequestData = e(substr(json_encode(array(
-                        'template'   => $mli->path,
-                    )), 1,-1));
+                    $pdfTemplate = NULL;
+                    try {
+                        $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
+                    } catch (Exception $ex) {
+                        // The media cache is out-of-date
+                        // this can happen during imports
+                        // or on filesystem permission changes
+                    }
+                    if ($pdfTemplate) {
+                        $printName   = e($pdfTemplate->label(TRUE)); // From FODT comment
+                        $dataRequestData = e(substr(json_encode(array(
+                            'template'   => $mli->path,
+                        )), 1,-1));
 
-                    if ($pdfTemplate->forContext($this->action)) {
-                        if ($useDropDown) {
-                            print("<option value='$mli->path'>$print $printName...</option>");
-                        } else              print(<<<HTML
-                            <button
-                                data-control="popup"
-                                data-size="huge"
-                                data-request-data='$dataRequestData'
-                                data-handler="onListActionTemplate"
-                                data-load-indicator="$dataLoadIndicator"
-                                class="btn">
-                                $print $printName...
-                            </button>
+                        if ($pdfTemplate->forContext($this->action)) {
+                            if ($useDropDown) {
+                                print("<option value='$mli->path'>$printName...</option>");
+                            } else              print(<<<HTML
+                                <button
+                                    data-control="popup"
+                                    data-size="huge"
+                                    data-request-data='$dataRequestData'
+                                    data-handler="onListActionTemplate"
+                                    data-load-indicator="$dataLoadIndicator"
+                                    class="btn">
+                                    $print $printName...
+                                </button>
 HTML
-                        );
+                            );
+                        }
+                    } else {
+                        if (env('APP_DEBUG')) {
+                            $printName   = e("Not found: $mli->path");
+                            if ($useDropDown) {
+                                print("<option value='$mli->path'>$printName</option>");
+                            } else              print(<<<HTML
+                                <button
+                                    disabled="1"
+                                    class="btn disabled">
+                                    $printName
+                                </button>
+HTML
+                            );
+                        }
                     }
                 }
             } 
@@ -140,11 +163,13 @@ HTML
         }
     ?>
 
-    <a
-        href="javascript:print()"
-        class="btn btn-primary wn-icon-print">
-        <?= e(trans('acorn::lang.models.general.print')); ?>
-    </a>
+    <?php if (!$modelIsAcornModel || $user->hasPermission($model->permissionFQN('print'))): ?>
+        <a
+            href="javascript:print()"
+            class="btn btn-primary wn-icon-print">
+            <?= e(trans('acorn::lang.models.general.print')); ?>
+        </a>
+    <?php endif ?>
 
     <?php if (property_exists($this->widget, 'importUploadForm')): ?>
         <a
