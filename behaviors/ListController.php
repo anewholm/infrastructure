@@ -2,7 +2,9 @@
 
 use \Backend\Behaviors\ListController as BackendListController;
 use \Exception;
+use Input;
 use Backend\Widgets\Search;
+use Backend\Widgets\Lists;
 
 class ListController extends BackendListController
 {
@@ -19,6 +21,8 @@ class ListController extends BackendListController
 
         Search::extend(function ($widget) {
             $widget->addViewPath('~/modules/acorn/partials/');
+            // Query string programmable search term
+            if (Input::get('search')) $widget->setActiveTerm(Input::get('search'));
         });
     }
 }

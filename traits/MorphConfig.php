@@ -108,9 +108,16 @@ Trait MorphConfig
                 case 'fields':
                     // ------------------------------------------------- Process comments for translate
                     if (isset($config->fields)) {
-                        foreach ($config->fields as &$fieldConfig) {
-                            self::processCommentEmbeddedTranslationKeys($fieldConfig);
-                        }
+                        foreach ($config->fields as &$fieldConfig) self::processCommentEmbeddedTranslationKeys($fieldConfig);
+                    }
+                    if (isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as &$fieldConfig) self::processCommentEmbeddedTranslationKeys($fieldConfig);
+                    }
+                    if (isset($config->secondaryTabs['fields'])) {
+                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) self::processCommentEmbeddedTranslationKeys($fieldConfig);
+                    }
+                    if (isset($config->tertiaryTabs['fields'])) {
+                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) self::processCommentEmbeddedTranslationKeys($fieldConfig);
                     }
 
                     // ------------------------------------------------- Defaults for drop-downs
@@ -238,9 +245,11 @@ Trait MorphConfig
                         if ($dropDownModel) { 
                             // Set and hide parentModel
                             // can be useful in nested popups
+                            // Morph type to text to prevent option loads
                             if ($parentModel
                                 && $dropDownModel == $parentModel
                             ) {
+                                $fieldConfig['type']      = 'text';
                                 $fieldConfig['cssClass'] .= ' hidden';
                                 $fieldConfig['default']   = $parentModelId;
                             } 
@@ -249,6 +258,7 @@ Trait MorphConfig
                             else if ($controllerModel 
                                 && $dropDownModel == get_class($controllerModel)
                             ) {
+                                $fieldConfig['type']      = 'text';
                                 $fieldConfig['cssClass'] .= ' hidden';
                                 $fieldConfig['default']   = $controllerModel->id;
                             }
@@ -264,7 +274,9 @@ Trait MorphConfig
                                 && ($controllerFieldModel = $controllerModel->$fieldName)
                                 && ($dropDownModel == get_class($controllerFieldModel))
                             ) {
-                                $fieldConfig['cssClass'] .= ' hidden';
+                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                $fieldConfig['cssClass']  = "$cssClass hidden";
+                                $fieldConfig['type']      = 'text';
                                 $fieldConfig['default']   = $controllerFieldModel->id;
                             }
                         }
@@ -458,10 +470,18 @@ Trait MorphConfig
 
     protected static function settingRemove(array &$fieldConfig, string $modelClass): bool
     {
-        $settingsClass = self::getSettingsModel($modelClass);
-        $removeField   = FALSE;
-        if ($settingsClass && isset($fieldConfig['setting']) && $settingsClass::get($fieldConfig['setting']) != '1')
-            $removeField = TRUE;
+        $removeField = FALSE;
+        if (isset($fieldConfig['setting'])) {
+            // setting: can include the model also
+            // setting: \Acorn\Something\Settings::has_this
+            $settingParts  = explode('::', $fieldConfig['setting']);
+            $settingName   = (isset($settingParts[1]) ? $settingParts[1] : $settingParts[0]);
+            $modelClass    = (count($settingParts) > 1 ? $settingParts[0] : $modelClass);
+            $settingsClass = self::getSettingsModel($modelClass);
+            if ($settingsClass && $settingsClass::get($settingName) != '1')
+                $removeField = TRUE;
+        }
+
         return $removeField;
     }
 

@@ -40,6 +40,9 @@ class TranslatableModel extends WinterTranslatableModel
 
     public function getAttributeTranslated($key, $locale = null)
     {
+        // Result should not return NULL to successfully hook beforeGetAttribute event
+        $result = '';
+
         if ($locale == null) {
             $locale = $this->translatableContext;
         }
@@ -54,50 +57,46 @@ class TranslatableModel extends WinterTranslatableModel
         $isNested = (count($keyArray) > 1);
         if ($isNested) {
             $key = array_pop($keyArray);
-            foreach ($keyArray as $step) $model = &$model->{$step};
-            $translatableModel = $model->getClassExtension('Acorn.Behaviors.TranslatableModel');
-            if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
+            foreach ($keyArray as $step) {
+                // Careful with Create mode
+                if ($model && $model->exists) $model = $model->{$step};
+            }
+            if ($model && $model->exists) {
+                $translatableModel = $model->getClassExtension('Acorn.Behaviors.TranslatableModel');
+                if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
+            }
         }
 
-        /*
-         * Result should not return NULL to successfully hook beforeGetAttribute event
-         */
-        $result = '';
+        if ($model && $model->exists) {
+            // Default locale
+            if (is_null($translatableModel) || $locale == $translatableModel->translatableDefault) {
+                $result = $model->attributes[$key];
+            }
+            // Other locale
+            else {
+                if (!array_key_exists($locale, $translatableModel->translatableAttributes)) {
+                    $translatableModel->loadTranslatableData($locale);
+                }
 
-        /*
-         * Default locale
-         */
-        if (is_null($translatableModel) || $locale == $translatableModel->translatableDefault) {
-            $result = $model->attributes[$key];
-        }
-        /*
-         * Other locale
-         */
-        else {
-            if (!array_key_exists($locale, $translatableModel->translatableAttributes)) {
-                $translatableModel->loadTranslatableData($locale);
+                if ($translatableModel->hasTranslation($key, $locale)) {
+                    $result = $translatableModel->translatableAttributes[$locale][$key];
+                }
+                elseif ($translatableModel->translatableUseFallback 
+                    // Sometimes the translatable fields list is a lie
+                    && isset($translatableModel->model->attributes[$key])
+                ) {
+                    $result = $translatableModel->model->attributes[$key];
+                }
             }
 
-            if ($translatableModel->hasTranslation($key, $locale)) {
-                $result = $translatableModel->translatableAttributes[$locale][$key];
-            }
-            elseif ($translatableModel->translatableUseFallback 
-                // Sometimes the translatable fields list is a lie
-                && isset($translatableModel->model->attributes[$key])
+            // Handle jsonable attributes, default locale may return the value as a string
+            if (
+                is_string($result) &&
+                method_exists($model, 'isJsonable') &&
+                $model->isJsonable($key)
             ) {
-                $result = $translatableModel->model->attributes[$key];
+                $result = json_decode($result, true);
             }
-        }
-
-        /*
-         * Handle jsonable attributes, default locale may return the value as a string
-         */
-        if (
-            is_string($result) &&
-            method_exists($model, 'isJsonable') &&
-            $model->isJsonable($key)
-        ) {
-            $result = json_decode($result, true);
         }
 
         return $result;

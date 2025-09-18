@@ -7,7 +7,7 @@
 <?php endif ?>
 
 <?php 
-if ($list->model->isListEditable()) {
+if (method_exists($list->model, 'isListEditable') && $list->model->isListEditable()) {
     print('<form id="list-editable-form">');
     print($list->render());
     print('</form>');

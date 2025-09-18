@@ -15,6 +15,9 @@ body .field-multilingual .ml-btn {
   margin-top: 0px;
 }
 
+.hide-time .input-with-icon:has(input[data-timepicker]) {
+    display:none;
+}
 .template-details label,
 .list-details label {
     display: inline;
@@ -23,6 +26,11 @@ body .field-multilingual .ml-btn {
 .template-details .warning label,
 .list-details .warning label {
     color: #f00;
+}
+
+.view-add-models {
+    float: left;
+    clear: left;
 }
 
 .fake-readonly *[readonly] {
@@ -34,7 +42,7 @@ body .field-multilingual .ml-btn {
     padding-bottom: 0px;
 }
 .control-toolbar .toolbar-primary .form-group .select2-container {
-    min-width: 250px;
+    min-width: 350px;
 }
 .control-toolbar .select2-results__options > li:first-child {
     color: #aaa;
@@ -118,6 +126,13 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 }
 
 /* ------------------------------------- Sidebar */
+.form-sidebar .form-group {
+    width: 100%;
+}
+.form-sidebar .field-datepicker > .row > div {
+    width: 50%;
+    padding: 5px;
+}
 .form-sidebar .form-elements > .hide-tabs > .form-group.bottom:before {
     border-bottom: none!important;
 }
@@ -232,48 +247,66 @@ ul.help-block {
     cursor: pointer;
     white-space: nowrap;
 }
-form.layout .action-functions {
-    float:right; /* TODO: float: left if RTL */
-    margin-top: -40px;
+ul.action-functions {
+    position: absolute; /* TODO: float: left if RTL */
+    right: 320px; /* sidebar is w-300 */
+    top: 22px;
+    /* margin-top: -40px; */
 }
-form .action-functions {
+ul.action-functions {
     padding: 3px 10px;
     background-color: #fff;
     border:1px solid #999;
     border-radius: 1px;
     box-shadow: 2px 0px 10px #ddd;
 }
-body.rtl form .action-functions {
+ul.action-functions > li .form-group,
+ul.action-functions > li .select2-container {
+    display: inline-block;
+    padding-bottom: 0px;
+}
+ul.action-functions > li .select2-selection {
+    height: 28px;
+    line-height: 0.8;
+    padding: 8px 5px 8px 5px;
+    min-width: 200px;
+}
+
+body.rtl ul.action-functions {
     float:left;
 }
-form .action-functions > li {
+ul.action-functions > li {
     display: inline;
     padding: 0px 6px 0px 6px;
     border-left: 1px solid #a7a7a7;
 }
-body.rtl form .action-functions > li {
+body.rtl ul.action-functions > li {
     border-right: 1px solid #a7a7a7;
     border-left: none;
 }
-form .action-functions > li:first-child {
+ul.action-functions > li:first-child {
     border-left: none;
 }
-body.rtl form .action-functions > li:first-child {
+body.rtl ul.action-functions > li:first-child {
     border-right: none;
 }
-form .action-functions > li > #popup-qrscan {
+ul.action-functions > li > #popup-qrscan {
     display: inline;
     font-size: 14px;
 }
-.modal-content > div > form .action-functions {
+.modal-content ul.action-functions {
     /* In a popup */
     position: absolute;
     top:34px;
     right:36px;
+    display: none;
 }
 
 /* List action functions */
-table.data tr.rowlink .action-functions {
+table.data tr.rowlink ul.action-functions {
+    position: static; /* Override the un-qualified update form setting */
+}
+table.data tr.rowlink ul.action-functions {
     float: right;
     text-align:center;
     /* Negate form CSS on Relation Manager tables */
@@ -283,7 +316,7 @@ table.data tr.rowlink .action-functions {
     border-radius: 0px;
     box-shadow: none;
 }
-table.data tr.rowlink .action-functions > li {
+table.data tr.rowlink ul.action-functions > li {
     display: inline-block;
     margin-bottom: 3px;
     padding: 3px 10px;
@@ -293,13 +326,13 @@ table.data tr.rowlink .action-functions > li {
     box-shadow: 2px 0px 10px #ddd;
     margin-left: 4px;
 }
-table.data tr.rowlink .action-functions > li:hover {
+table.data tr.rowlink ul.action-functions > li:hover {
     box-shadow: none;
 }
-table.table.data tbody tr.rowlink:hover td .action-functions > li > a {
+table.table.data tbody tr.rowlink:hover td ul.action-functions > li > a {
     color: #666!important;
 }
-table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
+table.table.data tbody tr.rowlink td ul.action-functions > li:hover > a {
     text-decoration: underline;
 }
 
@@ -376,6 +409,15 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
     background: Transparent;
 }
 
+.security-warning {
+    background-color: #ff8888;
+    font-weight: bold;
+    color: white;
+    padding: 1px 7px;
+    border-radius: 5px;
+    border: 1px solid #000;
+}
+
 /* ------------------------------------- Popups */
 .modal-dialog .help-block.function-description {
     padding-bottom: 20px;
@@ -383,6 +425,9 @@ table.table.data tbody tr.rowlink td .action-functions > li:hover > a {
 .modal-dialog .control-list p.no-data {
     text-align: left;
     margin:0px;
+}
+.modal-dialog .list-widget {
+    clear: both;
 }
 .modal-dialog .popup-hide {
   display:none;
@@ -473,6 +518,17 @@ body.slim-container .modal-dialog .modal-header.compact > button {
     transition: 0.3s height;
 }
 
+.control-simplelist > ul > li > div > div.field-name {
+    display: inline;
+    color: #888;
+}
+.control-simplelist > ul > li > div > div.field-name::before {
+    content: '(';
+}
+.control-simplelist > ul > li > div > div.field-name::after {
+    content: ')';
+}
+
 /* ------------------------------- permissions screen */
 table.collapsable tr {
     display:none;
@@ -491,6 +547,22 @@ table.collapsable tr.section > th:first-child::before {
 }
 table.collapsable tr.section:hover > th:first-child::before {
     background-color: #d7d7d7;
+}
+table.collapsable > tbody > tr.sub-section td {
+    padding-top: 30px;
+    border-top: 3px double black;
+    font-weight: bold;
+    background: linear-gradient(0deg, #f9f9f9, #f0f0f0);
+}
+.permissioneditor .model-name {
+    background-color: #333;
+    color: #fff;
+    border-radius: 6px;
+    border: 1px solid #000;
+    padding: 1px 8px;
+}
+div.permissioneditor > table > tbody > tr > td {
+    padding: 4px 4px;
 }
 
 /* ------------------------------- README screen */

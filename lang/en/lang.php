@@ -65,6 +65,8 @@
             'no_changes' => 'No changes found',
             'advanced' => 'Advanced',
             'simple' => 'Simple',
+            'current' => 'Current',
+            'prinmary' => 'Primary',
             'all_controllers' => 'All',
             'dateformats' => [
                 'day' => 'Day',
@@ -78,6 +80,7 @@
             'global_scopes' => 'Global Scopes',
             'no_restriction' => 'No Restriction',
             'nothing_linked' => 'Nothing linked',
+            'success' => 'Success',
         ],
         'server' => [
             'label' => 'Server',

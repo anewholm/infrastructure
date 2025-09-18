@@ -7,7 +7,7 @@ $modelIsCreateSystem = (isset($formModel) && $formModel instanceof \Acorn\Model)
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $controllerListUrl = $this->actionUrl('');
-$count             = NULL; // (isset($formModel) ? $formModel::menuItemCount() : NULL);
+$count             = (isset($formModel) ? $formModel::count() : NULL);
 
 Block::put('breadcrumb') ?>
     <ul>
@@ -17,14 +17,13 @@ Block::put('breadcrumb') ?>
         </li>
         <li><?= e($this->pageTitle) ?></li>
     </ul>
-<?php Block::endPut() ?>
+<?php Block::endPut() ?>    
 
 <?php if (!$this->fatalError): ?>
-
+    
     <?php Block::put('form-contents') ?>
-
+    
         <div class="layout-row">
-            <?= $this->makePartial('actions'); ?>
             <?= $this->formRender() ?>
         </div>
 
@@ -110,6 +109,9 @@ HTML
     <?php Block::endPut() ?>
 
     <?php Block::put('body') ?>
+        <!-- <ul> May contain forms -->
+        <?= $this->makePartial('actions'); ?>
+
         <?= Form::open(['class'=>'layout stretch']) ?>
             <?= $this->makeLayout('form-with-sidebar') ?>
         <?= Form::close() ?>

@@ -2,6 +2,7 @@
 namespace Acorn\Behaviors;
 
 use \Backend\Behaviors\ImportExportController as BackendImportExportController;
+use BackendAuth;
 
 class ImportExportController extends BackendImportExportController
 {
@@ -21,11 +22,15 @@ class ImportExportController extends BackendImportExportController
         $model         = parent::getModelForType($type);
         $model->config = $this->config->export;
             
-        // Copied from ImportExportController::exportFromList()
-        if (isset($model->config['useListQuery']) && $model->config['useListQuery']) {
-            $lists         = $this->controller->makeLists();
-            $widget        = $lists['list'] ?? reset($lists);
-            $model->query  = $widget->prepareQuery(); // Also applies scopes and search
+        // This will fail with hasAccess() on column view permissions if there is no user
+        // that is, artisan mode
+        if (BackendAuth::getUser()) {
+            // Copied from ImportExportController::exportFromList()
+            if (isset($model->config['useListQuery']) && $model->config['useListQuery']) {
+                $lists         = $this->controller->makeLists();
+                $widget        = $lists['list'] ?? reset($lists);
+                $model->query  = $widget->prepareQuery(); // Also applies scopes and search
+            }
         }
 
         return $model;

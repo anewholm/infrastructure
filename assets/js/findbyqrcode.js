@@ -1,6 +1,5 @@
 // https://github.com/mebjas/html5-qrcode
 var qrCodeObjects = {};
-var qrScannerInitialized = false;
 
 function onScanSuccess(decodeText, decodeResult) {
     var jQrScanner    = $(this);
@@ -60,7 +59,17 @@ function onScanSuccess(decodeText, decodeResult) {
             }
 
             case "redirect": {
-                document.location = controllerURL;
+                window.html5QrCode.stop().then((ignore) => {
+                    $("#my-qr-reader").fadeOut(400, function(){
+                        $("#my-qr-reader")
+                            .addClass('loading info flash-message')
+                            .text('Loading...')
+                            .fadeIn();
+                    });
+                    document.location = controllerURL;
+                }).catch((err) => {
+                    $("#my-qr-reader").addClass('error flash-message').text(err);
+                });
                 actionSuccess     = true;
                 break;
             }
@@ -97,8 +106,8 @@ function initializeQrScanner() {
     $("#my-qr-reader").each(function () {
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length) {
-                const html5QrCode = new Html5Qrcode("my-qr-reader");
-                html5QrCode.start(
+                window.html5QrCode = new Html5Qrcode("my-qr-reader");
+                window.html5QrCode.start(
                     devices[0].id, 
                     {
                         fps: 10,    // Optional, frame per seconds for qr code scanning
@@ -113,28 +122,7 @@ function initializeQrScanner() {
         .catch(err => {
             $("#my-qr-reader").addClass('error flash-message').text(err);
         });
-
-
-        qrScannerInitialized = true;
     });
-
-    // Initialize the QR code scanner when the element exists
-    // TODO: Remove this old scanning 2-step system
-    /*
-    $("#my-qr-reader").each(function () {
-        var self = this;
-        let htmlscanner = new Html5QrcodeScanner("my-qr-reader", {
-            fps: 10,
-            qrbos: 300,
-            facingMode: "user",
-            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        });
-        htmlscanner.render(function (decodeText, decodeResult) {
-            onScanSuccess.call(self, decodeText, decodeResult);
-        });
-        qrScannerInitialized = true;
-    });
-    */
 }
 
 $(document).ready(function () {

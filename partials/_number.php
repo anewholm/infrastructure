@@ -16,7 +16,9 @@ if (is_null($value)) {
     }
 
     if ($listColumn->format) {
+        print("<span title='$value'>");
         print(\sprintf($listColumn->format, $value));
+        print("</span>");
     } else {
         print($value);
     }
