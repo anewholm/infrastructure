@@ -14,6 +14,7 @@ use Storage;
 use DOMDocument;
 use DOMNode;
 use DOMXPath;
+use DOMElement; 
 
 class PdfTemplate {
     static $logging = TRUE;
@@ -23,6 +24,10 @@ class PdfTemplate {
     protected $templateDOM, $xpath;
     protected $textBoxes, $xQrCodeNode, $qrCodeHeightPX;
     protected $boxWarnings = array();
+    protected $fonts = array();
+    protected $fcList = array();
+    protected $images = array();
+
 
     public $comment;
     // Limit to a course, if relevant
@@ -109,13 +114,24 @@ class PdfTemplate {
     public function details(): array
     {
         return array(
-            'acorn::lang.models.pdftemplate.title'       => $this->label(),
-            'acorn::lang.models.pdftemplate.coursecode'  => $this->courseCode,
-            'acorn::lang.models.pdftemplate.coursename'  => $this->courseName,
-            'acorn::lang.models.pdftemplate.locale'      => $this->templateLocale,
-            'acorn::lang.models.pdftemplate.boxnames'    => implode(', ', $this->boxNames()),
-            'acorn::lang.models.pdftemplate.boxwarnings' => implode(', ', $this->boxWarnings),
+            'acorn::lang.models.pdftemplate.title'         => $this->label(),
+            'acorn::lang.models.pdftemplate.coursecode'    => $this->courseCode,
+            'acorn::lang.models.pdftemplate.coursename'    => $this->courseName,
+            'acorn::lang.models.pdftemplate.locale'        => $this->templateLocale,
+            'acorn::lang.models.pdftemplate.boxnames'      => implode(', ', $this->boxNames()),
+            'acorn::lang.models.pdftemplate.boxwarnings'   => implode(', ', $this->boxWarnings),
+            'acorn::lang.models.pdftemplate.images'        => implode(', ', $this->images),
+            'acorn::lang.models.pdftemplate.existingfonts' => implode(', ', $this->existingFonts()),
+            'acorn::lang.models.pdftemplate.missingfonts'  => implode(', ', $this->missingFonts()),
         );
+    }
+
+    public function existingFonts(): array {
+        return array_keys(array_filter($this->fonts, function ($value) {return ($value == TRUE);}));
+    }
+
+    public function missingFonts(): array {
+        return array_keys(array_filter($this->fonts, function ($value) {return ($value == FALSE);}));
     }
 
     public function loadTemplate(string $templateFilePath, string $mediaDir = 'media'): DOMDocument
@@ -187,6 +203,44 @@ class PdfTemplate {
                 $this->contexts = array_filter(preg_split('/ *, */', $value));
             if ($value = $this->getNodeValue("meta:user-defined[@meta:name='dc:relation']", $xOfficeMETA))
                 $this->templateLocale = $value;
+
+            // Assess fonts
+            if ($xOfficeFonts = $this->getSingleNode('/office:document/office:font-face-decls')) {
+                // Installed fonts
+                $execOutput = exec("fc-list", $fcListLines);
+                foreach ($fcListLines as $fcListLine) {
+                    $fcListLineParts = explode(':', $fcListLine);
+                    $fcFilePath      = trim($fcListLineParts[0]);
+                    $fcName          = trim($fcListLineParts[1]);
+                    $fcDetails       = (isset($fcListLineParts[2]) ? trim($fcListLineParts[2]) : NULL);
+                    $this->fcList[$fcName] = array(
+                        'path'    => $fcFilePath,
+                        'details' => $fcDetails,
+                    );
+                }
+
+                // <style:font-face style:name="Amiri Quran" svg:font-family="&apos;Amiri Quran&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+                foreach ($xOfficeFonts->childNodes as $xFontFace) {
+                    if ($xFontFace instanceof DOMElement) {
+                        if ($fontFamily = $xFontFace->getAttribute('svg:font-family')) {
+                            $fontFamily = preg_replace("/^'|'\$/", '', $fontFamily);
+                            $this->fonts[$fontFamily] = isset($this->fcList[$fontFamily]);
+                        }
+                    }
+                }
+            }
+
+            // TODO: Assess un-necessary pictures
+            // <draw:fill-image[@draw:name]/office:binary-data is the real background image
+            // <draw:image[@draw:mime-type="image/svg+xml"/office:binary-data is the QR Code
+            // These are un-necessary:
+            //   <style:background-image/office:binary-data
+            //   <draw:image[@draw:mime-type="image/png"]/office:binary-data
+            //   <draw:image[@draw:mime-type="image/png"]/office:binary-data under SVG draw:image
+            $xImageList = $this->xpath->query('.//*[self::draw:fill-image or self::style:background-image or self::draw:image][office:binary-data]');
+            foreach ($xImageList as $xImage) {
+                array_push($this->images, $xImage->tagName);
+            }
 
             // Set global language
             if ($this->templateLocale) {

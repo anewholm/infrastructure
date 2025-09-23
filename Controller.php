@@ -239,7 +239,7 @@ class Controller extends BackendController
             if (!$invisibleInConfig && !$isVisible) $hiddenColumns[$columnName] = trans($column['label']);
         }
         if ($hiddenColumns) {
-            $hiddenColumnsString = implode(', ', $hiddenColumns);
+            $hiddenColumnsString = implode(', ', array_keys($hiddenColumns));
             $listDetails  .= "<li class='warning'><label>Hidden columns</label>: $hiddenColumnsString</li>";
         }
 
@@ -277,7 +277,11 @@ class Controller extends BackendController
             if ($value) {
                 $labelEscaped = e(trans($transKey));
                 $valueEscaped = e($value);
-                $class        = (stristr($transKey, 'warning') === FALSE ? '' : 'warning'); 
+                $class        = (
+                       stristr($transKey, 'warning') === FALSE 
+                    && stristr($transKey, 'missing') === FALSE 
+                    ? '' : 'warning'
+                ); 
                 $pdfTemplateDetails .= "<li class='$class'><label>$labelEscaped</label>: <span class='value'>$valueEscaped</span></li>";
             }
         }
@@ -407,7 +411,7 @@ HTML
         return $this->makePopup(array($print, $filename), $exportResultForm, '', FALSE);
     }
 
-    public function makePopup(array $breadcrumbs, string $body, string $footer = '', bool $hasClose = TRUE, string $type = 'info'): string
+    public function makePopup(array $breadcrumbs, string $body, string|NULL $footer = '', bool $hasClose = TRUE, string $type = 'info'): string
     {
         $eventJs        = 'popup';
         $initJs         = "$('body > .control-popup').trigger('$eventJs');";
@@ -733,72 +737,81 @@ HTML;
                 $baseParamName       = preg_replace('/^p_|_id$/', '', $paramName);
                 $fieldParametersName = "parameters[$paramName]";
 
+                // Default config
                 $config = array(
                     'label' => Str::headline($baseParamName),
                 );
 
+                // Auto field type
+                switch ($paramType) {
+                    case 'double precision':
+                    case 'double':
+                    case 'int':
+                    case 'bigint':
+                    case 'integer':
+                        $config['type'] = 'number';
+                        break;
+                    case 'timestamp with time zone':
+                    case 'timestamp without time zone':
+                    case 'date':
+                    case 'datetime':
+                        $config['type'] = 'datepicker';
+                        break;
+                    case 'interval':
+                        // TODO: Currently intervals are just presented as text
+                        break;
+                    case 'boolean':
+                    case 'bool':
+                        $config['type']    = 'switch';
+                        $config['default'] = true;
+                        break;
+                    case 'char':
+                        $config['length'] = 1;
+                        break;
+                    case 'text':
+                        $config['type'] = 'richeditor';
+                        break;
+                    case 'path':
+                        // File uploads are NOT stored in the actual column
+                        $uploadDefinition = array(
+                            'type'         => 'fileupload',
+                            'mode'         => 'image',
+                            'required'     => FALSE,
+                            'imageHeight'  => 260,
+                            'imageWidth'   => 260,
+                            'thumbOptions' => array(
+                                'mode'      => 'crop',
+                                'offset'    => array(0,0),
+                                'quality'   => 90,
+                                'sharpen'   => 0,
+                                'interlace' => FALSE,
+                                'extension' => 'auto',
+                            ),
+                        );
+                        $config = array_merge($config, $uploadDefinition);
+                        break;
+                }
+
+                // Merge in model fields config
                 if (isset($modelFields[$baseParamName])) {
-                    $config = $modelFields[$baseParamName];
+                    $config = array_merge($config, $modelFields[$baseParamName]);
                     $config['comment'] = '';
                 } else if ($baseParamName == $classField) {
                     $config = array_merge($config, array(
                         'type'    => 'dropdown',
                         'options' => "$modelClass::dropdownOptions",
                     ));
-                } else if (isset($defFields[$paramName])) {
-                    $config = array_merge($config, $defFields[$paramName]);
+                } 
+
+                // Override with function fields settings
+                if (isset($defFields[$paramName])) {
+                    foreach ($defFields[$paramName] as $settingName => $value)
+                        $config[Str::camel($settingName)] = $value;
                 } else if (isset($defFields[$baseParamName])) {
-                    $config = array_merge($config, $defFields[$baseParamName]);
-                } else {
-                    switch ($paramType) {
-                        case 'double precision':
-                        case 'double':
-                        case 'int':
-                        case 'bigint':
-                        case 'integer':
-                            $config['type'] = 'number';
-                            break;
-                        case 'timestamp with time zone':
-                        case 'timestamp without time zone':
-                        case 'date':
-                        case 'datetime':
-                            $config['type'] = 'datepicker';
-                            break;
-                        case 'interval':
-                            // TODO: Currently intervals are just presented as text
-                            break;
-                        case 'boolean':
-                        case 'bool':
-                            $config['type']    = 'switch';
-                            $config['default'] = true;
-                            break;
-                        case 'char':
-                            $config['length'] = 1;
-                            break;
-                        case 'text':
-                            $config['type'] = 'richeditor';
-                            break;
-                        case 'path':
-                            // File uploads are NOT stored in the actual column
-                            $uploadDefinition = array(
-                                'type'         => 'fileupload',
-                                'mode'         => 'image',
-                                'required'     => FALSE,
-                                'imageHeight'  => 260,
-                                'imageWidth'   => 260,
-                                'thumbOptions' => array(
-                                    'mode'      => 'crop',
-                                    'offset'    => array(0,0),
-                                    'quality'   => 90,
-                                    'sharpen'   => 0,
-                                    'interlace' => FALSE,
-                                    'extension' => 'auto',
-                                ),
-                            );
-                            $config = array_merge($config, $uploadDefinition);
-                            break;
-                    }
+                    foreach ($defFields[$baseParamName] as $settingName => $value)
+                        $config[Str::camel($settingName)] = $value;
                 }
+                
                 $formConfig['fields'][$fieldParametersName] = $config;
             }
 
@@ -849,51 +862,64 @@ HTML;
             // ---------------------------------------------------- Run the action function
             // The order is critical here as they are not named parameters
             $results      = array();
-            $bindings     = array_pluck($paramsMerged, 'value');
-            $placeholders = implode(',', array_fill(0, count($bindings), '?'));
+            $values       = array_pluck($paramsMerged, 'value');
+            $bindings     = array();
+            $placeholders = array();
+            foreach ($values as $value) {
+                if ($value === '') {
+                    array_push($placeholders, 'NULL');
+                } else {
+                    array_push($placeholders, '?');
+                    array_push($bindings, $value);
+                }
+            }
+            $placeString  = implode(',', $placeholders);
+
             try {
                 switch ($returnType) {
                     case 'record':
                         // TODO: runFunction() 
-                        $results = DB::select("select * from $fnDatabaseName($placeholders)", $bindings);
+                        $results = DB::select("select * from $fnDatabaseName($placeString)", $bindings);
                         break;
                     default:
-                        $results = DB::select("select $fnDatabaseName($placeholders) as result", $bindings);
+                        $results = DB::select("select $fnDatabaseName($placeString) as message", $bindings);
                 }
             } catch (QueryException $qe) {
                 $this->throwNiceSqlError($qe);
             }
-            
-            // TODO: Respond with an immediate refresh
-            // TODO: configurable responses
+
+            // Results
+            $message    = NULL;
+            $type       = 'info';
+            $flash      = NULL;
+            $path       = NULL;
+            if (count($results)) {
+                $firstResult = $results[0];
+                if (property_exists($firstResult, 'path'))
+                    $path = $firstResult->path;
+                if (property_exists($firstResult, 'message'))
+                    $message = $firstResult->message;
+                if (property_exists($firstResult, 'type'))
+                    $type = $firstResult->type;
+                if (property_exists($firstResult, 'flash'))
+                    $flash = $firstResult->flash;
+            }
+
+            // Response
             switch ($resultAction) {
                 case 'model-uuid-redirect':
-                    $newModelId = $results[0]->result;
-                    $response   = Redirect::to($newModelId);
+                    if (!$path) throw new Exception('Path redirect requested without path');
+                    if ($message) Flash::$type($message);
+                    $response   = Redirect::to($path);
                     break;
                 case 'refresh':
+                    if ($message) Flash::$type($message);
                     $response   = Redirect::refresh();
                     break;
                 default:
-                    $message    = trans('acorn::lang.models.general.success');
-                    $type       = 'info';
-                    $flash      = NULL;
-                    if (count($results)) {
-                        $firstResult = $results[0];
-                        if (property_exists($firstResult, 'result'))
-                            $message = $firstResult->result;
-                        if (property_exists($firstResult, 'type'))
-                            $type    = $firstResult->type;
-                        if (property_exists($firstResult, 'flash'))
-                            $flash = $firstResult->flash;
-                    }
-
-                    if ($message) {
-                        $response = $this->makePopup(array($modelName, $title), $message, NULL, TRUE, $type);
-                    }
-                    if ($flash) {
-                        Flash::$type($flash);
-                    }
+                    if ($flash) Flash::$type($flash);
+                    if (!$message) $message = trans('acorn::lang.models.general.success');
+                    $response = $this->makePopup(array($modelName, $title), $message, NULL, TRUE, $type);
             }
         }
 

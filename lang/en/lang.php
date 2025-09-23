@@ -112,6 +112,9 @@
             'locale'     => 'Template locale',
             'boxnames'   => 'Dynamic box names',
             'boxwarnings' => 'Box Warnings',
+            'existingfonts' => 'Existing Fonts',
+            'missingfonts'  => 'Missing Fonts',
+            'images'     => 'Images',
         ],
         'name' => [
             'label_plural' => 'Names',

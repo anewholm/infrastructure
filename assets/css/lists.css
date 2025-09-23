@@ -180,25 +180,60 @@ div.state-indicator.waiting {
     color: #586800;
 }
 
-/* Valid */
-table.table.data > tbody > tr.rowlink:has(div.state-indicator.valid) > td {
+/* Valid|Complete */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.valid) > td,
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.complete) > td {
     border: none;
 }
-div.state-indicator.valid {
+div.state-indicator.valid,
+div.state-indicator.complete {
     border: none;
 }
-table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator > div.state-indicator.valid {
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator > div.state-indicator.valid,
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator > div.state-indicator.complete {
     position:inherit;
     border-left: none;
     border-right: none;
     background-color: Transparent;
     box-shadow: none;
 }
-table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(div.state-indicator.valid):before {
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(div.state-indicator.valid):before,
+table.table.data > tbody > tr.rowlink > td.list-cell-name-state_indicator:has(div.state-indicator.complete):before {
     display: block;
     content: "✓";
     text-align: center;
 }
+
+/* Steps */
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.step-0) > td {
+    border-color: #586800;
+}
+div.state-indicator.step-0 {
+    border-color: #586800;
+    color: #586800;
+}
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.step-1) > td {
+    border-color: #778b02;
+}
+div.state-indicator.step-1 {
+    border-color: #778b02;
+    color: #586800;
+}
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.step-2) > td {
+    border-color: #88a001;
+}
+div.state-indicator.step-2 {
+    border-color: #88a001;
+    color: #586800;
+}
+table.table.data > tbody > tr.rowlink:has(div.state-indicator.step-3) > td {
+    border-color: #4dc001;
+}
+div.state-indicator.step-3 {
+    border-color: #4dc001;
+    color: #586800;
+}
+
 .search-global-scope-selectors-container {
     float: left;
     margin-right: 10px;
