@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
+use \Winter\Storm\Argon\Argon;
+use \DateTime;
 
 use Str;
 use BackendAuth;
@@ -65,6 +67,7 @@ class Model extends BaseModel
 
     public $printable = FALSE;
     public static $globalScope;
+    public $globalScopeSubQuery; // Passing down the apply chain
     public $afterListEditableSaveFunctions = array();
 
     public $readOnly = FALSE; // For VIEWS
@@ -1353,32 +1356,110 @@ SQL;
             }
             */
 
-            // ----------------------------------- Extended config options
+            // ----------------------------------- Extended config options where clause
             // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
             // where:
             //   location: @source_location
-            /* TODO: filterFields() live dynamic changes
             foreach ($fields as $name => &$field) {
-                if (isset($field->config['options']) && is_callable($field->config['options']) && isset($field->config['where'])) {
-                    $models = $field->config['options'](NULL, $field);
-                    foreach ($field->config['where'] as $property => $whereClause) {
-                        if (is_array($whereClause)) {
-                            // Relation
-                            $relationClass = $this->belongsTo[$property];
-                            foreach ($whereClauses as $whereField => $value) {
+                if (   isset($field->config['options']) 
+                    && is_callable($field->config['options']) 
+                    && isset($field->config['optionsWhere'])
+                ) {
+                    $optionsCall     = $field->config['options'];
+                    $optionClass     = explode('::', $optionsCall)[0];
+                    $optionModel     = new $optionClass;
+                    $whereProperties = $field->config['optionsWhere'];
+
+                    foreach ($whereProperties as $whereProperty => $whereClauses) {
+                        if (is_array($whereClauses)) {
+                            // location: 
+                            //   - @source_location
+                            //   - sumink
+                            // TODO: Relation Extended config options where clause
+                            $relationClass = $this->belongsTo[$whereProperty];
+                            foreach ($whereClauses as $whereField => $whereValue) {
+                                if ($whereValue[0] == '@') {
+                                    $modelProperty = substr($whereValue, 1);
+                                    $whereValue    = $fields->$modelProperty->value;
+                                }
                                 if ($whereField == 'field') {
-                                    $models = $models->where($whereField, $value);
+                                    $optionModel = $optionModel->where($whereField, $whereValue);
                                 } else {
-                                    $models = $models->where($whereField, $value);
+                                    $optionModel = $optionModel->where($whereField, $whereValue);
+                                }
+                            }
+                        } else {
+                            // location: @source_location
+                            $whereValue = $whereClauses;
+                            if (substr($whereValue, -1) == '@') {
+                                $modelProperty = substr($whereValue, 0, -1);
+                                $whereValue    = $fields->$modelProperty->value;
+                            }
+                            $optionModel = $optionModel->where($whereProperty, $whereValue);
+                        }
+                    }
+                    // TODO: emptyOption?
+                    $field->options = $optionModel->get()->lists();
+                }
+            }
+
+            // ----------------------------------- Extended config options where clause
+            // dependsOnSettings:
+            //     calculation:
+            //         condition: ":calculation_id = '15f02b5c-2bff-11f0-8074-4bf737ba6a74'"
+            //         field:
+            //             hidden: true
+            $conditionCache = array();
+            foreach ($fields as $fieldName => &$field) {
+                if (isset($field->config['dependsOnSettings'])) {
+                    foreach ($field->config['dependsOnSettings'] as $dependsOnConditions) {
+                        if (isset($dependsOnConditions['condition'])) {
+                            $condition = $dependsOnConditions['condition'];
+
+                            if (isset($conditionCache[$condition])) {
+                                $result = $conditionCache[$condition];
+                            } else {
+                                // :<field name> => ?
+                                $bindings  = array();
+                                if (preg_match_all('/[^:]:([a-z_]+)/', $condition, $tokens)) {
+                                    foreach ($tokens[1] as $fieldName) {
+                                        $fieldNameBare = preg_replace('/_id$/', '', $fieldName);
+                                        $value = (isset($fields->$fieldName) 
+                                            ? $fields->$fieldName->value 
+                                            : $fields->$fieldNameBare->value
+                                        );
+                                        // Argon and Datetime must be suffixed with timestamp without time zone in the condition
+                                        if (is_null($value)) {
+                                            // Bindings cannont determine the data-type of NULL
+                                            $condition = str_replace(":$fieldName", 'NULL', $condition);
+                                        } else {
+                                            array_push($bindings, $value);
+                                            $condition = str_replace(":$fieldName", '?', $condition);
+                                        }
+                                    }
+                                }
+
+                                // Run
+                                $result = $this
+                                    ->where('id', $this->id)
+                                    ->whereRaw($condition, $bindings)
+                                    ->first();
+                                $conditionCache[$condition] = $result;
+                            }
+
+                            // Apply
+                            if ($result) {
+                                if (isset($dependsOnConditions['field'])) {
+                                    foreach ($dependsOnConditions['field'] as $attribute => $newValue) {
+                                        $attribute = Str::camel($attribute);
+                                        $field->$attribute = $newValue;
+                                    }
                                 }
                             }
                         }
                     }
-                    $field->value = $models;
                 }
             }
-            */
-
 
         } // ($is_update || $is_create)
     }
