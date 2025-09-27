@@ -1,6 +1,7 @@
 <?php
 use Acorn\Model;
 
+$ordinal = NULL;
 if (is_numeric($value)) {
     $value = (int) $value;
     
@@ -9,12 +10,12 @@ if (is_numeric($value)) {
 }
 
 $config = &$listColumn->config;
-if (isset($config['prefix'])) {
+if (isset($config['prefix']) && $ordinal) {
     $prefix = e(trans($config['prefix']));
     print("<span class='prefix'>$prefix</span> ");
 }
 print($value);
-if (isset($config['suffix'])) {
+if (isset($config['suffix']) && $ordinal) {
     $suffix = e(trans($config['suffix']));
     print(" <span class='suffix'>$suffix</span>");
 }

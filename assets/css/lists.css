@@ -358,3 +358,25 @@ td.list-cell-type-partial > .bar > .inner {
 #all-controllers > li > .values > li::after {
     content: ', ';
 }
+
+/* Levels */
+body table.table.data tr.list-tree-level-0 a.list-expand-collapse {left: 0px;}
+body table.table.data tr.list-tree-level-0 td.list-cell-index-1 {padding-left: 0px;}
+
+body table.table.data tr.list-tree-level-1 a.list-expand-collapse {left: 30px;}
+body table.table.data tr.list-tree-level-1 td.list-cell-index-1 {padding-left: 30px;}
+
+body table.table.data tr.list-tree-level-2 a.list-expand-collapse {left: 60px;}
+body table.table.data tr.list-tree-level-2 td.list-cell-index-1 {padding-left: 60px;}
+
+body table.table.data tr.list-tree-level-3 a.list-expand-collapse {left: 90px;}
+body table.table.data tr.list-tree-level-3 td.list-cell-index-1 {padding-left: 90px;}
+
+body table.table.data tr.list-tree-level-4 a.list-expand-collapse {left: 120px;}
+body table.table.data tr.list-tree-level-4 td.list-cell-index-1 {padding-left: 120px;}
+
+body table.table.data tr.list-tree-level-5 a.list-expand-collapse {left: 150px;}
+body table.table.data tr.list-tree-level-5 td.list-cell-index-1 {padding-left: 150px;}
+
+body table.table.data tr.list-tree-level-6 a.list-expand-collapse {left: 180px;}
+body table.table.data tr.list-tree-level-6 td.list-cell-index-1 {padding-left: 180px;}

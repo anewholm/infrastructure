@@ -15,16 +15,44 @@ if (method_exists($model, 'actionFunctions')) {
     $actionFunctions = $model->actionFunctions('row'); // Includes inherited 1to1 action functions
     $user            = BackendAuth::user();
     $advancedDisplay = ($user->hasPermission('acorn.advanced') && Session::get('advanced'));
+    $ml              = System\Classes\MediaLibrary::instance();
+    $class           = get_class($model);
+    $isAdvanced      = Session::get('advanced');
 
     if (count($actionFunctions) || $formMode || $model->printable) {
         print('<ul class="action-functions">');
+
+        // --------------------------------- Video help
+        // MediaLibraryItem s
+        if (!$isAdvanced) {
+            $location = "HelpVideos\\$class";
+            $mlis     = $ml->listFolderContents($location, 'title', 'video', TRUE);
+            if (count($mlis)) {
+                $useDropDown = (count($mlis) > 2);
+                $useSearch   = (count($mlis) < 10 ? 'select-no-search' : '');
+                if ($useDropDown) {
+                    print('<li class="video-help"><div class="form-group dropdown-field">');
+                    print("<i class='icon-video'></i>&nbsp;");
+                    print("<select name='video' class='form-control $useSearch custom-select select2-hidden-accessible' autocomplete='off' tabindex='-1'>");
+                }
+                foreach ($mlis as $mli) {
+                    // TODO: Translation of video names
+                    $baseName    = preg_replace('/\.[a-zA-Z0-9]+/', '', basename($mli->path));
+                    $videoName   = Str::title(str_replace('_', ' ', $baseName));
+                    $url         = $ml->url($mli->path);
+                    if ($useDropDown) print("<option value='$url'>$videoName</option>");
+                    else print("<li class='video-help'><i class='icon-video'></i>&nbsp;<a target='_blank' href='$url'>$videoName</a></li>");
+                }
+                if ($useDropDown) print('</select></div></li>');
+            }
+        }
 
         // --------------------------------- Advanced
         if ($model->advanced 
             && $this->action == 'update'
             && $user->hasPermission('acorn.advanced')
         ) {
-            $toggle   = (Session::get('advanced') ? 0 : 1);
+            $toggle   = ($isAdvanced ? 0 : 1);
             $advanced = e(trans('acorn::lang.models.general.advanced'));
             $simple   = e(trans('acorn::lang.models.general.simple'));
             $title    = ($toggle ? $advanced : $simple);
@@ -53,16 +81,16 @@ if (method_exists($model, 'actionFunctions')) {
                     : NULL
                 );
 
-                $class  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
-                $class .= ($title      ? ' hover-indicator' : NULL);
-                $class .= ($advancedFn ? ' advanced'        : NULL);
+                $cssClass  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
+                $cssClass .= ($title      ? ' hover-indicator' : NULL);
+                $cssClass .= ($advancedFn ? ' advanced'        : NULL);
 
                 if (!$advancedFn || $advancedDisplay) {
                     print(<<<HTML
                         <li>
                             $tooltip
                             <a
-                                class="$class"
+                                class="$cssClass"
                                 data-control="popup"
                                 data-request-data='$dataRequestData'
                                 data-load-indicator='$title...'
@@ -106,10 +134,8 @@ HTML
         // --------------------------------- PDF ActionTemplates
         // This takes a while so we don't want to do it in lists
         if ($formMode && $model->exists) {
-            $ml       = System\Classes\MediaLibrary::instance();
-            $class    = get_class($model);
-            $location = "ActionTemplates\\$class";
             // MediaLibraryItem s
+            $location = "ActionTemplates\\$class";
             $mlis        = $ml->listFolderContents($location, 'title', 'document', TRUE);
             $useDropDown = (count($mlis) > 2);
             $useSearch   = (count($mlis) < 10 ? 'select-no-search' : '');
@@ -148,53 +174,51 @@ HTML
             }
             
             foreach ($mlis as $mli) {
-                if ($mli->getFileType() == "document") {
-                    $pdfTemplate = NULL;
-                    try {
-                        $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
-                    } catch (Exception $ex) {
-                        // The media cache is out-of-date
-                        // this can happen during imports
-                        // or on filesystem permission changes
-                    }
-                    if ($pdfTemplate) {
-                        $printName       = e($pdfTemplate->label()); // From FODT comment
-                        $dataRequestData = e(substr(json_encode(array(
-                            'template'   => $mli->path,
-                            'model'      => $class,
-                            'model_id'   => $model->id,
-                        )), 1,-1));
+                $pdfTemplate = NULL;
+                try {
+                    $pdfTemplate = new \Acorn\PdfTemplate($mli->path);
+                } catch (Exception $ex) {
+                    // The media cache is out-of-date
+                    // this can happen during imports
+                    // or on filesystem permission changes
+                }
+                if ($pdfTemplate) {
+                    $printName       = e($pdfTemplate->label()); // From FODT comment
+                    $dataRequestData = e(substr(json_encode(array(
+                        'template'   => $mli->path,
+                        'model'      => $class,
+                        'model_id'   => $model->id,
+                    )), 1,-1));
 
-                        if ($pdfTemplate->forContext($this->action)) {
-                            if ($useDropDown) {
-                                print("<option value='$mli->path'>$printName</option>");
-                            } else              print(<<<HTML
-                                <li><a
-                                    data-control="popup"
-                                    data-size="huge"
-                                    data-request-data='$dataRequestData'
-                                    data-handler="onActionTemplate"
-                                    data-load-indicator="$dataLoadIndicator"
-                                >
-                                    $print $printName
-                                </a></li>
+                    if ($pdfTemplate->forContext($this->action)) {
+                        if ($useDropDown) {
+                            print("<option value='$mli->path'>$printName</option>");
+                        } else              print(<<<HTML
+                            <li><a
+                                data-control="popup"
+                                data-size="huge"
+                                data-request-data='$dataRequestData'
+                                data-handler="onActionTemplate"
+                                data-load-indicator="$dataLoadIndicator"
+                            >
+                                $print $printName
+                            </a></li>
 HTML
-                            );
-                        }
-                    } else {
-                        if (env('APP_DEBUG')) {
-                            $printName   = e("Not found: $mli->path");
-                            if ($useDropDown) {
-                                print("<option value='$mli->path'>$printName</option>");
-                            } else              print(<<<HTML
-                                <li><button
-                                    disabled="disabled"
-                                    class="btn disabled">
-                                    $printName
-                                </button></li>
+                        );
+                    }
+                } else {
+                    if (env('APP_DEBUG')) {
+                        $printName   = e("Not found: $mli->path");
+                        if ($useDropDown) {
+                            print("<option value='$mli->path'>$printName</option>");
+                        } else              print(<<<HTML
+                            <li><button
+                                disabled="disabled"
+                                class="btn disabled">
+                                $printName
+                            </button></li>
 HTML
-                            );
-                        }
+                        );
                     }
                 }
             } 

@@ -64,7 +64,7 @@ Block::put('breadcrumb') ?>
 
     <?php Block::put('body') ?>
         <!-- <ul> May contain forms -->
-        <?= $this->makePartial('actions'); ?>
+        <!-- ?= $this->makePartial('actions'); ? -->
         
         <?= Form::open(['class'=>'layout stretch']) ?>
             <?= $this->makeLayout('form-with-sidebar') ?>

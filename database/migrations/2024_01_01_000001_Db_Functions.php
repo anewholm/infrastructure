@@ -7,6 +7,44 @@ class DbFunctions extends Migration
 {
     public function up()
     {
+      // Useful for cubes
+      $this->createFunction('fn_acorn_translate', array(
+        'p_name character varying(1024)',
+        'p_table character varying(1024)',
+        'p_id uuid',
+        'p_locale character(2)'
+      ), 'character varying(1024)', array(
+        'p_model_parts character varying(1024)[]',
+        'p_author character varying(1024)',
+        'p_plugin character varying(1024)',
+        'p_class  character varying(1024)',
+        'p_model character varying(1024)'
+    	), <<<SQL
+        -- acorn_university_students => Acorn\Uniersity\Models\Student
+        p_model_parts := regexp_split_to_array(p_table, '_');
+        p_author := initcap(p_model_parts[1]);
+        p_plugin := initcap(p_model_parts[2]);
+        p_class  := initcap(p_model_parts[3]);
+        
+        p_author := replace(p_author, 'Acorn', 'Acorn');
+        p_class  := regexp_replace(p_class, 'ies$', 'y');
+        p_class  := regexp_replace(p_class, 's$', '');
+        
+        p_model_parts := ARRAY[p_author, p_plugin, 'Models', p_class];
+        p_model := array_to_string(p_model_parts, '\');
+
+        -- Failover translateable attribute
+        return case
+          when p_locale = 'en' then p_name
+          else coalesce((
+            select json_extract_path_text(attribute_data::json, 'name')
+            from winter_translate_attributes
+            where model_type = p_model and model_id = p_id::text and locale = p_locale
+          ), p_name)
+        end;
+SQL
+      );
+
       // Useful for replication initiation
       // string $name, array $parameters, string $returnType, array $declares, string $body, ?string $language = 'plpgsql'
       $this->createFunction('fn_acorn_truncate_database', ['schema_like character varying', 'table_like character varying'], 'void', ['reset_query varchar(32596)'], <<<SQL
