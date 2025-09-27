@@ -76,7 +76,10 @@ if (!is_null($value)) {
         // The related records are fetched as a Collection using the get() method.
         // and then the valueFrom is applied, essentially re-creating the same array or string indirectly
         $model = &$record;
-        if ($relation && $model->hasRelation($relation)) $model = $model->$relation;
+        if ($relation && $model->hasRelation($relation)) {
+            // Request the whole model, not the valueFrom or select string
+            $model = $model->$relation()->first();
+        }
         $value = $model->$col;
     } else if (is_array($value)) {
         // The $record is already the relation: model

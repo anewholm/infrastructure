@@ -1,3 +1,25 @@
+/* bootstrap extensions */
+@media (min-width:768px) {
+    /* Combine with new-row */
+    body .col-sm-no-new-row {clear: none;}
+    body .col-sm-new-row {clear: both;}
+}
+@media (min-width:992px) {
+    body .col-md-no-new-row {clear: none;}
+    body .col-md-new-row {clear: both;}
+}
+@media (min-width:1200px) {
+    body .col-lg-no-new-row {clear: none;}
+    body .col-lg-new-row {clear: both;}
+}
+
+.video-help {
+    background-color: aliceblue;
+    color: #3366ff;
+    font-weight: bold;
+}
+
+/* flash */
 .flash-message a,
 .callout a {
   color: blue;
