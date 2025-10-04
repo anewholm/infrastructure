@@ -93,6 +93,19 @@ class Controller extends BackendController
         */
     }
 
+    public function isClassExtendedWith($name) {
+        // Winter hard codes behavior requirements sometimes
+        // for example: 
+        //   EventRegistry::registerModelTranslation() 
+        //   requires Winter.Translate.Behaviors.TranslatableModel
+        // Here we fake the implemntation in favor of our sub-class
+        return parent::isClassExtendedWith($name)
+            || (
+                isset($this->implementReplaces) 
+                && in_array($name, $this->implementReplaces)
+            );
+    }
+
     // ------------------------------------------ Custom Actions
     public function qrcodescan(): string
     {
@@ -897,12 +910,14 @@ HTML;
                 $firstResult = $results[0];
                 if (property_exists($firstResult, 'path'))
                     $path = $firstResult->path;
-                if (property_exists($firstResult, 'message'))
-                    $message = $firstResult->message;
                 if (property_exists($firstResult, 'type'))
                     $type = $firstResult->type;
                 if (property_exists($firstResult, 'flash'))
                     $flash = $firstResult->flash;
+                if (property_exists($firstResult, 'message')) {
+                    $message = $firstResult->message;
+                    if (!$path) $path = $message;
+                }
             }
 
             // Response

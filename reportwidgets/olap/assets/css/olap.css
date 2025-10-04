@@ -1,0 +1,17 @@
+.widget-olap h2 {
+    margin-top: 15px;
+    font-weight: bold;
+}
+.webapps img {
+    display: inline;
+    margin-right: 6px;
+}
+.webapps .cubes {
+    margin-left: 20px;
+}
+.webapps .cubes > li {
+    display: inline;
+}
+.webapps .cubes > li::after {
+    content: ', ';
+}

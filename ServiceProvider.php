@@ -9,6 +9,8 @@ use Backend\Models\User;
 use Backend\Models\UserRole;
 use System\Classes\CombineAssets;
 use Backend\Classes\WidgetManager;
+use Acorn\ReportWidgets\DocumentStore;
+use Acorn\ReportWidgets\Olap;
 use System\Classes\MarkupManager;
 use System\Classes\SettingsManager;
 use Backend\Classes\FormTabs;
@@ -158,6 +160,22 @@ class ServiceProvider extends ModuleServiceProvider
         // VERSION: Winter 1.2.6: send also parameter ('acorn');
         // But does not seem to cause a problem if ommitted
         parent::boot(); 
+
+        $this->registerBackendReportWidgets();
+    }
+
+    protected function registerBackendReportWidgets()
+    {
+        WidgetManager::instance()->registerReportWidgets(function ($manager) {
+            $manager->registerReportWidget(DocumentStore::class, [
+                'label'   => 'acorn::lang.dashboard.documentstore.widget_title_default',
+                'context' => 'dashboard'
+            ]);
+            $manager->registerReportWidget(Olap::class, [
+                'label'   => 'acorn::lang.dashboard.olap.widget_title_default',
+                'context' => 'dashboard'
+            ]);
+        });
     }
 
     protected function missingServices(): array

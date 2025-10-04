@@ -1,5 +1,6 @@
 <?php namespace Acorn\Behaviors;
 
+use Exception;
 use Winter\Translate\Behaviors\TranslatableModel as WinterTranslatableModel;
 use Winter\Storm\Html\Helper as HtmlHelper;
 
@@ -20,8 +21,17 @@ class TranslatableModel extends WinterTranslatableModel
         $keyArray = HtmlHelper::nameToArray($key);
         $isNested = (count($keyArray) > 1);
         if ($isNested) {
+            if (!$model->exists) 
+                return;
             $key = array_pop($keyArray);
-            foreach ($keyArray as $step) $model = &$model->{$step};
+            foreach ($keyArray as $step) {
+                $newModel = &$model->{$step};
+                if (is_null($newModel)) {
+                    $modelClass = get_class($model);
+                    throw new Exception("TranslatableModel: $step did not exist on $modelClass");
+                }
+                $model = &$newModel;
+            }
             $translatableModel = $model->getClassExtension('Acorn.Behaviors.TranslatableModel');
             if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
         }

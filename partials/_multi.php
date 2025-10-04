@@ -6,9 +6,11 @@ use \Carbon\CarbonInterval;
 
 if (!isset($record)) throw new Exception("_multi.php is a column partial only");
 
-$multiId    = "$record->id-$column->columnName";
-$multiClass = Str::kebab($column->columnName);
-$isNested   = (strstr($column->columnName, '[') !== FALSE);
+// first_event_part[groups] => first-event-part-groups
+$multiClass  = Str::kebab(trim(preg_replace('/[\]\[_]+/', '-', $column->columnName), '-'));
+// <UUID>-first-event-part-groups
+$multiId     = "$record->id-$multiClass";
+$isNested    = (strstr($column->columnName, '[') !== FALSE);
 
 // --------------------------- Custom config settings
 $multiConfig = (isset($column->config['multi']) ? $column->config['multi'] : array());
