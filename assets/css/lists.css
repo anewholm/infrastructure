@@ -124,6 +124,10 @@ tr.rowlink.qrscan-highlight > td:last-child {
     border-right:1px solid #000!important;
     border-radius: 0px 5px 5px 0px;
 }
+.form-group.no-header table.table.data > thead,
+.form-group.no-header .list-scrollable-container.scroll-after::after {
+    display: none;
+}
 
 /* -------------------------------- State_Indicator */
 table.table.data > tbody > tr.rowlink:has(div.state-indicator) > td {

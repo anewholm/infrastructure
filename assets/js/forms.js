@@ -185,6 +185,10 @@ function acorn_ready(){
       if (select2 = jSelect.data().select2) setTimeout(select2.selection.clear(), 0);
     }
   });
+  $('.select-and-url').change(function(event){
+    var url = $(this).val();
+    if (url) window.open(url, '_blank').focus();
+  });
 
   // Collapseable <table>s
   $('table.collapsable tr.section').click(function(){

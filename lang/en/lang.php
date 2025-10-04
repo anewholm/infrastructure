@@ -6,6 +6,25 @@
         'replication_debug' => 'Replication Debug',
         'trigger_http_call_response' => 'Trigger HTTP call response'
     ],
+    'dashboard' => [
+        'widget_title_label' => 'Widget title',
+        'widget_title_error' => 'The Widget Title is required.',
+        'widget_tomcat_root_label' => 'TomCat root',
+        'widget_tomcat_root_error' => 'The TomCat root is required.',
+        'widget_tomcat_port_label' => 'TomCat port',
+        'widget_tomcat_port_error' => 'The TomCat port is required.',
+        'widget_tomcat_domain_label' => 'TomCat domain',
+        'widget_tomcat_domain_error' => 'The TomCat domain is required.',
+        'documentstore' => [
+            'widget_title_default' => 'NABU document and video store',
+        ],
+        'olap' => [
+            'widget_title_default' => 'OLAP Cube reports',
+            'widget_tomcat_root_default' => NULL,
+            'widget_tomcat_port_default' => NULL,
+            'widget_tomcat_domain_default' => NULL,
+        ],
+    ],
     'settings' => [
         'interface' => [
             'menu_label' => 'Interface',
@@ -81,6 +100,8 @@
             'no_restriction' => 'No Restriction',
             'nothing_linked' => 'Nothing linked',
             'success' => 'Success',
+            'helpvideos' => 'Help Videos',
+            'none' => 'None',
         ],
         'server' => [
             'label' => 'Server',

@@ -53,6 +53,7 @@ body .field-multilingual .ml-btn {
 .view-add-models {
     float: left;
     clear: left;
+    margin-right: 5px;
 }
 
 .fake-readonly *[readonly] {
@@ -117,6 +118,7 @@ body .field-multilingual .ml-btn {
 
 .control-breadcrumb .counter {
     position: inherit;
+    background-color: #333;
 }
 
 .template-thumbnail {
@@ -265,6 +267,12 @@ ul.help-block {
 }
 
 /* actions */
+.action-functions {
+    display: none;
+}
+.action-functions:has(li) {
+    display: block;
+}
 .action-functions > li > a {
     cursor: pointer;
     white-space: nowrap;
@@ -292,6 +300,10 @@ ul.action-functions > li .select2-selection {
     line-height: 0.8;
     padding: 8px 5px 8px 5px;
     min-width: 200px;
+}
+ul.action-functions .select2-container .select2-selection--single > .select2-selection__rendered {
+    /* Bold selection p's getting cut off */
+    overflow: visible;
 }
 
 body.rtl ul.action-functions {

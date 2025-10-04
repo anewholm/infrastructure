@@ -328,6 +328,18 @@ class RelationController extends RelationControllerBase
         return $manageMode;
     }
 
+    public function relationExtendViewWidget($viewWidget, $field, $model): void 
+    {
+        if (isset($this->config->view['fieldsSettings'])) {
+            $columns = &$viewWidget->columns;
+            foreach ($this->config->view['fieldsSettings'] as $name => $config) {
+                if (isset($columns[$name])) $columns[$name] = array_merge($columns[$name], $config);
+                else $columns[$name] = $config;
+            }
+        }
+        parent::relationExtendViewWidget($viewWidget, $field, $model);
+    }
+
     public function onRelationButtonUnlink()
     {
         // We need this custom eventTarget to guide the manageMode process above

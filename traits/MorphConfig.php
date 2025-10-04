@@ -373,6 +373,18 @@ Trait MorphConfig
                         }
                     }
 
+                    // Query string values
+                    if ($_GET) {
+                        foreach ($_GET as $getName => $getValue) {
+                            if (isset($config->fields[$getName])) {
+                                $field = &$config->fields[$getName];
+                                // $field['type']     = 'text';
+                                $field['readOnly'] = TRUE;
+                                $field['default']  = $getValue;
+                            }
+                        }
+                    }
+
                     break;
 
                 case 'columns':
@@ -468,18 +480,28 @@ Trait MorphConfig
         return $settingsClass;
     }
 
+    protected static function getSetting(string $settingCaluse, string $modelClass): bool
+    {
+        // setting: can include the model also
+        // setting: \Acorn\Something\Settings::has_this
+        $settingParts  = explode('::', $settingCaluse);
+        $settingName   = (isset($settingParts[1]) ? $settingParts[1] : $settingParts[0]);
+        if (count($settingParts) > 1) $modelClass = $settingParts[0];
+        $settingsClass = self::getSettingsModel($modelClass);
+        return ($settingsClass && $settingsClass::get($settingName) == '1');
+    }
+
     protected static function settingRemove(array &$fieldConfig, string $modelClass): bool
     {
         $removeField = FALSE;
+
         if (isset($fieldConfig['setting'])) {
-            // setting: can include the model also
-            // setting: \Acorn\Something\Settings::has_this
-            $settingParts  = explode('::', $fieldConfig['setting']);
-            $settingName   = (isset($settingParts[1]) ? $settingParts[1] : $settingParts[0]);
-            $modelClass    = (count($settingParts) > 1 ? $settingParts[0] : $modelClass);
-            $settingsClass = self::getSettingsModel($modelClass);
-            if ($settingsClass && $settingsClass::get($settingName) != '1')
-                $removeField = TRUE;
+            $setting = self::getSetting($fieldConfig['setting'], $modelClass);
+            if ($setting) $removeField = TRUE;
+        }
+        if (isset($fieldConfig['setting-not'])) {
+            $setting = self::getSetting($fieldConfig['settingNot'], $modelClass);
+            if (!$setting) $removeField = TRUE;
         }
 
         return $removeField;
