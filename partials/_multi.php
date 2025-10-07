@@ -13,11 +13,15 @@ $multiId     = "$record->id-$multiClass";
 $isNested    = (strstr($column->columnName, '[') !== FALSE);
 
 // --------------------------- Custom config settings
-$multiConfig = (isset($column->config['multi']) ? $column->config['multi'] : array());
-$sum         = (isset($multiConfig['sum'])   ? new ListColumn($multiConfig['sum'], '') : FALSE);
-$limit       = (isset($multiConfig['limit']) ? $multiConfig['limit']  : 4);
+$multiConfig = (isset($column->config['multi'])   ? $column->config['multi'] : array());
+$sum         = (isset($multiConfig['sum'])        ? new ListColumn($multiConfig['sum'], '') : FALSE);
+$limit       = (isset($multiConfig['limit'])      ? $multiConfig['limit']  : 4);
+$cssClasses  = (isset($multiConfig['cssClasses']) ? $multiConfig['cssClasses']  : array());
 $isHTML      = (isset($multiConfig['html']) && $multiConfig['html']);
-$modelClass  = (isset($multiConfig['model']) ? $multiConfig['model'] : NULL);
+$modelClass  = (isset($multiConfig['model'])      ? $multiConfig['model'] : NULL);
+
+if (is_string($cssClasses)) $cssClasses = explode(' ', $cssClasses);
+$cssClassesString = implode(' ', $cssClasses);
 
 // TODO: Linked popups for list view are currently not being used
 $useLinkedPopups = (isset($multiConfig['use-linked-popups']) ? $multiConfig['use-linked-popups'] : FALSE);
@@ -113,7 +117,7 @@ if (!is_null($value)) {
         } else {
             $itemClass = gettype($firstItem);
         }
-        print("<ul id='$multiId' class='multi $multiClass $itemClass'>");
+        print("<ul id='$multiId' class='multi $multiClass $itemClass $cssClassesString'>");
         foreach ($value as $model) {
             // id array => models
             if ($modelClass) $model = $modelClass::find($model);
