@@ -1024,16 +1024,24 @@ SQL;
                 // Conditionally unset
                 if (isset($actionFunctionDefinition['condition'])) {
                     $condition = $actionFunctionDefinition['condition'];
-                    if ($this->exists) {
-                        // Per-model query
-                        if ($this->whereRaw($condition)->count() == 0) 
-                            unset($actionFunctions[$name]);
-                    } else {
+                    if ($type == 'list') {
                         // Normal independent select query
                         // _list_toolbar will send through the empty model
-                        $results = DB::select($condition);
-                        if (!isset($results[0]) || array_values((array)$results[0])[0] == 0) 
-                            unset($actionFunctions[$name]);
+                        // Not relevant if model sent through
+                        if ($this->exists) unset($actionFunctions[$name]);
+                        else {
+                            $results = DB::select($condition);
+                            if (!isset($results[0]) || array_values((array)$results[0])[0] == 0) 
+                                unset($actionFunctions[$name]);
+                        }
+                    } else {
+                        // Per-model query
+                        if ($this->exists) {
+                            if ($this->whereRaw($condition)->count() == 0) 
+                                unset($actionFunctions[$name]);
+                        } 
+                        // Not relevant because no model
+                        else unset($actionFunctions[$name]);
                     }
                 }
             } else {

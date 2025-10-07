@@ -19,6 +19,13 @@
     font-weight: bold;
 }
 
+.form-group > .callout {
+    float: right;
+    margin-bottom: -32px;
+    opacity: 0.8;
+    box-shadow: 2px 0px 10px #ddd;
+}
+
 /* flash */
 .flash-message a,
 .callout a {

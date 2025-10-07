@@ -672,6 +672,8 @@ HTML;
         //   - show results
         // If the parameters are all satisfied, then we run the function
         // otherwise we will present a form
+        //
+        // List (without model), row and form (with model) functions come here
         $response    = ''; 
         $modelId     = post('modelId');
         $modelClass  = post('model');
@@ -1102,6 +1104,7 @@ HTML;
                 }
             }
         }
+        
         return parent::listExtendRecords($records);
     }
 
