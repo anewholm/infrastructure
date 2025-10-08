@@ -296,8 +296,25 @@ Trait MorphConfig
                             }
                         }
                     }
-
-                    // ------------------------------------------------- setting: directives
+                        
+                    // ------------------------------------------------- Popup tertiary fields
+                    $isPopup = (bool) $parentModel;
+                    if ($isPopup && isset($config->tertiaryTabs['fields'])) {
+                        $first = TRUE;
+                        foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                            if ($fieldName != '_qrcode') {
+                                if ($first) {
+                                    $cssClass  = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+                                    $cssClass .= ' new-row';
+                                    $fieldConfig['cssClass'] = $cssClass;
+                                }
+                                $config->fields[$fieldName] = $fieldConfig;
+                                $first = FALSE;
+                            }
+                        }
+                        unset($config->tertiaryTabs);
+                    }
+                    
                     // This allows fields to be conditionally shown
                     // in the same way as permissions
                     // setting: my_setting

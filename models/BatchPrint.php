@@ -3,12 +3,16 @@
 namespace Acorn\Models;
 
 use Acorn\PdfTemplate;
+use Winter\Storm\Database\Model as WinterModel;
 use \Backend\Models\ExportModel;
+use \DateTime;
 use File;
+use BackendAuth;
 use DB;
 use Log;
 use Exception;
 use Winter\Storm\Filesystem\Zip;
+use Acorn\User\Models\User;
 
 class BatchPrint extends ExportModel
 {
@@ -73,50 +77,45 @@ class BatchPrint extends ExportModel
         }
     }
 
-    protected function updatedPrintedArray($model, $pdfTemplate): void {
+    protected function updateJsonArray($value, $newvalue): mixed
+    {
+        // We assume array if the value is NULL
+        if (is_null($value)) $value = array($newvalue);
+        else if (is_array($value)) array_push($value, $newvalue);
+        else if ($value instanceof Collection) $value->add($newvalue);
+        // Strings etc.
+        else $value = $newvalue;
+        return $value;
+    }
+
+    protected function updatePrintedArray(WinterModel $model, string $pdfPath, string $pdfTemplatePath = NULL): void 
+    {
         // Record that this template has been printed
-        $storageTemplatePath = $pdfTemplate->storageTemplatePath();
-        
-        $modelClass = get_class($model);
+        // "printed" array columns
+        // NOTE: The database may also have triggers that complete custom create-system tables
+        $user    = User::authUser();
+        $name    = preg_replace('/\.[a-z]+$/', '', basename($pdfTemplatePath));
+        $details = array(
+            'name'            => $name,
+            'pdfTemplatePath' => $pdfTemplatePath,
+            'pdfPath'         => $pdfPath,
+            'createdBy'       => $user->id,
+        );
+
         if (!$model->readOnly && $model->hasAttribute('printed')) {
-            $printed = $model->printed;
-            if (is_null($printed)) $printed = array();
-            if (is_array($printed)) {
-                array_push($printed, $storageTemplatePath);
-                $model->printed = $printed;
-                $model->save();
-                Log::info("$modelClass::printed array updated ($storageTemplatePath)");
-            } else if ($model->printed instanceof Collection) {
-                $model->printed->add($storageTemplatePath);
-                $model->save();
-                Log::info("$modelClass::printed collection updated ($storageTemplatePath)");
-            } else {
-                Log::error("$modelClass::printed is not an array");
-            }
+            $model->printed = $this->updateJsonArray($model->printed, $details);
+            $model->save();
         }
 
+        // And on 1-1 relations
         foreach ($model->belongsTo as $name => $config) {
-            if ($relatedModel = $model->$name) {
-                if ($relatedModel instanceof \Winter\Storm\Database\Model) {
-                    $relatedModelClass = get_class($relatedModel);
-                    if (!$relatedModel->readOnly && $relatedModel->hasAttribute('printed')) {
-                        $printed = $relatedModel->printed;
-                        if (is_null($printed)) $printed = array();
-                        if (is_array($printed)) {
-                            array_push($printed, $storageTemplatePath);
-                            $relatedModel->printed = $printed;
-                            $relatedModel->save();
-                            Log::info("$relatedModelClass::printed array updated ($storageTemplatePath)");
-                        } else if ($relatedModel->printed instanceof Collection) {
-                            $relatedModel->printed->add($storageTemplatePath);
-                            $relatedModel->save();
-                            Log::info("$relatedModelClass::printed collection updated ($storageTemplatePath)");
-                        } else {
-                            $type = \gettype($relatedModel->printed);
-                            Log::error("$relatedModelClass::printed is not an array: $type");
-                            Log::error($relatedModel->printed);
-                        }
-                    }
+            if ($relatedModel = $model->$name()->first()) {
+                if ($relatedModel instanceof WinterModel
+                    && !$relatedModel->readOnly 
+                    && $relatedModel->hasAttribute('printed')
+                ) {
+                    $relatedModel->printed = $this->updateJsonArray($relatedModel->printed, $details);
+                    $relatedModel->save();
                 }
             } else {
                 Log::info("$name relation value was empty");
@@ -181,7 +180,7 @@ class BatchPrint extends ExportModel
                     Log::info("---------------------------------- Finishing");
                     $fodtPath    = $pdfTemplate->writeFODT($outName, $filename, $this->prepend_uniqid);
                     $pdfLocation = $pdfTemplate->convertFodtToPdf($fodtPath);
-                    $this->updatedPrintedArray($model, $pdfTemplate);
+                    $this->updatePrintedArray($model, $pdfLocation, $pdfTemplate->storageTemplatePath());
                     array_push($files, $pdfLocation);
 
                     // Reset all form values
@@ -200,7 +199,7 @@ class BatchPrint extends ExportModel
             Log::info("---------------------------------- Finishing");
             $fodtPath    = $pdfTemplate->writeFODT($outName, $filename, $this->prepend_uniqid);
             $pdfLocation = $pdfTemplate->convertFodtToPdf($fodtPath);
-            $this->updatedPrintedArray($model, $pdfTemplate);
+            $this->updatePrintedArray($model, $pdfLocation, $pdfTemplate->storageTemplatePath());
             array_push($files, $pdfLocation);
         }
 

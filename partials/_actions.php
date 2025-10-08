@@ -47,7 +47,7 @@ if (!$isAdvanced && $formMode) {
 }
 
 // --------------------------------- Advanced
-if ($model->advanced && $canAdvanced) {
+if ($model->advanced && $canAdvanced && $formMode) {
     $toggle   = ($isAdvanced ? 0 : 1);
     $advanced = e(trans('acorn::lang.models.general.advanced'));
     $simple   = e(trans('acorn::lang.models.general.simple'));
