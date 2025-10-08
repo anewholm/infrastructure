@@ -6,6 +6,7 @@ use Input;
 use Backend\Widgets\Search;
 use Backend\Widgets\Filter;
 use Backend\Widgets\Lists;
+use \Winter\Storm\Database\Builder;
 
 class ListController extends BackendListController
 {
@@ -62,9 +63,21 @@ class ListController extends BackendListController
                 $widget->showSorting = false;
                 $widget->showSetup   = false;
             }
-        });
 
-        // TODO: Extend filters to accept $_GET values
-        // Filter::extend()...
+            $widget->bindEvent('list.extendQuery', function (Builder $query) {
+                $query = $query->getQuery();
+                foreach (get() as $getName => $fieldValue) {
+                    if (substr($getName, 0, 7) == 'filter_') {
+                        $fieldName = substr($getName, 7);
+                        $query->where($fieldName, $fieldValue);
+                    }
+                    if (substr($getName, 0, 6) == 'order_') {
+                        $fieldName = substr($getName, 6);
+                        $direction = ($fieldValue == 'desc' ? 'desc' : 'asc');
+                        $query->reorder($fieldName, $direction);
+                    }
+                }
+            });
+        });
     }
 }
