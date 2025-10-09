@@ -19,6 +19,10 @@ $limit       = (isset($multiConfig['limit'])      ? $multiConfig['limit']  : 4);
 $cssClasses  = (isset($multiConfig['cssClasses']) ? $multiConfig['cssClasses']  : array());
 $isHTML      = (isset($multiConfig['html']) && $multiConfig['html']);
 $modelClass  = (isset($multiConfig['model'])      ? $multiConfig['model'] : NULL);
+$multiPrefix = (isset($multiConfig['prefix'])     ? $multiConfig['prefix'] : NULL);
+$multiSuffix = (isset($multiConfig['suffix'])     ? $multiConfig['suffix'] : NULL);
+$prefix      = (isset($column->config['prefix'])  ? $column->config['prefix'] : NULL);
+$suffix      = (isset($column->config['suffix'])  ? $column->config['suffix'] : NULL);
 
 if (is_string($cssClasses)) $cssClasses = explode(' ', $cssClasses);
 $cssClassesString = implode(' ', $cssClasses);
@@ -117,6 +121,7 @@ if (!is_null($value)) {
         } else {
             $itemClass = gettype($firstItem);
         }
+        print(e(trans($prefix)));
         print("<ul id='$multiId' class='multi $multiClass $itemClass $cssClassesString'>");
         foreach ($value as $model) {
             // id array => models
@@ -152,7 +157,9 @@ if (!is_null($value)) {
                     );
                 }
             }
+            print($multiPrefix);
             print($isHTML ? $name : e($name));
+            print($multiSuffix);
             if ($model instanceof Model && $useLinkedPopups) print('</a>');
             print('</li>');
 
@@ -168,6 +175,7 @@ if (!is_null($value)) {
             if (!$continue) break;
         };
         print('</ul>');
+        print(e(trans($suffix)));
 
         if ($count > $limit) {
             // Leave this "more" link to simply open the full record update screen

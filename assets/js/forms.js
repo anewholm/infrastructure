@@ -87,8 +87,13 @@ function acorn_dynamicElements(){
     jTable.children('tbody').children('tr').each(function(){
       var jCheck     = $(this).children('td.list-checkbox').first().find(':input');
       var rowIsDirty = false;
-      $(this).find(':input.list-editable').each(function(){
-        if ($(this).attr('original') != $(this).val()) {
+      $(this).find('.list-editable').each(function(){
+        // switch-fields have the input lower down
+        // but must always be on the input
+        var jOriginal   = $(this).filter('[original]').add($(this).find('[original]'));
+        var isCheckbox  = (jOriginal.attr('type') == 'checkbox');
+        if (isCheckbox) jOriginal = jOriginal.filter(':checked');
+        if (jOriginal.attr('original') != jOriginal.val()) {
           rowIsDirty   = true;
           tableIsDirty = true;
         }
@@ -111,7 +116,7 @@ function acorn_dynamicElements(){
     return false;
   };
   // Catch in the input because row should still be clickable
-  $(':input.list-editable').click(function(event){
+  $('.list-editable').click(function(event){
     event.stopPropagation();
   })
   .change(fCheckDirty)
