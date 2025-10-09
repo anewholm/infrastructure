@@ -5,6 +5,8 @@ $class        = end($classParts);
 $columnName   = $column->getName();
 $maxlength    = (isset($column->config['max'])           ? $column->config['max']           : 255 );
 $type         = (isset($column->config['typeEditable'])  ? $column->config['typeEditable']  : 'number' );
+$on           = (isset($column->config['on'])            ? $column->config['on']            : 'backend::lang.form.field_on' );
+$off          = (isset($column->config['off'])           ? $column->config['off']           : 'backend::lang.form.field_off' );
 if (!isset($required)) 
     $required = (isset($column->config['required'])      ? $column->config['required']      : FALSE );
 $passed       = (isset($passed) ? $passed : NULL);
@@ -100,19 +102,41 @@ $isRequired    = ($required ? 'is-required' : '');
 $isPassed      = (is_null($passed) ? '' : ($passed ? 'passed' : 'failed')); // 3-state
 
 print("<div class='list-editable-container $isRequired $isPassed'>");
-
 if ($titleEscaped) print(<<<HTML
     <label for="$idValue">$titleEscaped</label>
 HTML);
 
-print(<<<HTML
-<input type="$inputType" step="any" name="{$nameStem}[$columnName]" 
-    id="$idValue" value="$valueEscaped" original="$valueEscaped"
-    placeholder="$placeholder" class="form-control list-editable list-editable-$type $readOnlyClass" autocomplete="off" 
-    pattern="$pattern" maxlength="$maxlength" required="$required" $disabled $checked>
-</input>
+switch ($inputType) {
+    case 'checkbox':
+        $onEscaped    = e(trans($on));
+        $offEscaped   = e(trans($off));
+        $checked      = ($value ? 'checked="1"' : ''); 
+
+        print(<<<HTML
+        <div class="list-editable">
+            <input type="hidden" name="{$nameStem}[$columnName]" value="0" autocomplete="off">
+            <label class="custom-switch">
+                <input $checked original="$valueEscaped" type="checkbox" id="$idValue" name="{$nameStem}[$columnName]" value="1" autocomplete="off">
+                <span>
+                    <span>$onEscaped</span>
+                    <span>$offEscaped</span>
+                </span>
+                <a class="slide-button"></a>
+            </label>
+        </div>
 HTML
-);
+        );
+        break;
+    default:
+        print(<<<HTML
+        <input type="$inputType" step="any" name="{$nameStem}[$columnName]" 
+            id="$idValue" value="$valueEscaped" original="$valueEscaped"
+            placeholder="$placeholder" class="form-control list-editable list-editable-$type $readOnlyClass" autocomplete="off" 
+            pattern="$pattern" maxlength="$maxlength" required="$required" $disabled $checked>
+        </input>
+HTML
+        );
+    }
 
 // Accompanying values for not-NULL create row scenarios
 // like score rows

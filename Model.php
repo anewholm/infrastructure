@@ -401,7 +401,12 @@ class Model extends BaseModel
                 array_push($nameModels, $this->$name()->withoutGlobalScopes()->first());
             }
         }
-        return $this->buildName($html, $delimeter, ...$nameModels);
+        $name = $this->buildName($html, $delimeter, ...$nameModels);
+
+        if ($nameSuffix = $this->name_suffix)
+            $name = "$name$nameSuffix";
+
+        return $name;
     }
 
     public static function listEditableSave(Model $parentModel = NULL): bool

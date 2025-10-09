@@ -15,6 +15,14 @@ use Acorn\User\Models\User;
 
 Trait MorphConfig
 {
+    protected function appendClass(array &$fieldConfig, string $newClass): void
+    {
+        $cssClass   = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
+        $cssClasses = explode(' ', $cssClass);
+        array_push($cssClasses, $newClass);
+        $fieldConfig['cssClass'] = implode(' ', $cssClasses);
+    }
+
     public function makeConfig($configFile = [], $requiredConfig = [])
     {
         $debugOutput       = FALSE;
@@ -30,7 +38,9 @@ Trait MorphConfig
             ? get_class($this->relationModel) 
             : $this->getConfig('modelClass')
         );
-        $user = BackendAuth::user();
+        $user              = BackendAuth::user();
+        $context           = (property_exists($this, 'context') ? $this->context : NULL);
+        $isPopup           = (bool) $parentModel;
 
         if (is_string($configFile) && $configFile) {
             $configFileParts = explode('/', $configFile);
@@ -163,8 +173,7 @@ Trait MorphConfig
                         foreach ($config->fields as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
                                 if ($advanced) {
-                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                    $this->appendClass($fieldConfig, 'advanced');
                                 } else {
                                     unset($config->fields[$name]);
                                 }
@@ -175,8 +184,7 @@ Trait MorphConfig
                         foreach ($config->tabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
                                 if ($advanced) {
-                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                    $this->appendClass($fieldConfig, 'advanced');
                                 } else {
                                     unset($config->tabs['fields'][$name]);
                                 }
@@ -187,8 +195,7 @@ Trait MorphConfig
                         foreach ($config->secondaryTabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
                                 if ($advanced) {
-                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                    $this->appendClass($fieldConfig, 'advanced');
                                 } else {
                                     unset($config->secondaryTabs['fields'][$name]);
                                 }
@@ -199,8 +206,7 @@ Trait MorphConfig
                         foreach ($config->tertiaryTabs['fields'] as $name => &$fieldConfig) {
                             if (isset($fieldConfig['advanced']) && $fieldConfig['advanced']) {
                                 if ($advanced) {
-                                    $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                    $fieldConfig['cssClass'] = "$cssClass advanced";
+                                    $this->appendClass($fieldConfig, 'advanced');
                                 } else {
                                     unset($config->tertiaryTabs['fields'][$name]);
                                 }
@@ -250,7 +256,7 @@ Trait MorphConfig
                                 && $dropDownModel == $parentModel
                             ) {
                                 $fieldConfig['type']      = 'text';
-                                $fieldConfig['cssClass'] .= ' hidden';
+                                $this->appendClass($fieldConfig, 'hidden');
                                 $fieldConfig['default']   = $parentModelId;
                             } 
                             
@@ -259,7 +265,7 @@ Trait MorphConfig
                                 && $dropDownModel == get_class($controllerModel)
                             ) {
                                 $fieldConfig['type']      = 'text';
-                                $fieldConfig['cssClass'] .= ' hidden';
+                                $this->appendClass($fieldConfig, 'hidden');
                                 $fieldConfig['default']   = $controllerModel->id;
                             }
                             
@@ -274,8 +280,7 @@ Trait MorphConfig
                                 && ($controllerFieldModel = $controllerModel->$fieldName)
                                 && ($dropDownModel == get_class($controllerFieldModel))
                             ) {
-                                $cssClass = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                $fieldConfig['cssClass']  = "$cssClass hidden";
+                                $this->appendClass($fieldConfig, 'hidden');
                                 $fieldConfig['type']      = 'text';
                                 $fieldConfig['default']   = $controllerFieldModel->id;
                             }
@@ -297,16 +302,56 @@ Trait MorphConfig
                         }
                     }
                         
+                    // ------------------------------------------------- Popup update without list-editable
+                    // When updating a record from a list view, list-editable fields are not necessary
+                    // because they can be more easily changed in the list view
+                    // so we can reduce clutter in the popup
+                    // Just hide them in case they are required
+                    if ($isPopup) {
+                        // TODO: Rationalise model knowledge
+                        if (property_exists($this, 'eventTarget')) {
+                            // TODO: relationModel does not exist during update ????
+                            $popupContext = ($this->eventTarget == 'button-create' ? 'create' : 'update');
+                            if ($popupContext == 'update') {
+                                foreach ($config->fields as $fieldName => &$fieldConfig) {
+                                    if (isset($fieldConfig['listEditable']) && $fieldConfig['listEditable']) {
+                                        $this->appendClass($fieldConfig, 'hidden');
+                                    }
+                                }
+                                if (isset($config->tabs['fields'])) {
+                                    foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
+                                        if (isset($fieldConfig['listEditable']) && $fieldConfig['listEditable']) {
+                                            $this->appendClass($fieldConfig, 'hidden');
+                                        }
+                                    }
+                                }
+                                if (isset($config->secondaryTabs['fields'])) {
+                                    foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                        if (isset($fieldConfig['listEditable']) && $fieldConfig['listEditable']) {
+                                            $this->appendClass($fieldConfig, 'hidden');
+                                        }
+                                    }
+                                }
+                                if (isset($config->tertiaryTabs['fields'])) {
+                                    foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                        if (isset($fieldConfig['listEditable']) && $fieldConfig['listEditable']) {
+                                            $this->appendClass($fieldConfig, 'hidden');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // ------------------------------------------------- Popup tertiary fields
-                    $isPopup = (bool) $parentModel;
+                    // Move these fields in to the main area
+                    // because the popup has no tertiary area
                     if ($isPopup && isset($config->tertiaryTabs['fields'])) {
                         $first = TRUE;
                         foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
                             if ($fieldName != '_qrcode') {
                                 if ($first) {
-                                    $cssClass  = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
-                                    $cssClass .= ' new-row';
-                                    $fieldConfig['cssClass'] = $cssClass;
+                                    $this->appendClass($fieldConfig, 'new-row');
                                 }
                                 $config->fields[$fieldName] = $fieldConfig;
                                 $first = FALSE;
@@ -374,7 +419,7 @@ Trait MorphConfig
 
                                     // Check access
                                     $hasAccess = $user->hasAccess($permissionDirective);
-                                    $isContext = (is_null($permContext) || (property_exists($this, 'context') && $permContext == $this->context));
+                                    $isContext = (is_null($permContext) || $permContext == $context);
 
                                     if ($isContext && ($negation ? !$hasAccess : $hasAccess)) {
                                         if (isset($permissionSettings['field'])) {
