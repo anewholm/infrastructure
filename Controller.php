@@ -107,6 +107,27 @@ class Controller extends BackendController
     }
 
     // ------------------------------------------ Custom Actions
+    public function runAlias(string $alias = 'index')
+    {
+        // Example: 
+        // public function courseplanner()
+        // {
+        //     return $this->runAlias('index');
+        // }
+        parent::$alias();
+
+        // CSS classes
+        $class = Str::kebab($this->action);
+        $classParts = explode('-', $class);
+        array_push($classParts, $class);
+        $classesString = implode(' ', $classParts);
+        $this->bodyClass .= " $classesString";
+
+        $this->pageTitle = Str::headline($this->action);
+
+        return $this->makeResponse($this->makeView($alias));
+    }
+
     public function qrcodescan(): string
     {
         $buttons = array(
@@ -474,6 +495,13 @@ HTML;
         return $result;
     }
 
+    public function update_onSave($context = NULL)
+    {
+        $result = parent::update_onSave($context);
+        // TODO: Support explicit custom redirects
+        return $result;
+    }
+        
     public function create_onSave($context = NULL)
     {
         // Can return redirects from
@@ -491,6 +519,11 @@ HTML;
 
         return $result;
     }
+
+    // public function create_onSave($context = NULL)
+    // {
+    //     return parent::create_onSave($context);
+    // }
 
     public function onPopupRoute()
     {

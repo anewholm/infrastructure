@@ -192,8 +192,8 @@ HTML
         </a>
     <?php endif ?>
 
-    <?php if (isset($_GET['title'])) {
-        $titleEscaped = e(trans($_GET['title']));
+    <?php if ($title = get('title')) {
+        $titleEscaped = e(trans($title));
         print("<h1>$titleEscaped</h1>");
     }
     ?>
