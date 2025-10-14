@@ -181,8 +181,8 @@ if (!is_null($value)) {
             // Leave this "more" link to simply open the full record update screen
             $more = e(trans('more...'));
             print("<a class='more'>$more</a>");
-        } else {
-            if ($sum) print("<div class='multi-total'>$total</div>");
+        } else if ($count > 1 && $sum) {
+            print("<div class='multi-total'>$total</div>");
         }
     } else {
         print('-');

@@ -2,8 +2,28 @@
 // If $this->fatalError, vars will not be available
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
-$controllerListUrl = $this->actionUrl('');
 $count             = (isset($formModel) ? $formModel::count() : NULL);
+$controllerListUri = new \GuzzleHttp\Psr7\Uri($this->actionUrl(''));
+$controllerListUrl = (string) $controllerListUri;
+
+// We want to go back to the correct place
+// if it was the same domain and the backend
+$referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
+$referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
+$controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
+if (   $referrerUri->getHost()   == $controllerListUri->getHost()
+    && $referrerUri->getScheme() == $controllerListUri->getScheme()
+    && isset($referrerPathParts[2])
+    && isset($controllerListPathParts[2])
+    && $referrerPathParts[0]       == 'backend'
+    && $controllerListPathParts[0] == 'backend'
+    && end($referrerPathParts) != end($controllerListPathParts)
+) {
+    // This includes the query string also
+    // Session will apply the same filters
+    $controllerListUrl = (string) $referrerUri;
+    $modelsLabelKey    = Str::title(end($referrerPathParts));
+}
 
 Block::put('breadcrumb') ?>
     <ul>

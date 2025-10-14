@@ -19,9 +19,8 @@
     font-weight: bold;
 }
 
-.form-group > .callout {
-    float: right;
-    margin-bottom: -32px;
+.form-group > .callout,
+.form-group > .layout-row > .callout {
     opacity: 0.8;
     box-shadow: 2px 0px 10px #ddd;
 }
@@ -180,6 +179,9 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 .form-sidebar .list-scrollable-container.scroll-after::after {
     padding: 4px;    
     height: 24px;
+}
+.form-sidebar .btn.btn-sm {
+    padding: 3px 5px;
 }
 .form-sidebar .table.table.data thead .list-checkbox .custom-checkbox {
     top: -13px;

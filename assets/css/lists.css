@@ -42,39 +42,56 @@ table.table.data tr.list-tree-level-4 td.list-cell-index-1{padding-left:80px}
 table.table.data tr.list-tree-level-5 td.list-cell-index-1{padding-left:100px}
 */
 
-/* Document theme */
-.document table.table.data > tbody > tr.rowlink > td > .duplicate > * {
+/* Planner theme */
+.planner table.table.data > tbody > tr.rowlink > td.hide-duplicates > .duplicate,
+.planner table.table.data > tbody > tr.rowlink > td.hide-duplicates > .duplicate > * {
     color: Transparent!important;
 }
-.document table.table.data > tbody > tr.rowlink > td:has(> .heading) {
+.planner table.table.data > tbody > tr.rowlink > td.hide-duplicates:has(> .column-1.heading),
+.planner table.table.data > tbody > tr.rowlink > td.hide-duplicates:has(> .column-2.heading) {
     font-weight: bold;
+}
+.planner table.table.data > tbody > tr.rowlink > td:has(> .heading) {
     border-top: 1px dotted #999;
 }
-.document table.table.data > tbody > tr.rowlink > td {
+.planner table.table.data > tbody > tr.rowlink > td {
     background-color: #ecf0f1;
 }
-.document table.table.data > tbody > tr.rowlink > td:has(> div.column1_group_odd) {
+.planner table.table.data > tbody > tr.rowlink > td:has(> div.column-1-group-odd) {
     background-color: #fff;
 }
-.document table.table.data {
+.planner table.table.data {
     border-collapse: collapse;
 }
-.document table.table.data > tbody > tr.rowlink,
-.document table.table.data > tbody > tr.rowlink > td {
+.planner table.table.data > tbody > tr.rowlink,
+.planner table.table.data > tbody > tr.rowlink > td {
     border: none;
 }
-.document .list-setup {
+.planner .list-setup {
     /* display: none; */
 }
-.document #Filter-listFilter,
-.document .list-checkbox,
-.document #Toolbar-listToolbar .toolbar-item.toolbar-primary > div > a.btn.btn-primary.wn-icon-plus,
-.document #Toolbar-listToolbar .toolbar-item.toolbar-primary > div > button.btn.btn-danger.wn-icon-trash-o,
-.document #Toolbar-listToolbar .toolbar-item > div.search-qrscan-container,
-.document #Toolbar-listToolbar .toolbar-item > div.search-global-scope-selectors-container,
-.document #Toolbar-listToolbar .toolbar-item > div:has(> .search) {
+.planner #Filter-listFilter,
+.planner .list-checkbox,
+.planner #Toolbar-listToolbar .toolbar-item.toolbar-primary > div > a.btn.btn-primary.wn-icon-plus,
+.planner #Toolbar-listToolbar .toolbar-item.toolbar-primary > div > button.btn.btn-danger.wn-icon-trash-o,
+.planner #Toolbar-listToolbar .toolbar-item > div.search-qrscan-container,
+.planner #Toolbar-listToolbar .toolbar-item > div.search-global-scope-selectors-container,
+.planner #Toolbar-listToolbar .toolbar-item > div:has(> .search)
+{
     display: none;
 }
+/* Relation Manager planner */
+.planner {
+    padding-left: 0px;
+    padding-right: 0px;
+    margin-left: -5px;
+    margin-right: -5px;
+}
+.planner .relation-toolbar,
+.planner .control-filter {
+    display: none;
+}
+
 #Toolbar-listToolbar h1 {
     font-size: 24px;
     font-weight: bold;
@@ -147,11 +164,14 @@ table.table.data .counter,
 table.table.data td.tablet > * {
     border-radius: 5px;
     background-color: #aaa;
+}
+table.table.data td.tablet * {
     color: #fff;
     padding: 0px 6px;
 }
 
-table.table.data td.tablet > *.current {
+table.table.data td.tablet > *.current,
+table.table.data td.tablet > *:has(.current) {
     background-color: #777;
 }
 

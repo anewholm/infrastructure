@@ -29,31 +29,40 @@ class ListController extends BackendListController
 
         Lists::extend(function($widget){
             $widget->bindEvent('list.overrideColumnValue', function ($record, $column, $value) use($widget) {
-                static $firstColumn, $lastColumnRecord, $previousRecord, $iGroup;
-                // First column group
-                if (is_null($iGroup)) $iGroup = 0;
+                static $firstColumn, $iColumn, $lastColumnRecord, $previousRecord, $iGroups;
                 // Remember start column so we can detect when the row starts again
                 if (!$firstColumn) $firstColumn = $column;
                 // The row is starting again, remember the previous record for the whole row
-                $isFirstColumn = ($firstColumn && $firstColumn->columnName == $column->columnName);
-                if ($isFirstColumn) $previousRecord = $lastColumnRecord;
+                $isFirstColumn = ($firstColumn->columnName == $column->columnName);
+                if ($isFirstColumn) {
+                    $iColumn = 1;
+                    $previousRecord = $lastColumnRecord;
+                }
+                // Column groups
+                if (is_null($iGroups)) $iGroups = array();
+                if (!isset($iGroups[$iColumn])) $iGroups[$iColumn] = 0;
 
                 $thisValue   = $widget->getColumnValueRaw($record, $column);
                 $lastValue   = ($previousRecord ? $widget->getColumnValueRaw($previousRecord, $column) : NULL);
-                $isDuplicate = ($thisValue == $lastValue);
+                $isDuplicate = ($thisValue && $thisValue == $lastValue);
                 
-                $class = 'theme-cell';
-                if ($isDuplicate) $class .= ' duplicate';
-                // If the first column changes then we update our row group
-                else if ($isFirstColumn) {
-                    $class .= ' heading';
-                    $iGroup++;
+                $classes     = array('theme-cell');
+                array_push($classes, "column-$iColumn");
+                if ($isDuplicate) array_push($classes, 'duplicate');
+                else {
+                    // Column changed: update our row group
+                    array_push($classes, 'heading');
+                    $iGroups[$iColumn]++;
                 }
-                $class .= " column1_group_$iGroup";
-                if ($iGroup % 2) $class .= " column1_group_odd";
-
+                foreach ($iGroups as $iGroupColumn => $iGroup) {
+                    array_push($classes, "column-$iGroupColumn-group-$iGroup");
+                    if ($iGroup % 2) array_push($classes, "column-$iGroupColumn-group-odd");
+                }
+                
                 $lastColumnRecord = $record;
-                return "<div class='$class'>$value</div>";
+                $iColumn++;
+                $classesString    = implode(' ', $classes);
+                return "<div class='$classesString'>$value</div>";
             });
 
             // Themes
