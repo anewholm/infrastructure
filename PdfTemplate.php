@@ -354,7 +354,7 @@ class PdfTemplate {
         return $this->templateDOM;
     }
 
-    public function translateLanguageCode(string $code): string
+    public function translateLanguageCode(string|NULL $code): string|NULL
     {
         switch ($code) {
             case 'kmr': 
@@ -416,6 +416,8 @@ class PdfTemplate {
                             $value = $model->getAttributeTranslated($name, $locale);
                         }
                         if ($value) {
+                            if (is_array($value)) $value = var_export($value, TRUE);
+
                             $valueSuffix = NULL;
                             $suffixName  = "{$name}_suffix";
                             if ($model->hasRelation($suffixName)) {

@@ -39,7 +39,7 @@ foreach ($value as $name => $leValues) {
     // Null id indicates that the model is new
     // we assign a global integer for the form display
     $model = NULL;
-    if (is_null($leValues['id'])) {
+    if (!isset($leValues['id']) || is_null($leValues['id'])) {
         $model     = new $modelClass();
         $model->id = Model::nextNewModelId();
     } else {

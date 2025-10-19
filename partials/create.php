@@ -8,21 +8,23 @@ $controllerListUrl = (string) $controllerListUri;
 
 // We want to go back to the correct place
 // if it was the same domain and the backend
-$referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
-$referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
-$controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
-if (   $referrerUri->getHost()   == $controllerListUri->getHost()
-    && $referrerUri->getScheme() == $controllerListUri->getScheme()
-    && isset($referrerPathParts[2])
-    && isset($controllerListPathParts[2])
-    && $referrerPathParts[0]       == 'backend'
-    && $controllerListPathParts[0] == 'backend'
-    && end($referrerPathParts) != end($controllerListPathParts)
-) {
-    // This includes the query string also
-    // Session will apply the same filters
-    $controllerListUrl = (string) $referrerUri;
-    $modelsLabelKey    = Str::title(end($referrerPathParts));
+if ($backToReferrer = get('back-to-referrer')) {
+    $referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
+    $referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
+    $controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
+    if (   $referrerUri->getHost()   == $controllerListUri->getHost()
+        && $referrerUri->getScheme() == $controllerListUri->getScheme()
+        && isset($referrerPathParts[2])
+        && isset($controllerListPathParts[2])
+        && $referrerPathParts[0]       == 'backend'
+        && $controllerListPathParts[0] == 'backend'
+        && end($referrerPathParts) != end($controllerListPathParts)
+    ) {
+        // This includes the query string also
+        // Session will apply the same filters
+        $controllerListUrl = (string) $referrerUri;
+        $modelsLabelKey    = $backToReferrer;
+    }
 }
 
 Block::put('breadcrumb') ?>
@@ -60,10 +62,19 @@ Block::put('breadcrumb') ?>
                     class="btn btn-default">
                     <?= e(trans('acorn::lang.models.general.create_and_add_new')); ?>
                 </button>
+                <?php
+                    // Would access a custom redirect in the form config    
+                    // 'action' => 'course-planner', 
+                    $dataRequestData = array(
+                        'close'    => 1,
+                        'redirect' => $controllerListUrl,
+                    );
+                    $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
+                ?>
                 <button
                     type="button"
                     data-request="onSave"
-                    data-request-data="close:1"
+                    data-request-data="<?= $dataRequestDataString ?>"
                     data-hotkey="ctrl+enter, cmd+enter"
                     data-load-indicator="<?= e(trans('backend::lang.form.creating_name', ['name' => $modelLabelKey])); ?>"
                     class="btn btn-default">

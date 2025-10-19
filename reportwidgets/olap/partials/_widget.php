@@ -1,4 +1,4 @@
-<div class="report-widget widget-document-store">
+<div class="report-widget widget-olap">
     <h3><?= e(trans($this->property('title'))) ?></h3>
 
     <?php if (!isset($error)): ?>

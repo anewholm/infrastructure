@@ -8,9 +8,11 @@ use Acorn\Models\InterfaceSetting;
 use \Exception;
 use BackendAuth;
 use Str;
+use DB;
 // For debug output
 use Yaml;
 use File;
+use Winter\Storm\Database\Model;
 use Acorn\User\Models\User;
 
 Trait MorphConfig
@@ -379,6 +381,23 @@ Trait MorphConfig
                                 ) unset($config->tabs['fields'][$fieldName]);
                             }
                         }
+                        if (isset($config->secondaryTabs['fields'])) {
+                            foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                if (
+                                        self::settingRemove($fieldConfig, $modelClass)
+                                     || self::envRemove($fieldConfig, $modelClass)
+                                ) unset($config->secondaryTabs['fields'][$fieldName]);
+                            }
+                        }
+                        if (isset($config->tertiaryTabs['fields'])) {
+                            foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                if (
+                                        self::settingRemove($fieldConfig, $modelClass)
+                                     || self::envRemove($fieldConfig, $modelClass)
+                                     || self::conditionRemove($fieldConfig, $controllerModel)
+                                ) unset($config->tertiaryTabs['fields'][$fieldName]);
+                            }
+                        }
                     }
 
                     // ------------------------------------------------- permission-settings
@@ -573,8 +592,25 @@ Trait MorphConfig
     {
         $removeField = FALSE;
         if (isset($fieldConfig['env'])) {
-            $env = env($fieldConfig['env']);
+            $env         = env($fieldConfig['env']);
             $removeField = ($env != 1 && strtolower($env) != 'true' && strtolower($env) != 'yes');
+        }
+        return $removeField;
+    }
+
+    protected static function conditionRemove(array &$fieldConfig, Model|NULL $model): bool
+    {
+        $removeField = FALSE;
+        if (isset($fieldConfig['condition'])) {
+            if ($model && $model->exists) {
+                // Specific to model
+                $removeField = ($model::where('id', $model->id)->whereRaw($fieldConfig['condition'])->count() == 0);
+            } else {
+                // Generic, probably new Model
+                $condition   = $fieldConfig['condition'];
+                $results     = DB::select($condition);
+                $removeField = (!isset($results[0]) || array_values((array)$results[0])[0] == 0);
+            }
         }
         return $removeField;
     }

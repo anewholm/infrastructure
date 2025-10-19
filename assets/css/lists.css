@@ -3,6 +3,15 @@
   100% {opacity: 1;}
 }
 
+.model-name {
+    font-weight: bold;
+    border-bottom: 3px double #888;
+    display: none;
+}
+.show-breadcrumb-title .model-name {
+    display: inline-block;
+}
+
 /* tr.rowlink */
 tr.rowlink .nowrap {
     white-space: nowrap;
@@ -354,17 +363,17 @@ div.control-toolbar select.btn {
 tr.dirty > td {
     background-color:#ffdddd!important;
 }
-td.list-cell-type-partial > .list-editable-container > input.list-editable-number {
+td.list-cell-type-partial .list-editable-container > input.list-editable-number {
     width: 80px;
     padding: 0px 4px;
 }
-td.list-cell-type-partial > .list-editable-container > label {
+td.list-cell-type-partial .list-editable-container > label {
     font-size: 13px;
     color: rgb(102, 102, 102); /* Storm field value */
     padding: 0px 0px 4px 0px;
     margin: 0px;
 }
-td.list-cell-type-partial > .list-editable-container {
+td.list-cell-type-partial .list-editable-container {
     float: left;
     margin-right: 6px;
 }

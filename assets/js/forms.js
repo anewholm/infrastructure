@@ -122,6 +122,18 @@ function acorn_dynamicElements(){
   .change(fCheckDirty)
   .keyup(fCheckDirty);
 
+  // Stop action-function clicks propagating
+  $('.multi > li > a, .action-functions > li > a').click(function(event) {
+      var isPopoup = $(this).filter('[data-control=popup]').length;
+      if (isPopoup) {
+          $(this).popup(this.attributes);
+          event.preventDefault();
+      }
+      
+      event.stopPropagation();
+      return isPopoup;
+  });
+
   // Enable read-only for radio buttons
   // HTML does not accept readonly on radio buttons
   // So we disable not-allowed options
@@ -247,6 +259,7 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
     var $popups   = $(`body > div.control-popup.modal:has(${validFormPopup})`);
     var popupMain = $popups.first().data('oc.popup'); // Contains popup div collection
     var popupNew  = $popup.data('oc.popup'); // Whole new popup, to be injected and removed
+    $popups.removeClass('loading');
     
     if ($popups.length > 1 && popupMain) {
       popupMain.lock(true);
@@ -329,7 +342,9 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
     // and shows the loading indicator
     // then, after success, it remains hidden for some reason
     // We show both
-    if ($(this).data('request') != context.handler) return;
-    $(this).closest('.control-popup').addClass('in');
+    var jControlPopup = $(this).closest('.control-popup');
+    jControlPopup.addClass('loading');
+    if ($(this).data('request') == context.handler) 
+      jControlPopup.addClass('in');
   });
 }(window.jQuery);

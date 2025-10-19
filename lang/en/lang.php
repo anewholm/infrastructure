@@ -56,6 +56,7 @@
             'description' => 'Notes',
             'notes' => 'Notes',
             'empty' => 'Empty',
+            'fullscreen' => 'Full Screen',
             'type' => 'Type',
             'image' => 'Image',
             'select' => 'Select',
