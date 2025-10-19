@@ -38,7 +38,7 @@ if ($display) {
             data-request-data="<?= $dataRequestData ?>" 
             data-dismiss="callout" 
             aria-hidden="true">×</button>
-        <i class="icon-warning"></i>
+        <i class="icon-<?= $level ?>"></i>
         <h3><?= $titleEscaped ?></h3>
         <p class="content"><?= $contentEscaped ?></p>
     </div>

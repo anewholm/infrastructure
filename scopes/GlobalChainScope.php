@@ -106,6 +106,34 @@ class GlobalChainScope implements Scope
         return $globalScopeSetting;
     }
 
+    public static function allUserSettings(bool $withSetting = TRUE, User $user = NULL): array
+    {
+        // Fast function to get settings from Session
+        $names = array();
+        if (!$user) $user = User::authUser();
+        if ($user) {
+            foreach ($user->attributes as $fieldName => $setting) {
+                if (preg_match('/^global_scope_/', $fieldName)) {
+                    if (!$withSetting || $setting) {
+                        // The relevant plugin will have boot() time added a belongsTo
+                        // to the User object
+                        $fieldStub = preg_replace('/_id$/', '', $fieldName);
+                        if (isset($user->belongsTo[$fieldStub]) && isset($user->belongsTo[$fieldStub][0])) {
+                            $belongsTo  = $user->belongsTo[$fieldStub];
+                            $modelClass = $belongsTo[0];
+                            $names[$fieldName] = array(
+                                'userField'  => $fieldName,
+                                'modelClass' => $modelClass,
+                                'setting'    => $setting,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        return $names;
+    }
+
     public static function settingNameFor(Model $model): string
     {
         // For Session key

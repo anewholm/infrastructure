@@ -28,6 +28,7 @@ use Acorn\Events\DataChange;
 use Acorn\Events\UserNavigation;
 use Acorn\ServiceProvider;
 use Acorn\User\Models\Language;
+use Acorn\Scopes\GlobalChainScope;
 
 /**
  * Computer Product Backend Controller
@@ -91,6 +92,29 @@ class Controller extends BackendController
             }
         }
         */
+    }
+
+    public function bodyClassAdjust(): void
+    {
+        $globalScopeNames = array();
+        foreach (GlobalChainScope::allUserSettings(TRUE) as $name => $details) {
+            // Theme from Model
+            $modelClass  = $details['modelClass'];
+            if (isset($modelClass::$globalScopeCssTheme)) {
+                $globalScopeCssTheme = $modelClass::$globalScopeCssTheme;
+                array_push($globalScopeNames, "theme-$globalScopeCssTheme");
+            }
+
+            // global-scope- CSS class name
+            $cssName   = preg_replace('/_id$/', '', $name);
+            $cssName   = preg_replace('/^global_scope_/', '', $cssName);
+            $cssName   = preg_replace('/_+/', '-', $cssName);
+            $cssName   = "global-scope-$cssName";
+            array_push($globalScopeNames, $cssName);
+        }
+        $bodyClass = ($this->bodyClass ?: '');
+        $globalScopeNamesString = implode(' ', $globalScopeNames);
+        $this->bodyClass = "$bodyClass $globalScopeNamesString";
     }
 
     public function isClassExtendedWith($name) {
@@ -204,6 +228,7 @@ class Controller extends BackendController
     {
         $this->redirectToLeaf($id);
         parent::update($id);
+        $this->bodyClassAdjust();
     }
 
     public function redirectToLeaf($id)
@@ -253,7 +278,7 @@ class Controller extends BackendController
         if (!property_exists($this->widget, 'list'))
             throw new Exception('onListActionTemplate requires a list widget');
         $list   = $this->widget->list;
-        $filter = $this->widget?->listFilter;
+        $filter = (property_exists($this->widget, 'listFilter') ? $this->widget->listFilter : NULL);
         $model  = $list->model;
         if (!$model)
             throw new Exception('onListActionTemplate requires a list model');
@@ -278,10 +303,10 @@ class Controller extends BackendController
         }
 
         // ------------------------------- Filter details
+        $hasLanguageFilter = FALSE;
         if ($filter) {
             $filterNames  = array();
             $filterLanguage    = NULL;
-            $hasLanguageFilter = FALSE;
             foreach ($filter->getScopes() as $name => &$scope) {
                 if ($scope->value) {
                     array_push($filterNames, $name);
@@ -498,10 +523,21 @@ HTML;
     public function update_onSave($context = NULL)
     {
         $result = parent::update_onSave($context);
-        // TODO: Support explicit custom redirects
+        // Support explicit custom redirects
+        if ($redirect = post('redirect'))
+            $result = Response::redirectTo($redirect);
         return $result;
     }
         
+    public function update_onDelete($context = NULL)
+    {
+        $result = parent::update_onDelete($context);
+        // Support explicit custom redirects
+        if ($redirect = post('redirect'))
+            $result = Response::redirectTo($redirect);
+        return $result;
+    }
+
     public function create_onSave($context = NULL)
     {
         // Can return redirects from
@@ -516,6 +552,10 @@ HTML;
             $model = $this->widget->form->model;
             $result['id'] = $model->id;
         }
+
+        // Support explicit custom redirects
+        if ($redirect = post('redirect'))
+            $result = Response::redirectTo($redirect);
 
         return $result;
     }

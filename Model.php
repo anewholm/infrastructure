@@ -254,6 +254,33 @@ class Model extends BaseModel
         return (bool) $this->listEditable;
     }
 
+    protected function beforeCreate()
+    {
+        parent::beforeCreate();
+        if ($this->beforeFunctions) {
+            foreach ($this->beforeFunctions as $name => $definition) {
+                // TODO: Set the parameter values, including from $this->purgeable
+                // and run the function
+                $test = 9;
+            }
+        }
+    }
+
+    /**
+     * Handle the "created" model event
+     */
+    protected function afterCreate()
+    {
+        parent::afterCreate();
+        if ($this->afterFunctions) {
+            foreach ($this->afterFunctions as $name => $definition) {
+                // TODO: Set the parameter values, including from $this->purgeable
+                // and run the function
+                $test = 9;
+            }
+        }
+    }
+
     public function save(?array $options = [], $sessionKey = null)
     {
         $user   = BackendAuth::user();
@@ -1002,16 +1029,19 @@ SQL;
         return $list;
     }
 
-    public static function menuitemCountFor(string $class, bool $force = FALSE): mixed {
+    public static function menuitemCountFor(string $class, bool $force = FALSE): int|NULL {
         $count = NULL;
-        if (isset($_GET["count"]) || $force) {
+        if (get('count') || $force) {
             try { // Materialized views can error on this
                 $count = $class::count();
             } catch (Exception $ex) {}
-         }
+        } else if (get('order')) {
+            if (property_exists($class, 'order')) {
+                $count = $class::$order;
+            }
+        }
         return $count;
     }
-
 
     public function actionFunctions(string $typeLimit = NULL, string $fnName = NULL): array {
         // Direct (this) model action functions
@@ -1042,7 +1072,7 @@ SQL;
                     } else {
                         // Per-model query
                         if ($this->exists) {
-                            if ($this->whereRaw($condition)->count() == 0) 
+                            if (self::where('id', $this->id)->whereRaw($condition)->count() == 0) 
                                 unset($actionFunctions[$name]);
                         } 
                         // Not relevant because no model

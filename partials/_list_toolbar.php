@@ -191,10 +191,4 @@ HTML
             <?= e(trans("acorn::lang.models.export.$label")); ?>
         </a>
     <?php endif ?>
-
-    <?php if ($title = get('title')) {
-        $titleEscaped = e(trans($title));
-        print("<h1>$titleEscaped</h1>");
-    }
-    ?>
 </div>

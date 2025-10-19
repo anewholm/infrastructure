@@ -89,4 +89,14 @@ class ListController extends BackendListController
             });
         });
     }
+
+    public function index()
+    {
+        parent::index();
+
+        // Allow post-action re-setting of body class
+        // as ListController::index() resets it
+        if (method_exists($this->controller, 'bodyClassAdjust')) 
+            $this->controller->bodyClassAdjust();
+    }
 }

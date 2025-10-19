@@ -136,7 +136,7 @@ HTML
         </input>
 HTML
         );
-    }
+}
 
 // Accompanying values for not-NULL create row scenarios
 // like score rows

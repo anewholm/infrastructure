@@ -6,28 +6,40 @@ $modelIsCreateSystem = (isset($formModel) && $formModel instanceof \Acorn\Model)
 // Labels etc.
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
+$formModelName     = (isset($formModel) ? $formModel->name : '');
 $count             = (isset($formModel) ? $formModel::count() : NULL);
 $controllerListUri = new \GuzzleHttp\Psr7\Uri($this->actionUrl(''));
 $controllerListUrl = (string) $controllerListUri;
 
 // We want to go back to the correct place
 // if it was the same domain and the backend
-$referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
-$referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
-$controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
-if (   $referrerUri->getHost()   == $controllerListUri->getHost()
-    && $referrerUri->getScheme() == $controllerListUri->getScheme()
-    && isset($referrerPathParts[2])
-    && isset($controllerListPathParts[2])
-    && $referrerPathParts[0]       == 'backend'
-    && $controllerListPathParts[0] == 'backend'
-    && end($referrerPathParts) != end($controllerListPathParts)
-) {
-    // This includes the query string also
-    // Session will apply the same filters
-    $controllerListUrl = (string) $referrerUri;
-    $modelsLabelKey    = Str::title(end($referrerPathParts));
+if ($backToReferrer = get('back-to-referrer')) {
+    $referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
+    $referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
+    $controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
+    if (   $referrerUri->getHost()   == $controllerListUri->getHost()
+        && $referrerUri->getScheme() == $controllerListUri->getScheme()
+        && isset($referrerPathParts[2])
+        && isset($controllerListPathParts[2])
+        && $referrerPathParts[0]       == 'backend'
+        && $controllerListPathParts[0] == 'backend'
+        && end($referrerPathParts) != end($controllerListPathParts)
+    ) {
+        // This includes the query string also
+        // Session will apply the same filters
+        $controllerListUrl = (string) $referrerUri;
+        $modelsLabelKey    = $backToReferrer;
+    }
 }
+
+// For closing buttons to redirect correctly
+// Would access a custom redirect in the form config    
+// 'action' => 'course-planner', 
+$dataRequestData = array(
+    'close'    => 1,
+    'redirect' => $controllerListUrl,
+);
+$dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
 
 Block::put('breadcrumb') ?>
     <ul>
@@ -35,7 +47,10 @@ Block::put('breadcrumb') ?>
             <a href="<?= $controllerListUrl ?>"><?= e($modelsLabelKey); ?></a>
             <?php if (!is_null($count)) print("<span class='counter'>$count</span>"); ?>
         </li>
-        <li><?= e($this->pageTitle) ?></li>
+        <li>
+            <?= e($this->pageTitle) ?>
+            <span class="model-name"><?= e($formModelName) ?></span>
+        </li>
     </ul>
 <?php Block::endPut() ?>    
 
@@ -95,13 +110,6 @@ HTML
                     }
                 ?>
 
-                <?php
-                    $dataRequestData = array(
-                        'close'  => 1,
-                        // TODO: 'action' => 'course-planner', // Affects redirect
-                    );
-                    $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));
-                ?>
                 <button
                     type="button"
                     data-request="onSave"
@@ -117,6 +125,7 @@ HTML
                         type="button"
                         class="wn-icon-trash-o btn-icon danger pull-right"
                         data-request="onDelete"
+                        data-request-data="<?= $dataRequestDataString ?>"
                         data-load-indicator="<?= e(trans('backend::lang.form.deleting_name', ['name' => $modelLabelKey])); ?>"
                         data-request-confirm="<?= e(trans('backend::lang.form.confirm_delete')); ?>">
                     </button>

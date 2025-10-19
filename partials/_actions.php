@@ -231,17 +231,20 @@ if ($formMode && $user->hasPermission('acorn.scan_qrcode')) {
 }
 
 // --------------------------------- Links
-// TODO: Let the links decide their criteria for display
-if ($formMode && $model->exists && property_exists($model, 'actionLinks')) {
+if (property_exists($model, 'actionLinks')) {
     foreach ($model->actionLinks as $name => $definition) {
-        $title       = (isset($definition['title']) ? trans($definition['title']) : NULL);
+        // TODO: Let the links decide their criteria for display
+        // TODO: Use WinterCMS URL parameter replace
         $url         = str_replace(':id', $model->id, $definition['url']);
-        $target      = (isset($definition['target']) ? $definition['target'] : NULL);
-        $icon        = (isset($definition['icon']) ? $definition['icon'] : NULL);
-        $iconHTML    = ($icon ? "<i class='icon-$icon'></i>": NULL);
+        $label       = (isset($definition['label'])       ? trans($definition['label']) : NULL);
+        $type        = (isset($definition['type'])        ? $definition['type']   : NULL);
+        $target      = (isset($definition['target'])      ? $definition['target'] : NULL);
+        $icon        = (isset($definition['icon'])        ? $definition['icon']   : NULL);
         $permissions = (isset($definition['permissions']) ? $definition['permissions'] : array());
+        $iconHTML    = ($icon ? "<i class='icon-$icon'></i>": NULL);
         if (!is_array($permissions)) $permissions = array($permissions);
 
+        // Permissions
         $hasPermission = TRUE;
         foreach ($permissions as $permission) {
             if (!$user->hasPermission($permission)) {
@@ -249,12 +252,31 @@ if ($formMode && $model->exists && property_exists($model, 'actionLinks')) {
                 break;
             }
         }
+        
+        // Context
+        $show = FALSE;
+        switch ($type) {
+            case 'list':    
+                $show = (!$formMode); 
+                break;
+            case 'create':  
+                $show = ($formMode && !$model->exists); 
+                break;
+            case 'all':
+                $show = TRUE;
+                break;
+            case 'update':  
+            default:
+                $show = ($formMode && $model->exists);
+        }
 
-        if ($hasPermission) {
+        if ($show && $hasPermission) {
+            $labelEscaped = e($label);
+            $urlEscaped   = e($url);
             print(<<<HTML
                 <li>
-                    <a target='$target' title='$title' href='$url'>
-                        $title
+                    <a target='$target' title='$labelEscaped' href='$urlEscaped'>
+                        $labelEscaped
                         $iconHTML
                     </a>
                 </li>

@@ -5,6 +5,8 @@ use App;
 use Lang;
 use Event;
 use BackendAuth;
+use BackendMenu;
+use Url;
 use Backend\Models\User;
 use Backend\Models\UserRole;
 use System\Classes\CombineAssets;
@@ -155,6 +157,27 @@ class ServiceProvider extends ModuleServiceProvider
                     'tab'   => 'acorn::lang.permissions.tab',
                 ],
             ]);
+        });
+
+        BackendMenu::registerCallback(function ($manager) {
+            $user = BackendAuth::user();
+            if ($user && $user->is_superuser) {
+                $requestPath = request()->path();
+                $manager->registerQuickActions('Acorn', [
+                    'counts' => [
+                        'label'      => 'acorn::lang.models.general.counts',
+                        'icon'       => 'icon-dice',
+                        'url'        => Url::to("$requestPath?count=1"),
+                        'order'      => 100,
+                    ],
+                    'orders' => [
+                        'label'      => 'acorn::lang.models.general.orders',
+                        'icon'       => 'icon-sort',
+                        'url'        => Url::to("$requestPath?order=1"),
+                        'order'      => 100,
+                    ],
+                ]);
+            }
         });
 
         // VERSION: Winter 1.2.6: send also parameter ('acorn');

@@ -111,6 +111,9 @@ body .field-multilingual .ml-btn {
 .new-row {
   clear:both;
 }
+.modal-body .no-popup-new-row {
+    clear: none;
+}
 .nolabel > .debug-relative > label {
     /* We hold the space, but disappear the text */
     color: transparent;
@@ -135,6 +138,9 @@ body .field-multilingual .ml-btn {
     width: 100%;
 }
 
+.text-white .counter {
+    color: #fff!important;
+}
 .control-breadcrumb .counter {
     position: inherit;
     background-color: #333;
@@ -257,6 +263,16 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 .goto-form-group-selection {
   color: #4444ff;
 }
+.help-block img.level {
+    float: left;
+    margin-right: 8px;
+}
+.help-block:has(img.level):after {
+    /* Clear the image bottom */
+    content: ' ';
+    display: block;
+    clear:both;
+}
 ul.help-block {
     list-style: disc;
     margin-left:15px;
@@ -323,6 +339,13 @@ ul.action-functions {
     right: 320px; /* sidebar is w-300 */
     top: 22px;
     /* margin-top: -40px; */
+}
+@media (max-width: 768px) {
+    ul.action-functions {
+        top: 0px;
+        right: 16px; /* sidebar is w-0 */
+        z-index: 10000;
+    }
 }
 ul.action-functions {
     padding: 3px 10px;
@@ -497,6 +520,9 @@ table.table.data tbody tr.rowlink td ul.action-functions > li:hover > a {
 .modal-dialog .help-block.function-description {
     padding-bottom: 20px;
 }
+.control-popup.loading * {
+    cursor: wait;
+}
 .modal-dialog .control-list p.no-data {
     text-align: left;
     margin:0px;
@@ -635,6 +661,7 @@ table.collapsable > tbody > tr.sub-section td {
     border-radius: 6px;
     border: 1px solid #000;
     padding: 1px 8px;
+    display: inline;
 }
 div.permissioneditor > table > tbody > tr > td {
     padding: 4px 4px;
@@ -667,4 +694,81 @@ h1.collapsable::before {
 }
 .is-rtl button.pika-next, button.pika-prev {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAYAAAAsEj5rAAAAUklEQVR42u3VMQoAIBADQf8Pgj+OD9hG2CtONJB2ymQkKe0HbwAP0xucDiQWARITIDEBEnMgMQ8S8+AqBIl6kKgHiXqQqAeJepBo/z38J/U0uAHlaBkBl9I4GwAAAABJRU5ErkJggg==);
+}
+@media (max-width: 768px) {
+    /* Hide the blank header in responsive mobile mode */
+    .layout.responsive-sidebar>.layout-cell.form-sidebar {
+        display:none;
+    }
+    .layout.responsive-sidebar>.layout-cell.form-sidebar:has(.form-group) {
+        display:table-header-group;
+    }
+}
+
+nav.collapsible > ul > li:has(a > i.acorn-splitter) {
+    display: none;
+}
+
+/* ------------------------------- themes */
+body.theme-blue .nav.nav-tabs,
+body.theme-blue #layout-sidenav-1 div[role=menu] > a:has(i.acorn-splitter) {
+    display: none;
+}
+/* TODO: Change filtering and global-scope to a permission */
+body.theme-blue #Filter-listFilter,
+body.theme-blue .search-global-scope-selectors-container {
+    display: none;
+}
+body.theme-blue,
+body.theme-blue .control-tabs>div>div>ul.nav-tabs>li a>span.title>span, 
+body.theme-blue .control-tabs>div>ul.nav-tabs>li a>span.title>span, 
+body.theme-blue .control-tabs>ul.nav-tabs>li a>span.title>span,
+body.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li a>span.title:after, 
+body.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li a>span.title:before, 
+body.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li a>span.title:after, 
+body.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li a>span.title:before, 
+body.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li a>span.title:after, 
+body.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li a>span.title:before,
+body.theme-blue .modal-content,
+body.theme-blue .modal-dialog > .modal-content > div,
+
+body.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li.active a:before, 
+body.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li.active a:before, 
+body.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li.active a:before {
+    background-color: #e6effd;
+}
+body.theme-blue .relation-behavior .control-list,
+body.theme-blue table.table.data > tbody > tr:first-child > td {
+    border: none;
+}
+body.theme-blue [multiple], 
+body.theme-blue [type=date], 
+body.theme-blue [type=datetime-local], 
+body.theme-blue [type=email], 
+body.theme-blue [type=month], 
+body.theme-blue [type=number], 
+body.theme-blue [type=password], 
+body.theme-blue [type=search], 
+body.theme-blue [type=tel], 
+body.theme-blue [type=text], 
+body.theme-blue [type=time], 
+body.theme-blue [type=url], 
+body.theme-blue [type=week], 
+body.theme-blue select, 
+body.theme-blue textarea,
+body.theme-blue .btn {
+    border-color: rgb(145 187 251);
+}
+body.theme-blue .control-breadcrumb,
+body.theme-blue .modal-dialog .modal-header:has(h4.modal-title) {
+    background-color: #d0e0f0;
+}
+body.theme-blue .control-scrollpanel {
+    background-color: #b3c2d4;
+}
+body.theme-blue .control-breadcrumb li:first-child {
+    background-color: #71859e;
+}
+body.theme-blue .control-tabs > div > .nav-tabs {
+    background: linear-gradient(0deg, #d0e0f0, #e6effd);
 }
