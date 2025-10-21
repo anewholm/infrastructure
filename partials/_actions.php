@@ -79,11 +79,24 @@ if ($model->exists && method_exists($model, 'actionFunctions')) {
             : NULL
         );
 
+        // SECURITY: Action Function Premissions
+        $hasPermission = FALSE;
+        if (isset($definition['permissions'])) {
+            if ($user) {
+                foreach ($definition['permissions'] as $permission) {
+                    if ($user->hasPermission($permission)) $hasPermission = TRUE;
+                }
+            }
+        } else {
+            $hasPermission = TRUE;
+        }
+
+        // CSS class
         $cssClass  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
         $cssClass .= ($title      ? ' hover-indicator' : NULL);
         $cssClass .= ($advancedFn ? ' advanced'        : NULL);
 
-        if (!$advancedFn || $isAdvanced) {
+        if ($hasPermission && (!$advancedFn || $isAdvanced)) {
             print(<<<HTML
                 <li>
                     $tooltip

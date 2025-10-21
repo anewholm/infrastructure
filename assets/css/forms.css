@@ -24,6 +24,13 @@
     opacity: 0.8;
     box-shadow: 2px 0px 10px #ddd;
 }
+/* We are embedding other plugin callouts in hints */
+.callout > .content:has(> .layout-row) {
+    padding: 0px;
+}
+.callout > .content > .layout-row {
+    margin: -2px;
+}
 
 span.required::after {
     /* Independent required */

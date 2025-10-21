@@ -1,6 +1,7 @@
 <?php namespace Acorn\Traits;
 
 use Acorn\Behaviors\RelationController;
+use Winter\Storm\Database\Traits\Nullable;
 use Winter\Storm\Html\Helper as HtmlHelper;
 use Winter\Storm\Database\Relations\BelongsTo;
 use Illuminate\Support\Facades\Session;
@@ -29,17 +30,25 @@ Trait MorphConfig
     {
         $debugOutput       = FALSE;
         $config            = parent::makeConfig($configFile, $requiredConfig);
-        $controllerModel   = @$this->controller->widget->form->model;
-        $controllerModelClass = ($controllerModel ? get_class($controllerModel) : NULL);
-        // Popup situations, with parent model context
-        $parentModel       = post(RelationController::PARAM_PARENT_MODEL);
-        $parentModelId     = post(RelationController::PARAM_PARENT_MODEL_ID);
+        // This can be called from on Form|ListControllers and main Controllers
         // RelationManager aware
+        // TODO: Rationalise the model, controller model ideas
         $isRelationManager = ($this instanceof RelationController);
         $modelClass        = ($isRelationManager && $this->relationModel
             ? get_class($this->relationModel) 
             : $this->getConfig('modelClass')
         );
+        $controllerModel   = 
+            (isset($this->relationModel) ? $this->relationModel :
+            (isset($this->model) ? $this->model :
+            (isset($this->controller->widget->form->model) ? $this->controller->widget->form->model : 
+            (isset($this->controller->widget->list->model) ? $this->controller->widget->list->model : 
+            NULL
+        ))));
+        $controllerModelClass = ($controllerModel ? get_class($controllerModel) : NULL);
+        // Popup situations, with parent model context
+        $parentModel       = post(RelationController::PARAM_PARENT_MODEL);
+        $parentModelId     = post(RelationController::PARAM_PARENT_MODEL_ID);
         $user              = BackendAuth::user();
         $context           = (property_exists($this, 'context') ? $this->context : NULL);
         $isPopup           = (bool) $parentModel;
@@ -371,6 +380,7 @@ Trait MorphConfig
                             if (
                                    self::settingRemove($fieldConfig, $modelClass)
                                 || self::envRemove($fieldConfig, $modelClass)
+                                || self::conditionRemove($fieldConfig, $controllerModel)
                             ) unset($config->fields[$fieldName]);
                         }
                         if (isset($config->tabs['fields'])) {
@@ -378,6 +388,7 @@ Trait MorphConfig
                                 if (
                                         self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
+                                     || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->tabs['fields'][$fieldName]);
                             }
                         }
@@ -386,6 +397,7 @@ Trait MorphConfig
                                 if (
                                         self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
+                                     || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->secondaryTabs['fields'][$fieldName]);
                             }
                         }
@@ -601,15 +613,29 @@ Trait MorphConfig
     protected static function conditionRemove(array &$fieldConfig, Model|NULL $model): bool
     {
         $removeField = FALSE;
-        if (isset($fieldConfig['condition'])) {
-            if ($model && $model->exists) {
-                // Specific to model
-                $removeField = ($model::where('id', $model->id)->whereRaw($fieldConfig['condition'])->count() == 0);
-            } else {
-                // Generic, probably new Model
-                $condition   = $fieldConfig['condition'];
-                $results     = DB::select($condition);
+        if (isset($fieldConfig['condition']) || isset($fieldConfig['conditions'])) {
+            $conditions      = (isset($fieldConfig['condition']) ? $fieldConfig['condition'] : $fieldConfig['conditions']);
+            
+            // Understand the type of SQL query
+            $bareQuery       = trim($conditions, '( ');
+            $sqlCommand      = explode(' ', $bareQuery)[0];
+            $isAbsoluteQuery = ($sqlCommand == 'select');
+
+            if ($isAbsoluteQuery) {
+                // Generic, works with new Models
+                // for example, global-scope situations
+                $results     = DB::select($conditions);
                 $removeField = (!isset($results[0]) || array_values((array)$results[0])[0] == 0);
+            } else {
+                // Specific to model
+                // Winter does the following in initForm($model, $context = null)
+                //   $config = $this->makeConfig($formFields); => call to here
+                //   $config->model = $model;
+                // it calls makeConfig() _before_ it sets the model, so we may have nothing
+                // However, Acorn/FormController will set the model before calling here
+                if ($model && $model->exists) {
+                    $removeField = ($model::where('id', $model->id)->whereRaw($conditions)->count() == 0);
+                }
             }
         }
         return $removeField;
