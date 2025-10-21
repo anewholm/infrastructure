@@ -37,6 +37,7 @@ use Acorn\Events\ModelAfterSave;
 use Acorn\Models\Server;
 use Acorn\Scopes\GlobalChainScope;
 use Acorn\Models\InterfaceSetting;
+use Acorn\User\Models\User;
 
 /*
 class Saving {
@@ -254,14 +255,90 @@ class Model extends BaseModel
         return (bool) $this->listEditable;
     }
 
+    public function assembleParameters(string $name, array $fnParams, array $values = NULL): array
+    {
+        $paramsMerged      = array();
+        $unsatisfiedParams = array();
+        $purgeableAtts     = $this->getOriginalPurgeValues();
+        
+        foreach ($fnParams as $paramName => $paramType) {
+            $thisName  = preg_replace('/^p_/', '', $paramName);
+            $purgeName = "_{$name}_$paramName";
+            switch ($paramName) {
+                case 'model_id':
+                case 'p_model_id':
+                    $paramsMerged[$paramName] = array(
+                        'value' => $this->id,
+                        'type'  => $paramType,
+                    );
+                    break;
+                case 'user_id':
+                case 'p_user_id':
+                    $user = User::authUser();
+                    $paramsMerged[$paramName] = array(
+                        'value' => $user->id,
+                        'type'  => $paramType,
+                    );
+                    break;
+                default:
+                    if ($values && isset($values[$paramName])) {
+                        $paramsMerged[$paramName] = array(
+                            'value' => $values[$paramName],
+                            'type'  => $paramType,
+                        );
+                    } else if (isset($purgeableAtts[$purgeName])) {
+                        $paramsMerged[$paramName] = array(
+                            'value' => $purgeableAtts[$purgeName],
+                            'type'  => $paramType,
+                        );
+                    } else if (isset($this->attributes[$thisName])) {
+                        $paramsMerged[$paramName] = array(
+                            'value' => $this->attributes[$thisName],
+                            'type'  => $paramType,
+                        );
+                    } else {
+                        $unsatisfiedParams[$paramName] = $paramType;
+                    }
+                    break;
+            }
+        }
+
+        return [$paramsMerged, $unsatisfiedParams];
+    }
+
+    public static function bindAndRunFunction(string $fnDatabaseName, array $values, bool $returnRecordSet = FALSE): array
+    {
+        $bindings     = array();
+        $placeholders = array();
+        foreach ($values as $value) {
+            if ($value === '') {
+                array_push($placeholders, 'NULL');
+            } else {
+                array_push($placeholders, '?');
+                array_push($bindings, $value);
+            }
+        }
+        $placeString  = implode(',', $placeholders);
+
+        $sql = ($returnRecordSet 
+            ? "select * from $fnDatabaseName($placeString)" 
+            : "select $fnDatabaseName($placeString) as result"
+        );
+        $results = DB::select($sql, $bindings);
+
+        return $results;
+    }
+
     protected function beforeCreate()
     {
         parent::beforeCreate();
         if ($this->beforeFunctions) {
             foreach ($this->beforeFunctions as $name => $definition) {
-                // TODO: Set the parameter values, including from $this->purgeable
-                // and run the function
-                $test = 9;
+                [$paramsMerged, $unsatisfiedParams] = $this->assembleParameters($name, $definition['parameters']);
+                self::bindAndRunFunction(
+                    $definition['fnDatabaseName'], 
+                    array_pluck($paramsMerged, 'value')
+                );
             }
         }
     }
@@ -274,9 +351,11 @@ class Model extends BaseModel
         parent::afterCreate();
         if ($this->afterFunctions) {
             foreach ($this->afterFunctions as $name => $definition) {
-                // TODO: Set the parameter values, including from $this->purgeable
-                // and run the function
-                $test = 9;
+                [$paramsMerged, $unsatisfiedParams] = $this->assembleParameters($name, $definition['parameters']);
+                self::bindAndRunFunction(
+                    $definition['fnDatabaseName'], 
+                    array_pluck($paramsMerged, 'value')
+                );
             }
         }
     }
@@ -506,12 +585,11 @@ class Model extends BaseModel
     {
         // fn_acorn_university_student_ales(p_model_id)
         foreach ($this->alesFunctions as $fnDatabaseName => $config) {
-            $bindings     = array(
-                $this->id
-            );
-            $placeholders = implode(',', array_fill(0, count($bindings), '?'));
             try {
-                DB::select("select $fnDatabaseName($placeholders)", $bindings);
+                self::bindAndRunFunction(
+                    $fnDatabaseName,
+                    array($this->id)
+                );
             } catch (QueryException $qe) {
                 $this->throwNiceSqlError($qe);
             }

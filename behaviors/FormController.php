@@ -16,5 +16,13 @@ class FormController extends BackendFormController
         if (method_exists($this->controller, 'bodyClassAdjust')) 
             $this->controller->bodyClassAdjust();
     }
+    
+    public function initForm($model, $context = null)
+    {
+        // Here we set the model immediately
+        // so that MorphConfig can do its work
+        $this->model = $model;
 
+        parent::initForm($model, $context = null);
+    }
 }

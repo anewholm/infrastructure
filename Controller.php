@@ -758,9 +758,9 @@ HTML;
         $title       = e(trans(Str::title(implode(' ', $nameParts))));
         $modelName   = $this->unqualifiedClassName();
         
-        if (!$fnName)     throw new \Exception("onActionFunction() had no POST name");
-        if (!$user)       throw new \Exception("onActionFunction() requires logged in user with associated User::user");
-        if (!$modelClass) throw new \Exception("onActionFunction() had no POST Model class");
+        if (!$fnName)     throw new Exception("onActionFunction() had no POST name");
+        if (!$user)       throw new Exception("onActionFunction() requires logged in user with associated User::user");
+        if (!$modelClass) throw new Exception("onActionFunction() had no POST Model class");
 
         // These will throw their own Exceptions
         $model          = ($modelId ? $modelClass::find($modelId) : new $modelClass());
@@ -777,38 +777,22 @@ HTML;
         $comment        = (isset($actionFunctionDefinition['comment']['en']) ? $actionFunctionDefinition['comment']['en'] : NULL);
         $commentIcon    = (isset($actionFunctionDefinition['commentIcon']) ? $actionFunctionDefinition['commentIcon'] : NULL);
 
-        // TODO: SECURITY: Action Function Premissions
+        // SECURITY: Action Function Premissions
+        $hasPermission = FALSE;
+        if (isset($actionFunctionDefinition['permissions'])) {
+            if ($user) {
+                foreach ($actionFunctionDefinition['permissions'] as $permission) {
+                    if ($user->hasPermission($permission)) $hasPermission = TRUE;
+                }
+            }
+        } else {
+            $hasPermission = TRUE;
+        }
+        if (!$hasPermission)
+            throw new Exception("User $user->name does not have permission to run this function");
 
         // Parameter gathering
-        $paramsMerged      = array();
-        $unsatisfiedParams = array();
-        foreach ($fnParams as $paramName => $paramType) {
-            switch ($paramName) {
-                case 'model_id':
-                case 'p_model_id':
-                    $paramsMerged[$paramName] = array(
-                        'value' => $model->id,
-                        'type'  => $paramType,
-                    );
-                    break;
-                case 'user_id':
-                case 'p_user_id':
-                    $paramsMerged[$paramName] = array(
-                        'value' => $user->id,
-                        'type'  => $paramType,
-                    );
-                    break;
-                default:
-                    if (isset($postParams[$paramName])) $paramsMerged[$paramName] = array(
-                        'value' => $postParams[$paramName],
-                        'type'  => $paramType,
-                    );
-                    else {
-                        $unsatisfiedParams[$paramName] = $paramType;
-                    }
-                    break;
-            }
-        }
+        [$paramsMerged, $unsatisfiedParams] = $model->assembleParameters($fnParams, $postParams);
             
         if (count($unsatisfiedParams)) {
             // ---------------------------------------------------- Show a form
@@ -948,30 +932,13 @@ HTML;
         
         else {
             // ---------------------------------------------------- Run the action function
-            // The order is critical here as they are not named parameters
-            $results      = array();
-            $values       = array_pluck($paramsMerged, 'value');
-            $bindings     = array();
-            $placeholders = array();
-            foreach ($values as $value) {
-                if ($value === '') {
-                    array_push($placeholders, 'NULL');
-                } else {
-                    array_push($placeholders, '?');
-                    array_push($bindings, $value);
-                }
-            }
-            $placeString  = implode(',', $placeholders);
-
+            // The parameter order is critical here as they are not named parameters
             try {
-                switch ($returnType) {
-                    case 'record':
-                        // TODO: runFunction() 
-                        $results = DB::select("select * from $fnDatabaseName($placeString)", $bindings);
-                        break;
-                    default:
-                        $results = DB::select("select $fnDatabaseName($placeString) as message", $bindings);
-                }
+                $results = Model::bindAndRunFunction(
+                    $fnDatabaseName, 
+                    array_pluck($paramsMerged, 'value'), 
+                    ($returnType == 'record')
+                );
             } catch (QueryException $qe) {
                 $this->throwNiceSqlError($qe);
             }
