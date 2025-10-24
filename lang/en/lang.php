@@ -20,9 +20,13 @@
         ],
         'olap' => [
             'widget_title_default' => 'OLAP Cube reports',
-            'widget_tomcat_root_default' => NULL,
-            'widget_tomcat_port_default' => NULL,
-            'widget_tomcat_domain_default' => NULL,
+            'widget_tomcat_root_default' => '/var/lib/tomcat9',
+            'widget_tomcat_port_default' => '',
+            'widget_tomcat_domain_default' => '',
+        ],
+        'globalscopespreview' => [
+            'widget_title_default' => 'Global Scopes Preview',
+            'view' => 'View',
         ],
     ],
     'settings' => [

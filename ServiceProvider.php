@@ -13,6 +13,7 @@ use System\Classes\CombineAssets;
 use Backend\Classes\WidgetManager;
 use Acorn\ReportWidgets\DocumentStore;
 use Acorn\ReportWidgets\Olap;
+use Acorn\ReportWidgets\GlobalScopesPreview;
 use System\Classes\MarkupManager;
 use System\Classes\SettingsManager;
 use Backend\Classes\FormTabs;
@@ -196,6 +197,10 @@ class ServiceProvider extends ModuleServiceProvider
             ]);
             $manager->registerReportWidget(Olap::class, [
                 'label'   => 'acorn::lang.dashboard.olap.widget_title_default',
+                'context' => 'dashboard'
+            ]);
+            $manager->registerReportWidget(GlobalScopesPreview::class, [
+                'label'   => 'acorn::lang.dashboard.globalscopespreview.widget_title_default',
                 'context' => 'dashboard'
             ]);
         });

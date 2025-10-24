@@ -590,11 +590,11 @@ Trait MorphConfig
 
         if (isset($fieldConfig['setting'])) {
             $setting = self::getSetting($fieldConfig['setting'], $modelClass);
-            if ($setting) $removeField = TRUE;
-        }
-        if (isset($fieldConfig['setting-not'])) {
-            $setting = self::getSetting($fieldConfig['settingNot'], $modelClass);
             if (!$setting) $removeField = TRUE;
+        }
+        if (isset($fieldConfig['settingNot'])) {
+            $setting = self::getSetting($fieldConfig['settingNot'], $modelClass);
+            if ($setting) $removeField = TRUE;
         }
 
         return $removeField;

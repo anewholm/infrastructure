@@ -396,25 +396,38 @@ class PdfTemplate {
 
         // Fill form values
         foreach ($this->textBoxes as $name => $xTextBoxes) {
+            $count = count($xTextBoxes);
+            if (self::$logging) Log::info("Processing text box $name($count)...");
+
             foreach ($xTextBoxes as $xTextBox) {
                 $itemLocale  = $xTextBox->getAttribute('fo:language');
                 $locale      = $this->translateLanguageCode($itemLocale ?: $this->templateLocale);
+                $nameParts   = explode('.', $name);
 
-                $nameParts = explode('.', $name);
                 if (count($nameParts) == 1) {
+                    // ---------------------------------------- Single field request
                     // sum_score_name, [sum_score_name_suffix]
-                    if ($model->hasAttribute($name)) {
-                        // $value may be a model
-                        // We cannot directly ask for the un-translated model
+                    // We use the accessor to check because it will also check 1-1 fields
+                    // like name
+                    if ($model->$name) {
+                        // The value may be a model
+                        // but we cannot directly ask for the un-translated model
                         // because maybe there is a select or valueFrom that will force return of the name instead
                         $attributeType = 'value';
                         if ($model->hasRelation($name)) {
                             $attributeType = 'model';
                             $value         = $model->$name()->first();
-                            if ($value) $value = $value->getAttributeTranslated('name', $locale);
+                            // We cannot use getAttributeTranslated() because it only works on the current model
+                            // not 1-1 relations
+                            // getAttributeTranslated('name', $locale);
+                            if ($value) $value = $value->name; 
                         } else {
-                            $value = $model->getAttributeTranslated($name, $locale);
+                            // We cannot use getAttributeTranslated() because it only works on the current model
+                            // not 1-1 relations
+                            // getAttributeTranslated($name, $locale);
+                            $value = $model->$name; 
                         }
+
                         if ($value) {
                             if (is_array($value)) $value = var_export($value, TRUE);
 
@@ -435,19 +448,27 @@ class PdfTemplate {
                         } else {
                             if (self::$logging) Log::warning("Text box $name NOT CHANGED because value was empty ($attributeType/$locale)");
                         }
+                    } else {
+                        $class = get_class($model);
+                        if (self::$logging) Log::warning("[$name] not found on Model[$class]");
                     }
-                } else {
-                    // JSONable field: scores.Kurdish
+                } 
+                else {
+                    // ---------------------------------------- JSONable field request, e.g. scores.Kurdish
                     // scores => geography|history|math|... => id|title|value [|value_suffix|*_type]
                     // scores => @1|@2|@3|...               => id|title|value [|value_suffix|*_type]
                     $modelAttribute = $nameParts[0]; // scores
                     $arrayItem      = $nameParts[1]; // Kurdish
                     $content        = (count($nameParts) > 2 ? $nameParts[2] : 'value'); // title|value|minimum|...
+
+                    // These types of values must be on the direct model
+                    // not 1-1 relations, so we can use hasAttribute()
+                    // They also do not return a model, so we access tthrough the accessor
                     if ($model->hasAttribute($modelAttribute)) {
                         $objectArray = $model->{$modelAttribute};
                         if ($arrayItem[0] == '@') {
                             // @1|@2|@3|... => associative key
-                            $offset    = (int) substr($arrayItem, 1);
+                            $offset    = (int) substr($arrayItem, 1) - 1;
                             $keys      = array_keys($objectArray);
                             if (isset($keys[$offset])) $arrayItem = $keys[$offset];
                         }
@@ -496,6 +517,9 @@ class PdfTemplate {
                         } else {
                             if (self::$logging) Log::error("{$modelAttribute}[$arrayItem] not found");
                         }
+                    } else {
+                        $class = get_class($model);
+                        if (self::$logging) Log::warning("[$modelAttribute] not found on Model[$class]");
                     }
                 }
             }

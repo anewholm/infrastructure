@@ -8,6 +8,7 @@ use System\Classes\MediaLibrary;
 use Exception;
 use Str;
 use DomDocument;
+use Acorn\Scopes\GlobalChainScope;
 
 class GlobalScopesPreview extends ReportWidgetBase
 {
@@ -54,5 +55,16 @@ class GlobalScopesPreview extends ReportWidgetBase
 
     protected function loadData()
     {
+        // Only those with a setting
+        $this->vars['scopes'] = array();
+        foreach (GlobalChainScope::allUserSettings() as $setting => $details) {
+            $modelClass = $details['modelClass'];
+            $modelId    = $details['setting'];
+            if ($model = $modelClass::find($modelId)) {
+                if ($leafModel = $model->getLeafTypeModel())
+                    $model = $leafModel;
+                $this->vars['scopes'][$setting] = $model;
+            }
+        }
     }
 }
