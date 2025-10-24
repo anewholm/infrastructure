@@ -98,23 +98,58 @@ class Model extends BaseModel
         return $this->getLeafTypeModel($throwIfNull)?->unqualifiedClassName();
     }
 
+    public function getLeafTableCacheModel(): Model|NULL
+    {
+        $leafObject = NULL;
+        if ($leafTable = $this->leaf_table) {
+            // acorn_university_schools 
+            //   => Schools 
+            //   => Acorn\University\Models\School
+            // initcap(trim(regexp_replace(leaf_table, '^[^_]+_[^_]+_|_'::text, ' '::text, 'g')))
+            $thisFQNParts  = explode('\\', get_class($this));
+            $leafTableLast = preg_replace('/^[^_]+_[^_]+_|_/', '', $leafTable); // schools
+            $leafModelName = Str::singular(ucfirst(trim($leafTableLast)));
+            array_pop($thisFQNParts);
+            array_push($thisFQNParts, $leafModelName);
+            $leafModelFQN  = implode('\\', $thisFQNParts);
+
+            // Check hasOne relations for this leaf model
+            if (class_exists($leafModelFQN)) {
+                $relations     = array_merge($this->hasOneThrough, $this->hasOne);
+                foreach ($relations as $name => &$definition) {
+                    if (is_array($definition) && isset($definition[0]) && $definition[0] == $leafModelFQN) {
+                        $this->load($name);
+                        if ($leafObject = $this->$name) break;
+                    }
+                }
+            }
+        }
+        return $leafObject;
+    }
+
     public function getLeafTypeModel(?bool $throwIfNull = FALSE)
     {
         // For base tables that have multiple possible leaf detail tables in a star schema
         // we search the hasOne relation to determine which leaf table has the 1-1
-        $leafObject = NULL;
-        $thisName   = $this->unqualifiedClassName();
-
-        $relations = array_merge($this->hasOneThrough, $this->hasOne);
-        foreach ($relations as $name => &$relativeModel) {
-            if (is_array($relativeModel) && isset($relativeModel['leaf']) && $relativeModel['leaf']) {
-                $this->load($name);
-                if ($leafObject = $this->$name) break;
+        // Check for and use the leaf_table cache column
+        $leafObject = $this->getLeafTableCacheModel();
+        
+        if (!$leafObject) {
+            $relations  = array_merge($this->hasOneThrough, $this->hasOne);
+            foreach ($relations as $name => &$definition) {
+                // TODO: Need to check the reverse belongsTo relation(s), 
+                // because that will be the leaf relation
+                if (is_array($definition) && isset($definition['leaf']) && $definition['leaf']) {
+                    $this->load($name);
+                    if ($leafObject = $this->$name) break;
+                }
             }
         }
 
-        if ($throwIfNull && !$leafObject) 
-            throw new Exception("Leaf $thisName not found for id($this->id)");
+        if ($throwIfNull && !$leafObject) {
+            $className = get_class($this);
+            throw new Exception("Leaf $className not found for id($this->id)");
+        }
         
         return $leafObject;
     }
@@ -327,6 +362,46 @@ class Model extends BaseModel
         $results = DB::select($sql, $bindings);
 
         return $results;
+    }
+
+    public static function uniqueValue(string $name, string $field = 'code', string|NULL $self = NULL, string $method = 'AU'): string
+    {
+        $upper        = strtoupper($name);
+        $alphanumeric = preg_replace('/[^A-Z0-9]/', '', $upper);
+        $first3       = substr($alphanumeric, 0, 3);
+        $firstLetters = preg_replace('/([A-Z0-9])[^ ]+/', '\\1', $upper);
+        $acronym3     = substr($firstLetters, 0, 3);
+        switch ($method) {
+            case 'MN':
+                // Leave it to throw a validation error
+                break;
+            case 'AC3':
+                $code = $acronym3;
+                $i    = 1;
+                while ($self::where($field, $code)->count()) $code = $acronym3 . $i++;
+                break;
+            case 'F3':
+                $code = $first3;
+                $i    = 1;
+                while ($self::where($field, $code)->count()) $code = $first3 . $i++;
+                break;
+            default:
+                // Automatic
+                // Try the Acronym
+                $code = $acronym3;
+                if ($self::where($field, $code)->count()) {
+                    // Check first 3
+                    $code = $first3;
+                    if ($self::where($field, $code)->count()) {
+                        // Return to the Acronym, with a number
+                        $code = $acronym3;
+                        $i    = 1;
+                        while ($self::where($field, $code)->count()) $code = $acronym3 . $i++;
+                    }
+                }
+        }
+
+        return $code;
     }
 
     protected function beforeCreate()
