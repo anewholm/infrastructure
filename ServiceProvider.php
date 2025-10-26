@@ -175,7 +175,13 @@ class ServiceProvider extends ModuleServiceProvider
                         'label'      => 'acorn::lang.models.general.orders',
                         'icon'       => 'icon-sort',
                         'url'        => Url::to("$requestPath?order=1"),
-                        'order'      => 100,
+                        'order'      => 110,
+                    ],
+                    'debug' => [
+                        'label'      => 'acorn::lang.models.general.debug',
+                        'icon'       => 'icon-question',
+                        'url'        => Url::to("$requestPath?debug=1"),
+                        'order'      => 120,
                     ],
                 ]);
             }
