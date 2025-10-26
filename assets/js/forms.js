@@ -26,6 +26,16 @@ function acorn_dynamicElements(){
     $(this).closest('.callout').slideUp();
   });
 
+  // Push ML fields to the current locale, not the default
+  // multilingual.js seems to always push to en
+  var locale = $('html').attr('lang');
+  if (locale && locale != 'en') {
+    var jMls = $('[data-control="multilingual"], [data-control="mlricheditor"]').each(function(){
+      var ml = $(this).data('oc.multilingual');
+      if (ml) ml.setLocale(locale);
+    });
+  }
+
   $('.goto-form-group-selection').hide();
 
   $('select[default]').each(function(){

@@ -8,6 +8,11 @@ class TranslatableModel extends WinterTranslatableModel
 {
     public function setAttributeTranslated($key, $value, $locale = null)
     {
+        // Set the translatableAttributes on the model, not the saveData
+        // so when it saves, it will write the Winter\Translate\Attributes
+        // TranslatableModel binds $model model.afterCreate
+        //   => storeTranslatableBasicData()
+        //     Db::table('winter_translate_attributes')->insert(translatableAttributes)
         if ($locale == null) {
             $locale = $this->translatableContext;
         }
@@ -21,11 +26,18 @@ class TranslatableModel extends WinterTranslatableModel
         $keyArray = HtmlHelper::nameToArray($key);
         $isNested = (count($keyArray) > 1);
         if ($isNested) {
-            if (!$model->exists) 
-                return;
+            // Remove the field [name] at the end, cause we only want the model
             $key = array_pop($keyArray);
+            // Traverse to the real model
+            // by reference, so it is used in $modelsToSave
             foreach ($keyArray as $step) {
-                $newModel = &$model->{$step};
+                if (!$model->$step) {
+                    // This is stolen from FormModelSaver::setModelAttributes()
+                    // which will do this as well, during building of $modelsToSave
+                    // We do it pre-imtively here to have a model for our translatableAttributes
+                    $model->$step = $model->$step()->getRelated();
+                }
+                $newModel = &$model->$step;
                 if (is_null($newModel)) {
                     $modelClass = get_class($model);
                     throw new Exception("TranslatableModel: $step did not exist on $modelClass");
@@ -36,10 +48,15 @@ class TranslatableModel extends WinterTranslatableModel
             if (!$translatableModel) $translatableModel = $model->getClassExtension('Winter.Translate.Behaviors.TranslatableModel');
         }
         
+        // Set the attributes on the final model
         if ($locale == $this->translatableDefault) {
+            // Set the name attribute directly
             $model->attributes[$key] = $value;
         } else {
+            // Set translation data array values
             if (!array_key_exists($locale, $translatableModel->translatableAttributes)) {
+                // This is our overridden function
+                // that will pre-load all locale values
                 $translatableModel->loadTranslatableData($locale);
             }
             $translatableModel->translatableAttributes[$locale][$key] = $value;
@@ -115,30 +132,36 @@ class TranslatableModel extends WinterTranslatableModel
     protected function loadTranslatableData($locale = null)
     {
         // This is copied from the parent method
-        // with manual relation below
+        // with a manual relation query below
         if (!$locale) {
+            // The current Lang::getLocale()
             $locale = $this->translatableContext;
         }
 
-        if (!$this->model->exists) {
-            return $this->translatableAttributes[$locale] = [];
+        $result = [];
+        $this->translatableAttributes[$locale] = $result;
+
+        if ($this->model->exists) {
+            // If running within a noConstraints() callback
+            // like makeRenderFormField() for simple form fields like dropdowns
+            // then all translations will be loaded everytime
+            // addConstraints() will have no effect due to the static::$constraints == FALSE in RelationBase
+            //
+            // So we manually addConstraints() of the winter attributes table request
+            // Pre-load all locales for this model
+            $translationsRelation = $this->model->translations()
+                ->where('model_type', get_class($this->model))
+                ->where('model_id',   $this->model->id);
+                // ->where('locale',     $locale)
+            $translationsRelation->get()->each(function($attributesDetails) use($locale, &$result) {
+                $thisLocale    = $attributesDetails->locale;
+                $attributeData = json_decode($attributesDetails->attribute_data, true);
+                $this->translatableOriginals[$thisLocale]  = $attributeData;
+                $this->translatableAttributes[$thisLocale] = $attributeData;
+                if ($thisLocale == $locale) $result = $attributeData;
+            });
         }
 
-        // If running within a noConstraints() callback
-        // like makeRenderFormField() for simple form fields like dropdowns
-        // then all translations will be loaded everytime
-        // addConstraints() will have no effect due to the static::$constraints == FALSE in RelationBase
-        //
-        // So we manually addConstraints() of the winter attributes table request
-        $translationsRelation = $this->model->translations()
-            ->where('model_type', get_class($this->model))
-            ->where('model_id',   $this->model->id)
-            ->where('locale',     $locale);
-
-        $obj = $translationsRelation->first();
-
-        $result = $obj ? json_decode($obj->attribute_data, true) : [];
-
-        return $this->translatableOriginals[$locale] = $this->translatableAttributes[$locale] = $result;
+        return $result;
     }
 }

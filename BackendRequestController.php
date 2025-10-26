@@ -47,6 +47,8 @@ class BackendRequestController extends BackendController {
         // For performance reasons
         // and we do not want to run the request twice
         // So this may return NULL
+        if (!$this->requestedController)
+            throw new Exception("No controller available during findController()");
         return $this->requestedController;
     }
 

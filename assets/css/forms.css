@@ -198,6 +198,14 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visible_columns\[\]][value=current]) {
     display: inherit;
 }
+.translations label {
+    font-weight: bold;
+    display: inline;
+}
+.translations .current {
+    border-radius: 5px;
+    border: 1px dotted #888;
+}
 
 /* ------------------------------------- Sidebar */
 .form-sidebar .form-group {
@@ -243,7 +251,7 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 .form-sidebar .form-elements > .hide-tabs > .form-group.dropdown-field {
     clear:both;
 }
-.form-sidebar .control-list p.no-data {
+.form-sidebar p.no-data {
     text-align: left;
     margin:0px;
     padding: 0px;
@@ -732,6 +740,15 @@ h1.collapsable::before {
 
 nav.collapsible > ul > li:has(a > i.acorn-splitter) {
     display: none;
+}
+
+.custom-switch > span > span {
+    /* Fix wrapping options with different locales */
+    white-space: nowrap;
+    max-width: 
+}
+.custom-switch > span {
+    overflow: hidden;
 }
 
 /* ------------------------------- themes */

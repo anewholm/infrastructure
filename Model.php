@@ -57,6 +57,7 @@ class Model extends BaseModel
     use Traits\DirtyWriteProtection;
     use Traits\ObjectLocking;
     use Traits\PostGreSQLFieldTypeUtilities;
+    use Traits\ImplementReplaces;
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
@@ -79,48 +80,54 @@ class Model extends BaseModel
     public $implementReplaces = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = [];
 
-    public function isClassExtendedWith($name) {
-        // Winter hard codes behavior requirements sometimes
-        // for example: 
-        //   EventRegistry::registerModelTranslation() 
-        //   requires Winter.Translate.Behaviors.TranslatableModel
-        // Here we fake the implemntation in favor of our sub-class
-        return parent::isClassExtendedWith($name)
-            || (
-                isset($this->implementReplaces) 
-                && in_array($name, $this->implementReplaces)
-            );
-    }
-
     // --------------------------------------------- Star schema centre => leaf services
     public function getLeafTypeAttribute(?bool $throwIfNull = FALSE)
     {
         return $this->getLeafTypeModel($throwIfNull)?->unqualifiedClassName();
     }
 
-    public function getLeafTableCacheModel(): Model|NULL
+    public function getLeafTableAttribute($value): string|NULL
     {
-        $leafObject = NULL;
-        if ($leafTable = $this->leaf_table) {
+        return $this->getLeafTableCacheClass();
+    }
+
+    public function getLeafTableCacheClass(bool $fqn = FALSE): string|NULL
+    {
+        $class = NULL;
+        if (isset($this->attributes['leaf_table'])) {
             // acorn_university_schools 
             //   => Schools 
             //   => Acorn\University\Models\School
-            // initcap(trim(regexp_replace(leaf_table, '^[^_]+_[^_]+_|_'::text, ' '::text, 'g')))
-            $thisFQNParts  = explode('\\', get_class($this));
-            $leafTableLast = preg_replace('/^[^_]+_[^_]+_|_/', '', $leafTable); // schools
-            $leafModelName = Str::singular(ucfirst(trim($leafTableLast)));
-            array_pop($thisFQNParts);
-            array_push($thisFQNParts, $leafModelName);
-            $leafModelFQN  = implode('\\', $thisFQNParts);
+            $leafTable      = $this->attributes['leaf_table'];
+            $leafTableParts = explode('_', $leafTable);
+            array_shift($leafTableParts); // acorn
+            array_shift($leafTableParts); // university
+            $leafTableName = implode(' ', $leafTableParts); // schools
+            $class         = Str::singular($leafTableName);
+            $class         = Str::title($class);
+            if ($fqn) {
+                // Swap in last name for this FQN
+                $class        = str_replace(' ', '', $class);
+                $thisFQNParts = explode('\\', get_class($this));
+                array_pop($thisFQNParts);
+                array_push($thisFQNParts, $class);
+                $class  = implode('\\', $thisFQNParts);
+                if (!class_exists($class)) $class = NULL;
+            }
+        }
+        return $class;
+    }
 
+    public function getLeafTableCacheModel(): Model|NULL
+    {
+        $leafObject = NULL;
+        if ($leafModelFQN = $this->getLeafTableCacheClass(TRUE)) {
             // Check hasOne relations for this leaf model
-            if (class_exists($leafModelFQN)) {
-                $relations     = array_merge($this->hasOneThrough, $this->hasOne);
-                foreach ($relations as $name => &$definition) {
-                    if (is_array($definition) && isset($definition[0]) && $definition[0] == $leafModelFQN) {
-                        $this->load($name);
-                        if ($leafObject = $this->$name) break;
-                    }
+            $relations = array_merge($this->hasOneThrough, $this->hasOne);
+            foreach ($relations as $name => &$definition) {
+                if (is_array($definition) && isset($definition[0]) && $definition[0] == $leafModelFQN) {
+                    $this->load($name);
+                    if ($leafObject = $this->$name) break;
                 }
             }
         }

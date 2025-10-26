@@ -30,6 +30,8 @@ use Acorn\ServiceProvider;
 use Acorn\User\Models\Language;
 use Acorn\Scopes\GlobalChainScope;
 
+use Winter\Translate\Traits\MLControl;
+
 /**
  * Computer Product Backend Controller
  */
@@ -540,11 +542,48 @@ HTML;
 
     public function create_onSave($context = NULL)
     {
+        // FormController::create_onSave(NULL)
+        //   with post():
+        //     Course processed by getSaveData()
+        //       entity
+        //         user_group
+        //           name: 'name'
+        //     RLTranslate processed by getLocaleSaveData()
+        //       en|ku|ar
+        //         entity
+        //           user_group
+        //             name: 'name (ku)'
+        //  creates $this->formWidget with blank $model
+        // => Form::$this->formWidget->getSaveData()
+        //  1) filter post() => $result array by valid [nested] field names (same structure) 
+        //     using dataArrayGet([entity][user_group]) => dataArraySet($result[entity][user_group])
+        //     includes setting the $result[entity => user_group => name array]
+        //  2) Form::$this->formWidgets opportunity to process the data
+        //     same, but passing through:
+        //     => $widget->getSaveValue($result value) 
+        //       => Trait MLControl::getLocaleSaveValue($value)
+        //         $localeData = getLocaleSaveData() from post(RLTranslate)
+        //         => TranslatableModel::$this->model->setAttributeTranslated() foreach locale
+        //           to set the $model TranslatableModel::translatableAttributes
+        //           BUT: 1-1 Relation TranslatableModel::$modelsToSave do not exist yet <===== PROBLEM !!
+        // => FormController::prepareModelsToSave($getSaveData) 
+        //   from reversed 1-1 relations => [UserGroup, Entity, Course]
+        //   => Trait FormModelSaver::setModelAttributes() RECURSIVELY builds $this->modelsToSave
+        //     using $model->hasRelation[BelongsTo]($attribute) to create 1-1 $this->modelsToSave
+        //     and handling related records that don't exist yet with: $model->{$attribute}()->getRelated()
+        //     => FormModelSaver::setModelAttributes($belongsToModel) ...
+        // Then Each $this->modelsToSave save(), in order, 
+        // with their new TranslatableModel::translatableAttributes
+        // ...
+        // TranslatableModel binds $model model.afterCreate
+        //   => storeTranslatableBasicData()
+        //     Db::table('winter_translate_attributes')->insert(translatableAttributes)
+
         // Can return redirects from
         // protected function createRedirect($path, $status, $headers)
         $result = parent::create_onSave($context);
 
-        // Include the new model id
+        // Include the new model id in the result
         // $result can be a Illuminate\Http\RedirectResponse
         // creates normally redirect to updates
         if (is_null($result)) $result = array();
@@ -554,16 +593,12 @@ HTML;
         }
 
         // Support explicit custom redirects
+        // For RM manager breadcrumb processes
         if ($redirect = post('redirect'))
             $result = Response::redirectTo($redirect);
 
         return $result;
     }
-
-    // public function create_onSave($context = NULL)
-    // {
-    //     return parent::create_onSave($context);
-    // }
 
     public function onPopupRoute()
     {
@@ -792,7 +827,7 @@ HTML;
             throw new Exception("User $user->name does not have permission to run this function");
 
         // Parameter gathering
-        [$paramsMerged, $unsatisfiedParams] = $model->assembleParameters($fnParams, $postParams);
+        [$paramsMerged, $unsatisfiedParams] = $model->assembleParameters($fnName, $fnParams, $postParams);
             
         if (count($unsatisfiedParams)) {
             // ---------------------------------------------------- Show a form
