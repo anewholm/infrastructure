@@ -56,6 +56,12 @@
         'general' => [
             'id' => 'ID',
             'name' => 'Name',
+            'debug' => 'Debug',
+            'counts' => 'Counts',
+            'orders' => 'Ordering',
+            'qrcode' => 'QR Code',
+            'translations' => 'Translations',
+            'actions' => 'Actions',
             'noname' => 'no name',
             'description' => 'Notes',
             'notes' => 'Notes',
@@ -158,6 +164,12 @@
             '23502' => 'The :column field is required.',
             '23514' => 'Check :check failed',
             'CIM'   => ':title',
+        ],
+        'nestedtree' => [
+            'ANCBMTADOI' => 'A node cannot be moved to a descendant of itself.',
+            'ANCBMTI'    => 'A node cannot be moved to itself.',
+            'ANNCBM'     => 'A new node cannot be moved.',
+            'CRTN'       => 'Cannot resolve target node.',
         ],
     ],
     'helpblock' => [

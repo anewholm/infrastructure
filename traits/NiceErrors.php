@@ -3,9 +3,58 @@
 use Illuminate\Database\QueryException;
 use Winter\Storm\Exception\ValidationException;
 use Str;
+use \Exception;
+use Flash;
 
-Trait NiceSqlErrors
+Trait NiceErrors
 {
+    public function throwNiceError(Exception $ex): void {
+        $filePath    = $ex->getFile();
+        $fileParts   = explode('.', basename($filePath));
+        $fileName    = $fileParts[0];
+        $messageNice = NULL;
+        $typeNice    = 'ValidationException';
+
+        switch ($fileName) {
+            case 'NestedTree':
+                // From NestedTree:
+                // throw new Exception('A new node cannot be moved.'); => ANNCBM
+                // throw new Exception('Position should be either child, left, right. Supplied position is "%s".',
+                // throw new Exception('Cannot resolve target node. This node cannot move any further to the %s.',
+                // throw new Exception('Cannot resolve target node.');
+                // throw new Exception('A node cannot be moved to itself.');                 => ANCBMTI
+                // throw new Exception('A node cannot be moved to a descendant of itself.'); => ANCBMTADOI
+
+                // Translation of errors
+                $messageFull    = $ex->getMessage();
+                $upper          = strtoupper($messageFull);
+                $letters        = preg_replace('/([A-Z0-9])[^ -]+/', '\\1', $upper);
+                $acronym        = preg_replace('/([^A-Z0-9])/', '', $letters);
+                $translationKey = "acorn::lang.errors.nestedtree.$acronym";
+                $messageNice    = trans($translationKey);
+                break;
+        }
+
+        if ($messageNice) {
+            if (env('APP_DEBUG')) {
+                $line         = $ex->getLine();
+                $messageNice .= "\nAdvanced: \n";
+                $messageNice .= "$filePath:$line";  
+            }
+            switch ($typeNice) {
+                case 'flash::error':
+                    Flash::error($messageNice);
+                    break;
+                default:
+                    throw new ValidationException(['error' => $messageNice]);
+            }
+        } else {
+            // Completely unhandled
+            // Throw original in dev and live env
+            throw $ex;
+        }
+    }
+
     public function throwNiceSqlError(QueryException $qe): void {
         if ($messageNice = $this->niceSqlError($qe)) {
             if (env('APP_DEBUG')) {

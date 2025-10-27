@@ -15,6 +15,7 @@ use DB;
 use File;
 use Form;
 use Request;
+use Lang;
 use Redirect;
 use Response;
 use Session;
@@ -38,7 +39,7 @@ use Winter\Translate\Traits\MLControl;
 class Controller extends BackendController
 {
     use Traits\PathsHelper;
-    use \Acorn\Traits\NiceSqlErrors;
+    use \Acorn\Traits\NiceErrors;
 
     public const DENEST = TRUE;
 
@@ -788,6 +789,7 @@ HTML;
         $fnName      = post('name');
         $postParams  = post('parameters') ?? array();
         $user        = User::authUser();
+        $locale      = Lang::getLocale();
         $fnNameParts = explode('_', $fnName);
         $nameParts   = array_slice($fnNameParts, 5);
         $title       = e(trans(Str::title(implode(' ', $nameParts))));
@@ -809,7 +811,7 @@ HTML;
         $classParts     = explode('\\', get_class($model));
         $shortClass     = end($classParts);
         $classField     = Str::snake($shortClass); // academic_year
-        $comment        = (isset($actionFunctionDefinition['comment']['en']) ? $actionFunctionDefinition['comment']['en'] : NULL);
+        $comment        = (isset($actionFunctionDefinition['comment'])     ? $actionFunctionDefinition['comment'] : NULL);
         $commentIcon    = (isset($actionFunctionDefinition['commentIcon']) ? $actionFunctionDefinition['commentIcon'] : NULL);
 
         // SECURITY: Action Function Premissions
@@ -933,18 +935,20 @@ HTML;
             $dataRequestData       = post();
             $dataRequestDataString = e(substr(json_encode($dataRequestData), 1, -1));;
 
-            // TODO: Translate comments
-            $commentIconHtml = '';
-            if ($commentIcon) {
-                $imageBasePath   = '/modules/acorn/assets/images';
-                $size            = 64;
-                $commentIconHtml = "<img class='comment-icon' src='$imageBasePath/$commentIcon-$size.png'></img>";
+            // Comment
+            $commentHtml = '';
+            if ($comment) {
+                // Icon
+                $commentIconHtml = '';
+                if ($commentIcon) {
+                    $imageBasePath   = '/modules/acorn/assets/images';
+                    $size            = 64;
+                    $commentIconHtml = "<img class='comment-icon' src='$imageBasePath/$commentIcon-$size.png'></img>";
+                }
+                // Text, with translations
+                $commentEscaped = e(trans($comment));
+                $commentHtml    = "<div class='help-block function-description'>$commentIconHtml$commentEscaped</div>";
             }
-            $commentEscaped = e($comment);
-            $commentHtml    = ($comment
-                ? "<div class='help-block function-description'>$commentIconHtml$commentEscaped</div>"
-                : NULL
-            );
 
             // Render
             $body   = "$formOpen$formHtml$formClose$commentHtml";
