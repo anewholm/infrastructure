@@ -228,87 +228,108 @@ Trait MorphConfig
                     // ------------------------------- Auto-hide and set parent model drop-down
                     // TODO: This does not work if the parent field is 1-1 nested
                     // e.g. Student.user[languages] => user_user_language.user (student)
-                    foreach ($config->fields as $fieldName => &$fieldConfig) {
-                        // Look for a parent model selector
-                        $dropDownModel = NULL;
-                        
-                        // type: dropdown + options call
-                        // Create-system standard drop-down specification
-                        // options: Acorn\University\Models\Student::dropdownOptions
-                        if (isset($fieldConfig['type']) 
-                            && $fieldConfig['type'] == 'dropdown'
-                            && isset($fieldConfig['options'])
-                            && is_string($fieldConfig['options'])
-                        ) {
-                            $optionsParts  = explode('::', $fieldConfig['options']);
-                            $dropDownModel = $optionsParts[0];
-                        } 
-
-                        // Yaml configs often use type: relation
-                        // type: relation
-                        else if (isset($fieldConfig['type']) 
-                            && $fieldConfig['type'] == 'relation'
-                            && $modelClass 
-                        ) {
-                            $model = new $modelClass();
-                            if ($model->hasRelation($fieldName)
-                                && ($relation = $model->$fieldName())
-                                && ($relation instanceof BelongsTo)
+                    if ($isPopup && $parentModel) {
+                        foreach ($config->fields as $fieldName => &$fieldConfig) {
+                            // Look for a parent model selector
+                            $dropDownModel = NULL;
+                            
+                            // type: dropdown + options call
+                            // Create-system standard drop-down specification
+                            // options: Acorn\University\Models\Student::dropdownOptions
+                            if (isset($fieldConfig['type']) 
+                                && $fieldConfig['type'] == 'dropdown'
+                                && isset($fieldConfig['options'])
+                                && is_string($fieldConfig['options'])
                             ) {
-                                $dropDownModel = get_class($relation->getRelated());
-                            }
-                        }
-
-                        if ($dropDownModel) { 
-                            // Set and hide parentModel
-                            // can be useful in nested popups
-                            // Morph type to text to prevent option loads
-                            if ($parentModel
-                                && $dropDownModel == $parentModel
-                            ) {
-                                $fieldConfig['type']      = 'text';
-                                $this->appendClass($fieldConfig, 'hidden');
-                                $fieldConfig['default']   = $parentModelId;
+                                $optionsParts  = explode('::', $fieldConfig['options']);
+                                $dropDownModel = $optionsParts[0];
                             } 
-                            
-                            // Set and hide the main controllerModel
-                            else if ($controllerModel 
-                                && $dropDownModel == get_class($controllerModel)
+
+                            // Yaml configs often use type: relation
+                            // type: relation
+                            else if (isset($fieldConfig['type']) 
+                                && $fieldConfig['type'] == 'relation'
+                                && $modelClass 
                             ) {
-                                $fieldConfig['type']      = 'text';
-                                $this->appendClass($fieldConfig, 'hidden');
-                                $fieldConfig['default']   = $controllerModel->id;
+                                $model = new $modelClass();
+                                if ($model->hasRelation($fieldName)
+                                    && ($relation = $model->$fieldName())
+                                    && ($relation instanceof BelongsTo)
+                                ) {
+                                    $dropDownModel = get_class($relation->getRelated());
+                                }
                             }
-                            
-                            // Set and hide common singular parent BelongsTo models
-                            // Student->user has common with UserUserLanguage->user
-                            // when adding XfromXSemi languages
-                            // We need the actual controller object
-                            else if ($controllerModel
-                                && $controllerModel->hasRelation($fieldName)
-                                && ($relation = $controllerModel->$fieldName())
-                                && ($relation instanceof BelongsTo)
-                                && ($controllerFieldModel = $controllerModel->$fieldName)
-                                && ($dropDownModel == get_class($controllerFieldModel))
-                            ) {
-                                $this->appendClass($fieldConfig, 'hidden');
-                                $fieldConfig['type']      = 'text';
-                                $fieldConfig['default']   = $controllerFieldModel->id;
+
+                            if ($dropDownModel) { 
+                                // Set and hide parentModel
+                                // can be useful in nested popups
+                                // Morph type to text to prevent option loads
+                                if ($dropDownModel == $parentModel) {
+                                    $fieldConfig['type']      = 'text';
+                                    $this->appendClass($fieldConfig, 'hidden');
+                                    $fieldConfig['default']   = $parentModelId;
+                                } 
+                                
+                                // Set and hide the main controllerModel
+                                else if ($controllerModel 
+                                    && $dropDownModel == get_class($controllerModel)
+                                ) {
+                                    $fieldConfig['type']      = 'text';
+                                    $this->appendClass($fieldConfig, 'hidden');
+                                    $fieldConfig['default']   = $controllerModel->id;
+                                }
+                                
+                                // Set and hide common singular parent BelongsTo models
+                                // Student->user has common with UserUserLanguage->user
+                                // when adding XfromXSemi languages
+                                // We need the actual controller object
+                                else if ($controllerModel
+                                    && $controllerModel->hasRelation($fieldName)
+                                    && ($relation = $controllerModel->$fieldName())
+                                    && ($relation instanceof BelongsTo)
+                                    && ($controllerFieldModel = $controllerModel->$fieldName)
+                                    && ($dropDownModel == get_class($controllerFieldModel))
+                                ) {
+                                    $this->appendClass($fieldConfig, 'hidden');
+                                    $fieldConfig['type']      = 'text';
+                                    $fieldConfig['default']   = $controllerFieldModel->id;
+                                }
                             }
                         }
-                    }
                         
-                    // ------------------------------------- Auto-hide parent model reverse relation managers
-                    // so that X-X relations do not have repeating relationmanager popup loops
-                    // TODO: Secondary tabs
-                    if ($parentModel && isset($config->tabs['fields'])) {
-                        foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
-                            if (   isset($fieldConfig['type']) 
-                                && isset($fieldConfig['relatedModel'])
-                                && $fieldConfig['type'] == 'relationmanager'
-                                && $fieldConfig['relatedModel'] == $parentModel
-                            ) {
-                                unset($config->tabs['fields'][$fieldName]);
+                        // ------------------------------------- Auto-hide parent model reverse relation managers
+                        // so that X-X relations do not have repeating relationmanager popup loops
+                        if (isset($config->tabs['fields'])) {
+                            foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
+                                if (   isset($fieldConfig['type']) 
+                                    && isset($fieldConfig['relatedModel'])
+                                    && $fieldConfig['type'] == 'relationmanager'
+                                    && $fieldConfig['relatedModel'] == $parentModel
+                                ) {
+                                    unset($config->tabs['fields'][$fieldName]);
+                                }
+                            }
+                        }
+                        if (isset($config->secondaryTabs['fields'])) {
+                            foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                if (   isset($fieldConfig['type']) 
+                                    && isset($fieldConfig['relatedModel'])
+                                    && $fieldConfig['type'] == 'relationmanager'
+                                    && $fieldConfig['relatedModel'] == $parentModel
+                                ) {
+                                    unset($config->secondaryTabs['fields'][$fieldName]);
+                                }
+                            }
+                        }
+                        if (isset($config->tertiaryTabs['fields'])) {
+                            foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                                if (   isset($fieldConfig['type']) 
+                                    && isset($fieldConfig['relatedModel'])
+                                    && $fieldConfig['type'] == 'relationmanager'
+                                    && $fieldConfig['relatedModel'] == $parentModel
+                                ) {
+                                    unset($config->tertiaryTabs['fields'][$fieldName]);
+                                }
                             }
                         }
                     }

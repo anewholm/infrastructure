@@ -62,7 +62,7 @@ class Model extends BaseModel
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
-    use \Acorn\Traits\NiceSqlErrors;
+    use \Acorn\Traits\NiceErrors;
 
     public const LE_DELETE_ON_NULL = 2; // Row deletes
     public const LE_FALSE_ON_NULL = 3;  // Useful for missing boolean checkbox values
@@ -88,7 +88,22 @@ class Model extends BaseModel
 
     public function getLeafTableAttribute($value): string|NULL
     {
-        return $this->getLeafTableCacheClass();
+        return trans($this->getLeafTableTranslationKey());
+    }
+
+    public function getLeafTableTranslationKey(): string
+    {
+        $key        = '';
+        $leafTable  = $this->attributes['leaf_table'];
+        $tableParts = explode('_', $leafTable);
+        if (isset($tableParts[2])) {
+            $modelParts = array_slice($tableParts, 2);
+            $localKey   = strtolower(Str::singular(implode('', $modelParts)));
+            $key        = "$tableParts[0].$tableParts[1]::lang.models.$localKey.label";
+        } else {
+            $key = $this->getLeafTableCacheClass();
+        }
+        return $key;
     }
 
     public function getLeafTableCacheClass(bool $fqn = FALSE): string|NULL
@@ -478,6 +493,9 @@ class Model extends BaseModel
         catch (QueryException $qe) {
             $this->throwNiceSqlError($qe);
         }
+        catch (Exception $ex) {
+            $this->throwNiceError($ex);
+        }
 
         if (!$qe) {
             if (!isset($options['list-editable']) || $options['list-editable']) {
@@ -542,7 +560,6 @@ class Model extends BaseModel
 
             if ($model) { // Guard from NULLs
                 if ($model instanceof BaseModel) {
-                    // TODO: 1-1 model translatable fields do not work
                     if ($html) $modelName  = ($model->htmlName ?: e($model->name));
                     else       $modelName  = $model->name;
                     $classParts = explode('\\', get_class($model));
