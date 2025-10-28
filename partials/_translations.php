@@ -65,7 +65,7 @@ if (is_null($value)) {
                 switch ($locale) {
                     case 'en': $localName = 'English'; break;
                     case 'ku': $localName = 'Kurdî'; break;
-                    case 'ar': $localName = 'Erebî'; break;
+                    case 'ar': $localName = 'عربي'; break; // Arabic
                 }
                 
                 print("<li class='$isCurrent'><label>$localName</label>: $valueEscaped</li>");

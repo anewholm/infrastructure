@@ -36,11 +36,11 @@ class GlobalScopesPreview extends ReportWidgetBase
     {
         return [
             'title' => [
-                'title'             => 'acorn::lang.dashboard.widget_title_label',
+                'title'             => 'backend::lang.dashboard.widget_title_label',
                 'default'           => 'acorn::lang.dashboard.globalscopespreview.widget_title_default',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
-                'validationMessage' => 'acorn::lang.dashboard.widget_title_error',
+                'validationMessage' => 'backend::lang.dashboard.widget_title_error',
             ],
         ];
     }

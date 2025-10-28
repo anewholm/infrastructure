@@ -88,21 +88,32 @@ class Model extends BaseModel
 
     public function getLeafTableAttribute($value): string|NULL
     {
-        return trans($this->getLeafTableTranslationKey());
+        $ret = NULL;
+        if ($key = $this->getLeafTableTranslationKey($value)) {
+            $ret = trans($key);
+        } else {
+            // Maybe not translated, but we will offer
+            $ret = trans($this->getLeafTableCacheClass());
+        }
+        return $ret;
     }
 
-    public function getLeafTableTranslationKey(): string
+    public function getLeafTableTranslationKey(string|NULL $value = NULL): string|NULL
     {
-        $key        = '';
-        $leafTable  = $this->attributes['leaf_table'];
-        $tableParts = explode('_', $leafTable);
-        if (isset($tableParts[2])) {
-            $modelParts = array_slice($tableParts, 2);
-            $localKey   = strtolower(Str::singular(implode('', $modelParts)));
-            $key        = "$tableParts[0].$tableParts[1]::lang.models.$localKey.label";
-        } else {
-            $key = $this->getLeafTableCacheClass();
+        $key = NULL;
+        
+        if (is_null($value) && isset($this->attributes['leaf_table']))
+            $value  = $this->attributes['leaf_table'];
+        
+        if ($value) {
+            $tableParts = explode('_', $value);
+            if (isset($tableParts[2])) {
+                $modelParts = array_slice($tableParts, 2);
+                $localKey   = strtolower(Str::singular(implode('', $modelParts)));
+                $key        = "$tableParts[0].$tableParts[1]::lang.models.$localKey.label";
+            }
         }
+
         return $key;
     }
 

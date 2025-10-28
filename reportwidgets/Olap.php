@@ -41,11 +41,11 @@ class Olap extends ReportWidgetBase
     {
         return [
             'title' => [
-                'title'             => 'acorn::lang.dashboard.widget_title_label',
+                'title'             => 'backend::lang.dashboard.widget_title_label',
                 'default'           => 'acorn::lang.dashboard.olap.widget_title_default',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
-                'validationMessage' => 'acorn::lang.dashboard.widget_title_error',
+                'validationMessage' => 'backend::lang.dashboard.widget_title_error',
             ],
             'tomcat_root' => [
                 'title'             => 'acorn::lang.dashboard.widget_tomcat_root_label',

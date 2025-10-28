@@ -4,7 +4,7 @@
     <?php if (!isset($error)): ?>
         <div class="welcome-container">
             <div class="backend-content">
-                <h2>Videos</h2>
+                <h2><?= e(trans('acorn::lang.dashboard.documentstore.videos')) ?></h2>
                 <ul class="videos">
                     <?php if (isset($videos)) {
                         foreach ($videos as $dirName => $dir) {
@@ -15,7 +15,7 @@
                     } ?>
                 </ul>
 
-                <h2>Documents</h2>
+                <h2><?= e(trans('acorn::lang.dashboard.documentstore.documents')) ?></h2>
                 <ul class="documents">
                     <?php if (isset($documents)) {
                         foreach ($documents as $dirName => $dir) {
