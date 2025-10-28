@@ -6,6 +6,29 @@
         'replication_debug' => 'Çewtgerandina dîkşandinê',
         'trigger_http_call_response' => 'Berdevkê li bangê HTTPê çalak bike'
     ],
+    'dashboard' => [
+        'widget_tomcat_root_label' => 'TomCat root',
+        'widget_tomcat_root_error' => 'The TomCat root is required.',
+        'widget_tomcat_port_label' => 'TomCat port',
+        'widget_tomcat_port_error' => 'The TomCat port is required.',
+        'widget_tomcat_domain_label' => 'TomCat domain',
+        'widget_tomcat_domain_error' => 'The TomCat domain is required.',
+        'documentstore' => [
+            'widget_title_default' => 'Dikana belge û vîdyoyan',
+            'videos' => 'Vîdyon',
+            'documents' => 'Belgên',
+        ],
+        'olap' => [
+            'widget_title_default' => 'Raporên OLAP Cube',
+            'widget_tomcat_root_default' => '/var/lib/tomcat9/webapps',
+            'widget_tomcat_port_default' => '',
+            'widget_tomcat_domain_default' => '',
+        ],
+        'globalscopespreview' => [
+            'widget_title_default' => 'Pêşdîtina Qadên Gerdûnî',
+            'view' => 'Dîtinî',
+        ],
+    ],
     'settings' => [
         'interface' => [
             'menu_label' => 'Navrû',
@@ -82,6 +105,9 @@
             'global_scopes' => 'Qada Giştî',
             'no_restriction' => 'Bê kêlik',
             'nothing_linked' => 'Tiştek girêdayî tune',
+            'success' => 'Serkeftin',
+            'helpvideos' => 'Vîdyoyên Alîkariyê',
+            'none' => 'Tune',
         ],
         'server' => [
             'label' => 'Server',

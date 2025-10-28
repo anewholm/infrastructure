@@ -15,6 +15,7 @@ $user            = BackendAuth::user();
 $canAdvanced     = $user->hasPermission('acorn.advanced');
 $isAdvanced      = ($canAdvanced && Session::get('advanced'));
 $ml              = System\Classes\MediaLibrary::instance();
+$locale          = Lang::getLocale();
 
 // This will be hidden by CSS if there are no entries
 print('<ul class="action-functions">');
@@ -35,12 +36,22 @@ if (!$isAdvanced && $formMode) {
             print("<option value='' selected='selected'>$helpVideos...</option>");
         }
         foreach ($mlis as $mli) {
-            // TODO: Translation of video names
-            $baseName    = preg_replace('/\.[a-zA-Z0-9]+/', '', basename($mli->path));
-            $videoName   = Str::title(str_replace('_', ' ', $baseName));
-            $url         = $ml->url($mli->path);
-            if ($useDropDown) print("<option value='$url'>$videoName</option>");
-            else print("<li class='video-help'><i class='icon-video'></i>&nbsp;<a target='_blank' href='$url'>$videoName</a></li>");
+            $basePath   = preg_replace('/\.[a-zA-Z0-9]+$/', '', $mli->path);
+            $baseName   = basename($basePath);
+            // Translation of video names
+            $label = Str::title(preg_replace('/[_-]+/', ' ', $baseName));
+            if ($ml->exists("$basePath.yaml")) {
+                $settings = Yaml::parse($ml->get("$basePath.yaml"));
+                if (isset($settings['labels'][$locale])) {
+                    $label = $settings['labels'][$locale];
+                } else if (isset($settings['labels']['en'])) {
+                    $label = $settings['labels']['en'];
+                }
+            }
+
+            $url = $ml->url($mli->path);
+            if ($useDropDown) print("<option value='$url'>$label</option>");
+            else print("<li class='video-help'><i class='icon-video'></i>&nbsp;<a target='_blank' href='$url'>$label</a></li>");
         }
         if ($useDropDown) print('</select></div></li>');
     }
@@ -59,56 +70,57 @@ if ($model->advanced && $canAdvanced && $formMode) {
 if ($model->exists && method_exists($model, 'actionFunctions')) {
     $actionFunctions = $model->actionFunctions('row'); // Includes inherited 1to1 action functions
     foreach ($actionFunctions as $fnName => &$definition) {
-        $enDevLabel      = e(trans($definition['label']));
-        $modelArrayName  = $model->unqualifiedClassName();
-        $dataRequestData = e(substr(json_encode(array(
-            'name'       => $fnName, // SECURITY: We do not want to reveal the full function name
-            'arrayname'  => $modelArrayName,
-            'modelId'    => $definition['model_id'],
-            'model'      => $definition['model']
-        )), 1,-1));
-
-        // TODO: Translateable comments
-        $title      = (isset($definition['comment']['en']) ? $definition['comment']['en'] : NULL);
-        $advancedFn = (isset($definition['advanced']) && $definition['advanced']);
-        $tooltip    = ($title 
-            ? "<div class='tooltip fade top'>
-                <div class='tooltip-arrow'></div>
-                <div class='tooltip-inner'>$title</div>
-            </div>"
-            : NULL
-        );
-
         // SECURITY: Action Function Premissions
-        $hasPermission = FALSE;
+        $hasPermission = TRUE;
         if (isset($definition['permissions'])) {
+            $hasPermission = FALSE;
             if ($user) {
                 foreach ($definition['permissions'] as $permission) {
                     if ($user->hasPermission($permission)) $hasPermission = TRUE;
                 }
             }
-        } else {
-            $hasPermission = TRUE;
         }
-
-        // CSS class
-        $cssClass  = preg_replace('/^fn_[^_]+_[^_]+_action_/', '', $fnName);
-        $cssClass .= ($title      ? ' hover-indicator' : NULL);
-        $cssClass .= ($advancedFn ? ' advanced'        : NULL);
-
+        
+        $advancedFn = (isset($definition['advanced']) && $definition['advanced']);
         if ($hasPermission && (!$advancedFn || $isAdvanced)) {
+            $labelEscaped    = e(trans($definition['label']));
+            $modelArrayName  = $model->unqualifiedClassName();
+            $dataRequestData = e(substr(json_encode(array(
+                'name'       => $fnName, // SECURITY: We do not want to reveal the full function name
+                'arrayname'  => $modelArrayName,
+                'modelId'    => $definition['model_id'],
+                'model'      => $definition['model']
+            )), 1,-1));
+
+            // Translateable comments
+            $commentEscaped = (isset($definition['comment']) ? e(trans($definition['comment'])) : NULL);
+            $tooltipHtml    = ($commentEscaped 
+                ? "<div class='tooltip fade top'>
+                    <div class='tooltip-arrow'></div>
+                    <div class='tooltip-inner'>$commentEscaped</div>
+                </div>"
+                : NULL
+            );
+
+            // CSS class
+            $fnNameParts = explode('_', $fnName);
+            $fnNameSpec  = implode('-', array_slice($fnNameParts, 4));
+            $cssClass    = $fnNameSpec;
+            $cssClass   .= ($commentEscaped ? ' hover-indicator' : NULL);
+            $cssClass   .= ($advancedFn     ? ' advanced'        : NULL);
+
             print(<<<HTML
                 <li>
-                    $tooltip
+                    $tooltipHtml
                     <a
                         class="$cssClass"
                         data-control="popup"
                         data-request-data='$dataRequestData'
-                        data-load-indicator='$title...'
+                        data-load-indicator='$commentEscaped...'
                         data-request-loading="loading-indicator"
                         data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
                         data-handler="onActionFunction"
-                    >$enDevLabel</a>
+                    >$labelEscaped</a>
                 </li>
 HTML
             );

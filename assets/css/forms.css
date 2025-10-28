@@ -404,7 +404,8 @@ ul.action-functions .select2-container .select2-selection--single > .select2-sel
 }
 
 body.rtl ul.action-functions {
-    float:left;
+    left:320px;
+    right: auto;
 }
 ul.action-functions > li {
     display: inline;

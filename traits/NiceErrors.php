@@ -21,7 +21,7 @@ Trait NiceErrors
                 // throw new Exception('A new node cannot be moved.'); => ANNCBM
                 // throw new Exception('Position should be either child, left, right. Supplied position is "%s".',
                 // throw new Exception('Cannot resolve target node. This node cannot move any further to the %s.',
-                // throw new Exception('Cannot resolve target node.');
+                // throw new Exception('Cannot resolve target node.'); => CRTN
                 // throw new Exception('A node cannot be moved to itself.');                 => ANCBMTI
                 // throw new Exception('A node cannot be moved to a descendant of itself.'); => ANCBMTADOI
 

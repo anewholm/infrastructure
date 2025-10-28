@@ -7,6 +7,8 @@ use Backend\Models\BrandSetting;
 use System\Classes\MediaLibrary;
 use Exception;
 use Str;
+use Yaml;
+use Lang;
 
 /**
  * User welcome report widget.
@@ -40,11 +42,11 @@ class DocumentStore extends ReportWidgetBase
     {
         return [
             'title' => [
-                'title'             => 'acorn::lang.dashboard.widget_title_label',
+                'title'             => 'backend::lang.dashboard.widget_title_label',
                 'default'           => 'acorn::lang.dashboard.documentstore.widget_title_default',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
-                'validationMessage' => 'acorn::lang.dashboard.widget_title_error',
+                'validationMessage' => 'backend::lang.dashboard.widget_title_error',
             ]
         ];
     }
@@ -61,22 +63,36 @@ class DocumentStore extends ReportWidgetBase
     {
         // --------------------------------- Video help
         // MediaLibraryItem s
-        $ml       = MediaLibrary::instance();
-        $dirs     = $ml->listAllDirectories(['/ActionTemplates']);
+        $ml     = MediaLibrary::instance();
+        $locale = Lang::getLocale();
+        $dirs   = $ml->listAllDirectories(['/ActionTemplates']);
         foreach ($dirs as $dir) {
             $mlis = $ml->listFolderContents($dir, 'title', NULL, TRUE);
             foreach ($mlis as $mli) {
-                // TODO: Translation of video names
                 $type       = $mli->getFileType();
-                $typePlural = "{$type}s";
-                $baseName   = preg_replace('/\.[a-zA-Z0-9]+/', '', basename($mli->path));
-                $title      = Str::title(preg_replace('/[_-]+/', ' ', $baseName));
-                $url        = $ml->url($mli->path);
-                $baseDir    = basename($dir);
-                
-                if (!isset($this->vars[$typePlural])) $this->vars[$typePlural] = array();
-                if (!isset($this->vars[$typePlural][$baseDir])) $this->vars[$typePlural][$baseDir] = array();
-                $this->vars[$typePlural][$baseDir][$title] = $url; 
+                $ext        = strtolower(pathinfo($mli->path, PATHINFO_EXTENSION));
+                $basePath   = preg_replace('/\.[a-zA-Z0-9]+$/', '', $mli->path);
+                $baseName   = basename($basePath);
+                if ($ext != 'yaml') {
+                    // Translation of video names
+                    $label = Str::title(preg_replace('/[_-]+/', ' ', $baseName));
+                    if ($ml->exists("$basePath.yaml")) {
+                        $settings = Yaml::parse($ml->get("$basePath.yaml"));
+                        if (isset($settings['labels'][$locale])) {
+                            $label = $settings['labels'][$locale];
+                        } else if (isset($settings['labels']['en'])) {
+                            $label = $settings['labels']['en'];
+                        }
+                    }
+
+                    $typePlural = "{$type}s";
+                    $url        = $ml->url($mli->path);
+                    $baseDir    = basename($dir);
+                    
+                    if (!isset($this->vars[$typePlural])) $this->vars[$typePlural] = array();
+                    if (!isset($this->vars[$typePlural][$baseDir])) $this->vars[$typePlural][$baseDir] = array();
+                    $this->vars[$typePlural][$baseDir][$label] = $url; 
+                }
             }
         }
     }

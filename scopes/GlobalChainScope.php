@@ -28,7 +28,7 @@ class GlobalChainScope implements Scope
     //     select acorn_university_hierarchies.id from acorn_university_hierarchies
     //     INNER JOIN "acorn_university_entities" ON "acorn_university_hierarchies"."entity_id" = "acorn_university_entities"."id"
     //     INNER JOIN "acorn_university_academic_years" ON "acorn_university_hierarchies"."academic_year_id" = "acorn_university_academic_years"."id"
-    //     where FN_ACORNASSOCIATED_UNIVERSITY_SCOPE_ENTITIES (ACORNASSOCIATED_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249')
+    //     where FN_ACORN_UNIVERSITY_SCOPE_ENTITIES (ACORN_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249')
     //   );
     //
     // Not this inner join, because of the multiple IDs it would return into the Model hydration process:
@@ -36,7 +36,7 @@ class GlobalChainScope implements Scope
     //   FROM "acorn_university_hierarchies"
     //     INNER JOIN "acorn_university_entities" ON "acorn_university_hierarchies"."entity_id" = "acorn_university_entities"."id"
     //     INNER JOIN "acorn_university_academic_years" ON "acorn_university_hierarchies"."academic_year_id" = "acorn_university_academic_years"."id"
-    //   WHERE FN_ACORNASSOCIATED_UNIVERSITY_SCOPE_ENTITIES (ACORNASSOCIATED_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249');
+    //   WHERE FN_ACORN_UNIVERSITY_SCOPE_ENTITIES (ACORN_UNIVERSITY_ENTITIES.ID, '0d76ad75-f9d4-4d01-8045-331517709249');
 
     public const IS_THIS = TRUE;
 

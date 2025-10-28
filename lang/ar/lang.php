@@ -6,6 +6,29 @@
         'replication_debug' => 'تصحيح النسخ المتماثل',
         'trigger_http_call_response' => 'تشغيل استجابة نداء HTTP'
     ],
+    'dashboard' => [
+        'widget_tomcat_root_label' => 'TomCat root',
+        'widget_tomcat_root_error' => 'The TomCat root is required.',
+        'widget_tomcat_port_label' => 'TomCat port',
+        'widget_tomcat_port_error' => 'The TomCat port is required.',
+        'widget_tomcat_domain_label' => 'TomCat domain',
+        'widget_tomcat_domain_error' => 'The TomCat domain is required.',
+        'documentstore' => [
+            'widget_title_default' => 'متجر المستندات والفيديو',
+            'videos' => 'مقاطع فيديو',
+            'documents' => 'وثائق',
+        ],
+        'olap' => [
+            'widget_title_default' => 'تقارير OLAP Cube',
+            'widget_tomcat_root_default' => '/var/lib/tomcat9/webapps',
+            'widget_tomcat_port_default' => '',
+            'widget_tomcat_domain_default' => '',
+        ],
+        'globalscopespreview' => [
+            'widget_title_default' => 'معاينة النطاقات العالمية',
+            'view' => 'منظر',
+        ],
+    ],
     'settings' => [
         'interface' => [
             'menu_label' => 'الواجهة',
@@ -82,6 +105,9 @@
             'global_scopes' => 'نطاقات عامة',
             'no_restriction' => 'بدون قيود',
             'nothing_linked' => 'لا يوجد ارتباط',
+            'success' => 'نجاح',
+            'helpvideos' => 'فيديوهات مساعدة',
+            'none' => 'لا شيء',
         ],
         'server' => [
             'label' => 'الخادم',
