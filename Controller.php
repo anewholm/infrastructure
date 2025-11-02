@@ -913,6 +913,7 @@ HTML;
                 } 
 
                 // Override with function fields settings
+                // Properties are already converted to camel, but double checking here
                 if (isset($defFields[$paramName])) {
                     foreach ($defFields[$paramName] as $settingName => $value)
                         $config[Str::camel($settingName)] = $value;

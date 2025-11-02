@@ -157,6 +157,12 @@
             'field' => 'Field',
             'content' => 'Content',
         ],
+        'fieldactions' => [
+            'createpopup'   => 'Create new',
+            'viewaddmodels' => 'View all',
+            'gotoformgroupselection' => 'Goto selection',
+            'debug'         => 'Debug',
+        ]
     ],
     'errors' => [
         'sql' => [

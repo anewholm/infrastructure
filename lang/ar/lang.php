@@ -149,6 +149,12 @@
             'field' => 'الحقل',
             'content' => 'المحتوى',
         ],
+        'fieldactions' => [
+            'createpopup'   => 'إنشاء جديد',
+            'viewaddmodels' => 'عرض الكل',
+            'gotoformgroupselection' => 'انتقل إلى الاختيار',
+            'debug'         => 'تصحيح الأخطاء',
+        ]
     ],
     'errors' => [
         'sql' => [
