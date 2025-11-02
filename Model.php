@@ -383,6 +383,11 @@ class Model extends BaseModel
                 array_push($placeholders, 'NULL');
             } else {
                 array_push($placeholders, '?');
+                if (is_array($value)) {
+                    // Convert to PostGreSQL format
+                    foreach ($value as &$item) $item = preg_replace('/([\\,])/', '\\$1', $item);
+                    $value = '{' . implode(',', $value) . '}';
+                }
                 array_push($bindings, $value);
             }
         }

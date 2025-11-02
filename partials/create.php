@@ -23,7 +23,7 @@ if ($backToReferrer = get('back-to-referrer')) {
         // This includes the query string also
         // Session will apply the same filters
         $controllerListUrl = (string) $referrerUri;
-        $modelsLabelKey    = $backToReferrer;
+        $modelsLabelKey    = trans($backToReferrer);
     }
 }
 
