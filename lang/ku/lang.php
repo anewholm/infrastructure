@@ -149,6 +149,12 @@
             'field' => 'Qad',
             'content' => 'Naverok',
         ],
+        'fieldactions' => [
+            'createpopup'   => 'Nû biafirîne',
+            'viewaddmodels' => 'Hemûyan bibîne',
+            'gotoformgroupselection' => 'Biçe hilbijartinê',
+            'debug'         => 'Çewtîkirin',
+        ]
     ],
     'errors' => [
         'sql' => [

@@ -141,6 +141,21 @@ Trait MorphConfig
                         foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) self::processCommentEmbeddedTranslationKeys($fieldConfig);
                     }
 
+                    // ------------------------------------------------- Comment Add-ins
+                    // Actions: View all, Goto selected, Create new popup, Debug
+                    if (isset($config->fields)) {
+                        foreach ($config->fields as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                    }
+                    if (isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                    }
+                    if (isset($config->secondaryTabs['fields'])) {
+                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                    }
+                    if (isset($config->tertiaryTabs['fields'])) {
+                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                    }
+
                     // ------------------------------------------------- Defaults for drop-downs
                     // For some reason they do not work, maybe because of UUIDs
                     // So forms.js supports select[@default] HTML attribute
@@ -677,6 +692,85 @@ Trait MorphConfig
                 },
                 $fieldConfig['comment']
             );
+        }
+    }
+
+    protected static function adornFieldWithActions(array &$fieldConfig): void
+    {
+        if (isset($fieldConfig['actions']) && is_array($fieldConfig['actions'])) {
+            $lis = '';
+            foreach ($fieldConfig['actions'] as $name => $actionConfig) {
+                // 3 styles of config are allowed:
+                //   1: create-popup
+                //   create-popup: true
+                //   my-custom-action:
+                //     labels: ...
+                //     ...
+                if (is_numeric($name)) {
+                    $name = $actionConfig;
+                    $actionConfig = TRUE;
+                }
+                if ($actionConfig === TRUE) $actionConfig = array();
+
+                $localLabelKey = preg_replace('/[^a-z0-9]/', '', $name);
+                $labelKey      = "acorn::lang.models.fieldactions.$localLabelKey";
+                $labelEscaped  = e(trans($labelKey));
+
+                // Pre-defined
+                switch ($name) {
+                    case 'create-popup':
+                        if (!isset($actionConfig['control'])) 
+                            $actionConfig['control'] = 'popup';
+                        break;
+                    case 'view-add-models':
+                        if (is_string($actionConfig)) 
+                            $actionConfig = array('href' => $actionConfig);
+                        if (!isset($actionConfig['control'])) 
+                            $actionConfig['control'] = 'newtab';
+                        break;
+                    case 'goto-form-group-selection':
+                        if (is_string($actionConfig)) 
+                            $actionConfig = array('href' => $actionConfig);
+                        if (!isset($actionConfig['control'])) 
+                            $actionConfig['control'] = 'newtab';
+                        break;
+                    case 'debug':
+                        if (get('debug')) {
+                            $actionConfig = array(
+                                'content'  => "$labelEscaped$actionConfig",
+                                'title'    => '',
+                            );
+                        } else {
+                            $actionConfig = FALSE;
+                        }
+                        break;
+                }
+
+                // Direct Content custom actions
+                if (is_string($actionConfig)) {
+                    $actionConfig = array(
+                        'content' => $actionConfig,
+                    );
+                }
+
+                // HTML
+                if ($actionConfig !== FALSE) {
+                    $content      = (isset($actionConfig['content']) ? $actionConfig['content'] : $labelEscaped);
+                    $titleEscaped = (isset($actionConfig['title']) ? e($actionConfig['title']) : $labelEscaped);
+                    if (isset($actionConfig['href'])) {
+                        $target  = ((isset($actionConfig['control']) && $actionConfig['control'] == 'newtab') ? '_blank' : '');
+                        $content = "<a tabindex='-1' target='$target' href='$actionConfig[href]'>$content</a>";
+                    }
+                    $lis .= "<li class='$name' title='$titleEscaped'>$content</li>";
+                }
+            }
+
+            // Prepend to the comment
+            if ($lis) {
+                if (!isset($fieldConfig['comment'])) $fieldConfig['comment'] = '';
+                if (!isset($fieldConfig['commentHtml']) || !$fieldConfig['commentHtml']) $fieldConfig['commentHtml'] = TRUE;
+                $fieldConfig['comment'] = "<ul class='field-actions'>$lis</ul>$fieldConfig[comment]";
+            }
         }
     }
 

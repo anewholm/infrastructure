@@ -2,9 +2,6 @@
 .debug-relative {
     position:relative;
 }
-.debug {
-    display: none;
-}
 
 .debug-view {color:darkgreen;}
 .debug-controller {font-weight:bold; color:darkblue;}
@@ -35,7 +32,10 @@
 }
 
 .debug-relative:hover > .debug,
-.form-group:hover .debug {
+.debug > div {
+  display: none;
+}
+.debug:hover > div {
     position:absolute;
     top:0px;
     left:0px;

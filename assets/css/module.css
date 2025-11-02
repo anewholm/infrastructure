@@ -6,6 +6,8 @@
 @import '/modules/acorn/assets/css/html5-qrcode.css';
 @import '/modules/acorn/assets/css/print.css';
 
+/* Themes */
+@import '/modules/acorn/assets/css/themes/blue.css';
 
 /* Plugin README.md */
 .plugin-details-content h2 {

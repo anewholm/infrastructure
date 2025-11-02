@@ -94,12 +94,6 @@ body .field-multilingual .ml-btn {
     color: #f00;
 }
 
-.view-add-models {
-    float: left;
-    clear: left;
-    margin-right: 5px;
-}
-
 .fake-readonly *[readonly] {
     background-color: inherit !important;
     cursor: inherit;
@@ -292,8 +286,26 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
         content: none;
 }
 
-.help-block a,
-.goto-form-group-selection {
+.field-actions {
+    position: relative;
+    margin-top: -12px;
+    margin-left: 10px;
+}
+.form-group:has(.select2-container--open) .field-actions {
+    display: none;
+}
+.field-actions > li {
+    display: inline;
+    margin-right: 4px;
+    padding: 0px 8px;
+    font-size: 10px;
+    background-color: #fff;
+    border:1px solid #999;
+    border-radius: 1px;
+    box-shadow: 2px 0px 10px #ddd;
+}
+
+.help-block a {
   color: #4444ff;
 }
 .help-block img.level {
@@ -310,11 +322,6 @@ ul.help-block {
     list-style: disc;
     margin-left:15px;
     color: #777;
-}
-
-.goto-form-group-selection {
-  float:right;
-  margin-left: 5px;
 }
 
 /* relation displays to show only their attached items */
@@ -349,11 +356,6 @@ ul.help-block {
 .form-preview {
   margin:0px auto;
   max-width: 900px;
-}
-
-/* These are always included, but we only show them when debug is enabled */
-.debug-field {
-    display:none;
 }
 
 /* actions */
@@ -750,68 +752,4 @@ nav.collapsible > ul > li:has(a > i.acorn-splitter) {
 }
 .custom-switch > span {
     overflow: hidden;
-}
-
-/* ------------------------------- themes */
-.theme-blue .nav.nav-tabs,
-.theme-blue #layout-sidenav-1 div[role=menu] > a:has(i.acorn-splitter) {
-    display: none;
-}
-/* TODO: Change filtering and global-scope to a permission */
-.theme-blue #Filter-listFilter,
-.theme-blue .search-global-scope-selectors-container {
-    display: none;
-}
-.theme-blue,
-.theme-blue .control-tabs>div>div>ul.nav-tabs>li a>span.title>span, 
-.theme-blue .control-tabs>div>ul.nav-tabs>li a>span.title>span, 
-.theme-blue .control-tabs>ul.nav-tabs>li a>span.title>span,
-.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li a>span.title:after, 
-.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li a>span.title:before, 
-.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li a>span.title:after, 
-.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li a>span.title:before, 
-.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li a>span.title:after, 
-.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li a>span.title:before,
-.theme-blue .modal-content,
-.theme-blue .modal-dialog > .modal-content > div,
-
-.theme-blue .control-tabs.primary-tabs>div>div>ul.nav-tabs>li.active a:before, 
-.theme-blue .control-tabs.primary-tabs>div>ul.nav-tabs>li.active a:before, 
-.theme-blue .control-tabs.primary-tabs>ul.nav-tabs>li.active a:before {
-    background-color: #e6effd;
-}
-.theme-blue .relation-behavior .control-list,
-.theme-blue table.table.data > tbody > tr:first-child > td {
-    border: none;
-}
-.theme-blue [multiple], 
-.theme-blue [type=date], 
-.theme-blue [type=datetime-local], 
-.theme-blue [type=email], 
-.theme-blue [type=month], 
-.theme-blue [type=number], 
-.theme-blue [type=password], 
-.theme-blue [type=search], 
-.theme-blue [type=tel], 
-.theme-blue [type=text], 
-.theme-blue [type=time], 
-.theme-blue [type=url], 
-.theme-blue [type=week], 
-.theme-blue select, 
-.theme-blue textarea,
-.theme-blue .btn {
-    border-color: rgb(145 187 251);
-}
-.theme-blue .control-breadcrumb,
-.theme-blue .modal-dialog .modal-header:has(h4.modal-title) {
-    background-color: #d0e0f0;
-}
-.theme-blue .control-scrollpanel {
-    background-color: #b3c2d4;
-}
-.theme-blue .control-breadcrumb li:first-child {
-    background-color: #71859e;
-}
-.theme-blue .control-tabs > div > .nav-tabs {
-    background: linear-gradient(0deg, #d0e0f0, #e6effd);
 }

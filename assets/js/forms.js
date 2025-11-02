@@ -3,17 +3,18 @@ function acorn_updateViewSelectionLink() {
   var modelUuid = jInput.val();
   var jGotoLink = jInput.closest('.form-group,.custom-checkbox').find('.goto-form-group-selection');
 
-  if (modelUuid && jGotoLink.attr('href')) {
+  if (modelUuid && jGotoLink.length) {
+    var jA = jGotoLink.children('a');
     // Remove any update/id parts from URL
-    var urlParts = jGotoLink.attr('href').split('/').filter(n => n);
+    var urlParts = jA.attr('href').split('/').filter(n => n);
     if (urlParts[urlParts.length-2] == 'update') {
       urlParts.splice(urlParts.length-2);
     }
     urlParts.push('update');
     urlParts.push(modelUuid);
     var updateUrl = '/' + urlParts.join('/');
-    var viewselection = $.wn.lang.get('links.viewselection');
-    jGotoLink.attr('href', updateUrl).text(viewselection).show();
+    jA.attr('href', updateUrl);
+    jGotoLink.show();
   } else {
     jGotoLink.hide();
   }
