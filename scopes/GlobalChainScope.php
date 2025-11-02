@@ -298,6 +298,12 @@ class GlobalChainScope implements Scope
         //     }
         //   }
         $this->applyRecursiveMaybe($builder, $model);
+
+        // Users can always see things they created
+        if ($builder->getQuery()->wheres && $model->hasRelation('created_by_user')) {
+            if ($user = User::authUser())
+                $builder->orWhere("$model->table.created_by_user_id", $user->id);
+        }
     }
 
     public function applyRecursiveMaybe(Builder $builder, Model $model): void {
