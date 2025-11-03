@@ -259,8 +259,17 @@ class GlobalChainScope implements Scope
                 // Apply the sub-query to the main builder
                 // This will translate the QueryBuilder in to a string Illuminate\Database\Query\Expression
                 $query     = $builder->getQuery();
-                $mainTable = $query->from;
-                $builder->whereIn("$mainTable.id", $model->globalScopeSubQuery, 'and');
+                $fromTable = $query->from;
+                $mainModel = $builder->getModel();
+
+                // Users can always see the things they created
+                // We want this to be the last where in the sub-query
+                if ($mainModel->hasRelation('created_by_user')) {
+                    if ($user = User::authUser())
+                        $model->globalScopeSubQuery->orWhere("$mainModel->table.created_by_user_id", $user->id);
+                }
+
+                $builder->whereIn("$fromTable.id", $model->globalScopeSubQuery, 'and');
             }
 
             // TODO: Allow NULLs on the first join to show Models without an explicit setting
@@ -299,10 +308,14 @@ class GlobalChainScope implements Scope
         //   }
         $this->applyRecursiveMaybe($builder, $model);
 
-        // Users can always see things they created
-        if ($builder->getQuery()->wheres && $model->hasRelation('created_by_user')) {
-            if ($user = User::authUser())
-                $builder->orWhere("$model->table.created_by_user_id", $user->id);
+        // Users can always see the things they created
+        // We want this to be the last where
+        if (   $model->hasRelation('created_by_user') 
+            && $model->globalScopeSubQuery
+            && $model->globalScopeSubQuery->wheres
+            && ($user = User::authUser())
+        ) {
+            $model->globalScopeSubQuery->orWhere("$model->table.created_by_user_id", $user->id);
         }
     }
 

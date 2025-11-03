@@ -43,7 +43,7 @@ if (is_null($value)) {
         // Only to those with existing translations
         foreach ($attributesArray as $attributeName => $locales) {   
             if (isset($model->$attributeName)) {
-                $attributesArray[$attributeName]['en'] = $model->attributes[$attributeName];
+                $attributesArray[$attributeName]['en'] = $model->getAttributeTranslated($attributeName, 'en');
             }
         }
 
