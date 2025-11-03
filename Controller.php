@@ -988,24 +988,30 @@ HTML;
             $type       = 'info';
             $flash      = NULL;
             $path       = NULL;
+            $result     = NULL;
             if (count($results)) {
                 $firstResult = $results[0];
+                if (property_exists($firstResult, 'message')) {
+                    $message = $firstResult->message;
+                    if (!$path) $path = $message;
+                }
+                if (property_exists($firstResult, 'result')) {
+                    $result = $firstResult->result;
+                    if (!$path) $path = $result;
+                }
                 if (property_exists($firstResult, 'path'))
                     $path = $firstResult->path;
                 if (property_exists($firstResult, 'type'))
                     $type = $firstResult->type;
                 if (property_exists($firstResult, 'flash'))
                     $flash = $firstResult->flash;
-                if (property_exists($firstResult, 'message')) {
-                    $message = $firstResult->message;
-                    if (!$path) $path = $message;
-                }
             }
 
             // Response
             switch ($resultAction) {
                 case 'model-uuid-redirect':
-                    if (!$path) throw new Exception('Path redirect requested without path');
+                    if (!$path) 
+                        throw new Exception('Path redirect requested without path');
                     if ($message) Flash::$type($message);
                     $response   = Redirect::to($path);
                     break;

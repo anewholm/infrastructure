@@ -330,44 +330,51 @@ class Model extends BaseModel
         $purgeableAtts     = $this->getOriginalPurgeValues();
         
         foreach ($fnParams as $paramName => $paramType) {
+            $value     = NULL;
             $thisName  = preg_replace('/^p_/', '', $paramName);
             $purgeName = "_{$name}_$paramName";
-            switch ($paramName) {
+            switch ($thisName) {
                 case 'model_id':
-                case 'p_model_id':
-                    $paramsMerged[$paramName] = array(
-                        'value' => $this->id,
-                        'type'  => $paramType,
-                    );
+                    $value = $this->id;
                     break;
                 case 'user_id':
-                case 'p_user_id':
-                    $user = User::authUser();
-                    $paramsMerged[$paramName] = array(
-                        'value' => $user->id,
-                        'type'  => $paramType,
-                    );
+                    if ($user = User::authUser()) $value = $user->id;
                     break;
                 default:
+                    // Explicit values sent
                     if ($values && isset($values[$paramName])) {
-                        $paramsMerged[$paramName] = array(
-                            'value' => $values[$paramName],
-                            'type'  => $paramType,
-                        );
-                    } else if (isset($purgeableAtts[$purgeName])) {
-                        $paramsMerged[$paramName] = array(
-                            'value' => $purgeableAtts[$purgeName],
-                            'type'  => $paramType,
-                        );
-                    } else if (isset($this->attributes[$thisName])) {
-                        $paramsMerged[$paramName] = array(
-                            'value' => $this->attributes[$thisName],
-                            'type'  => $paramType,
-                        );
-                    } else {
-                        $unsatisfiedParams[$paramName] = $paramType;
+                        $value = $values[$paramName];
+                    } 
+                    // Purgeable form values
+                    else if (isset($purgeableAtts[$purgeName])) {
+                        $value = $purgeableAtts[$purgeName];
+                    } 
+                    // Model attributes
+                    else if (isset($this->attributes[$thisName])) {
+                        $value = $this->attributes[$thisName];
                     }
                     break;
+            }
+
+            if (is_null($value)) {
+                $unsatisfiedParams[$paramName] = $paramType;
+            } else {
+                $isArrayParam = str_ends_with($paramType, '[]');
+                if ($isArrayParam) {
+                    // Convert to PostGreSQL format
+                    // WinterCMS will send a '0' if there were no selections
+                    // or an array if there are
+                    if (is_array($value)) {
+                        // Escape values
+                        foreach ($value as &$item) $item = preg_replace('/([\\,])/', '\\$1', $item);
+                        $value = '{' . implode(',', $value) . '}';
+                    } else $value = '{}';
+                }
+
+                $paramsMerged[$paramName] = array(
+                    'value' => $value,
+                    'type'  => $paramType,
+                );
             }
         }
 
@@ -383,11 +390,6 @@ class Model extends BaseModel
                 array_push($placeholders, 'NULL');
             } else {
                 array_push($placeholders, '?');
-                if (is_array($value)) {
-                    // Convert to PostGreSQL format
-                    foreach ($value as &$item) $item = preg_replace('/([\\,])/', '\\$1', $item);
-                    $value = '{' . implode(',', $value) . '}';
-                }
                 array_push($bindings, $value);
             }
         }
@@ -1224,7 +1226,7 @@ SQL;
 
     public static function menuitemCountFor(string $class, bool $force = FALSE): int|NULL {
         $count = NULL;
-        if (get('count') || $force) {
+        if (get('count') || $force || TRUE) {
             try { // Materialized views can error on this
                 $count = $class::count();
             } catch (Exception $ex) {}

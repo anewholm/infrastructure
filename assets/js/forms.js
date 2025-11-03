@@ -4,7 +4,8 @@ function acorn_updateViewSelectionLink() {
   var jGotoLink = jInput.closest('.form-group,.custom-checkbox').find('.goto-form-group-selection');
 
   if (modelUuid && jGotoLink.length) {
-    var jA = jGotoLink.children('a');
+    // Allow .goto > a
+    var jA = (jGotoLink.children('a').length ? jGotoLink.children('a') : jGotoLink);
     // Remove any update/id parts from URL
     var urlParts = jA.attr('href').split('/').filter(n => n);
     if (urlParts[urlParts.length-2] == 'update') {
