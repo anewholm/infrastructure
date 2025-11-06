@@ -108,6 +108,8 @@
             'success' => 'Serkeftin',
             'helpvideos' => 'Vîdyoyên Alîkariyê',
             'none' => 'Tune',
+            'deferred_binding_hint_label' => 'Berî girêdana van tomaran, modelê biafirîne',
+            'deferred_binding_hint_content' => 'Pêdivî ye ku hûn pêşî modelê hilînin, ji nû ve vekin, û dûv re van tiştan lê zêde bikin',
         ],
         'server' => [
             'label' => 'Server',

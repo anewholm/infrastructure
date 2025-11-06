@@ -115,9 +115,11 @@ class Controller extends BackendController
             $cssName   = "global-scope-$cssName";
             array_push($globalScopeNames, $cssName);
         }
-        $bodyClass = ($this->bodyClass ?: '');
-        $globalScopeNamesString = implode(' ', $globalScopeNames);
-        $this->bodyClass = "$bodyClass $globalScopeNamesString";
+        $cssClasses = array_merge($globalScopeNames, array(
+            $this->action
+        ));
+        $cssClassesString = implode(' ', $cssClasses);
+        $this->bodyClass = "$this->bodyClass $cssClassesString";
     }
 
     public function isClassExtendedWith($name) {

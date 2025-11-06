@@ -6,8 +6,8 @@ $config = (isset($formField) ? $formField->config : $column->config);
 if (isset($config['whitelist'])) {
   $whitelist = $config['whitelist'];
   foreach ($whitelist as $name) {
-    if (isset($_GET[$name])) {
-      switch ($_GET[$name]) {
+    if ($action = get($name)) {
+      switch ($action) {
         case 'hide':
           print("body div .$name {display:none!important; visibility:none!important;}");
           break;

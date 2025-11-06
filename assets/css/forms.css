@@ -49,6 +49,21 @@
 .hint-field:has(div,p,i,h3) {
     display: block;
 }
+.hint-field .icon-info,
+.hint-field .icon-warning,
+.hint-field .icon-error {
+    float: left;
+}
+
+.layout-topmenu .global-scope {
+    height: 100%;
+    line-height: 60px;
+    padding: 0px 8px;
+    
+    background-color: #333;
+    color: #fff;
+    font-weight: bold;
+}
 
 span.required::after {
     /* Independent required */
@@ -296,6 +311,7 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 }
 .field-actions > li {
     display: inline;
+    white-space: nowrap;
     margin-right: 4px;
     padding: 0px 8px;
     font-size: 10px;
