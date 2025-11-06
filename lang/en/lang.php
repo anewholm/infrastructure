@@ -113,6 +113,8 @@
             'success' => 'Success',
             'helpvideos' => 'Help Videos',
             'none' => 'None',
+            'deferred_binding_hint_label' => 'Create the model before attaching these records',
+            'deferred_binding_hint_content' => 'You need to save the model first, re-open it, and then add these items',
         ],
         'server' => [
             'label' => 'Server',

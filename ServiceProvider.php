@@ -7,6 +7,7 @@ use Event;
 use BackendAuth;
 use BackendMenu;
 use Url;
+use Backend\Classes\Controller as BackendController;
 use Backend\Models\User;
 use Backend\Models\UserRole;
 use System\Classes\CombineAssets;
@@ -32,6 +33,7 @@ use Acorn\Console\SetConfig;
 use Acorn\Console\ConfigPlugin;
 use Acorn\Console\Seed;
 use Acorn\Console\GenerateSeed;
+use Acorn\Scopes\GlobalChainScope;
 
 class ServiceProvider extends ModuleServiceProvider
 {
@@ -187,6 +189,19 @@ class ServiceProvider extends ModuleServiceProvider
             }
         });
 
+        Event::listen('backend.partials.menuTop.extend', function(BackendController $controller, string $menuLocation, string $iconLocation) {
+            $globalScopes = GlobalChainScope::allUserSettings(TRUE);
+            foreach ($globalScopes as $name => $details) {
+                // Theme from Model
+                $class       = $details['modelClass'];
+                $modelId     = $details['setting'];
+                $model       = $class::find($modelId);
+                $cssClass    = str_replace('_', '--', preg_replace('/_id$/', '', $details['userField']));
+
+                print("<div class='global-scope $cssClass'>$model->name</div>");
+            }
+        });
+
         // VERSION: Winter 1.2.6: send also parameter ('acorn');
         // But does not seem to cause a problem if ommitted
         parent::boot(); 
@@ -309,7 +324,7 @@ class ServiceProvider extends ModuleServiceProvider
     {
         $isDebugAny = FALSE;
         if (env('APP_DEBUG')) {
-            foreach ($_GET as $name => $value) {
+            foreach (get() as $name => $value) {
                 if (substr($name, 0, 5) == 'debug') $isDebugAny = TRUE;
             }
         }
@@ -318,7 +333,7 @@ class ServiceProvider extends ModuleServiceProvider
 
     static public function isDebug(string $type = ''): bool
     {
-        return (env('APP_DEBUG') && (isset($_GET["debug-$type"]) || isset($_GET['debug-all'])));
+        return (env('APP_DEBUG') && (get("debug-$type") || get('debug-all')));
     }
 
     static protected function isAJAX(): bool

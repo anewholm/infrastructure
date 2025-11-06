@@ -6,6 +6,7 @@ use Winter\Storm\Html\Helper as HtmlHelper;
 use Winter\Storm\Database\Relations\BelongsTo;
 use Illuminate\Support\Facades\Session;
 use Acorn\Models\InterfaceSetting;
+use \GuzzleHttp\Psr7\Uri;
 use \Exception;
 use BackendAuth;
 use Str;
@@ -192,7 +193,7 @@ Trait MorphConfig
                     }
 
                     // ------------------------------------------------- Advanced fields toggle
-                    if (isset($_GET['advanced'])) Session::put('advanced', ($_GET['advanced'] == '1'));
+                    if ($advancedGet = get('advanced')) Session::put('advanced', ($advancedGet == '1'));
                     $advanced = Session::get('advanced');
                     
                     if (isset($config->fields)) {
@@ -503,14 +504,19 @@ Trait MorphConfig
                     }
 
                     // Query string values
-                    if ($_GET) {
-                        foreach ($_GET as $getName => $getValue) {
-                            if (isset($config->fields[$getName])) {
-                                $field = &$config->fields[$getName];
-                                // $field['type']     = 'text';
-                                $field['readOnly'] = TRUE;
-                                $field['default']  = $getValue;
+                    foreach (get() as $getName => $getValue) {
+                        if (isset($config->fields[$getName])) {
+                            if ($getValue == '<referrer>') {
+                                $referrerUri   = new Uri(request()->headers->get('referer'));
+                                $referrerParts = explode('/', $referrerUri->getPath());
+                                if (count($referrerParts) > 2) {
+                                    $getValue = end($referrerParts);
+                                }
                             }
+                            $field = &$config->fields[$getName];
+                            // $field['type']     = 'text';
+                            $field['readOnly'] = TRUE;
+                            $field['default']  = $getValue;
                         }
                     }
 

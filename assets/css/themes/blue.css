@@ -1,4 +1,7 @@
-.theme-blue .nav.nav-tabs,
+.theme-blue.create .nav.nav-tabs {
+    /* Hide tabs on create for a clean form */
+    display: none;
+}
 .theme-blue #layout-sidenav-1 div[role=menu] > a:has(i.acorn-splitter) {
     display: none;
 }
@@ -59,4 +62,7 @@
 }
 .theme-blue .control-tabs > div > .nav-tabs {
     background: linear-gradient(0deg, #d0e0f0, #e6effd);
+}
+.theme-blue .layout-topmenu .global-scope {
+    background-color: #020277;
 }

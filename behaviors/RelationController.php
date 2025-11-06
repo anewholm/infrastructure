@@ -208,6 +208,7 @@ class RelationController extends RelationControllerBase
         // ------------------------------------ Hide the parent model column
         // TODO: Hide any 1-1 belongsTo off the parent model also
         // It will still show if it is selected in the cookies
+        // TODO: Shouldn't this be in|is in MorphConfig?
         if (property_exists($this, 'viewWidget')
             && $this->viewWidget
             && $this->viewWidget->model
@@ -304,8 +305,10 @@ class RelationController extends RelationControllerBase
             case 'button-apply':
                 break;
             // New custom eventTargets from overrides below
+            case 'button-delete':
             case 'button-unlink':
             case 'button-link':
+                // Prevent form load of wrong model with id
                 $manageMode = 'list';
                 break;
         }
@@ -339,6 +342,15 @@ class RelationController extends RelationControllerBase
         }
         parent::relationExtendViewWidget($viewWidget, $field, $model);
     }
+
+    public function onRelationButtonDelete()
+    {
+        // We need this custom eventTarget to guide the manageMode process above
+        // in the case of popups with _relation_mode set for their form save
+        $this->eventTarget = 'button-delete';
+        return parent::onRelationButtonDelete();
+    }
+
 
     public function onRelationButtonUnlink()
     {

@@ -108,6 +108,8 @@
             'success' => 'نجاح',
             'helpvideos' => 'فيديوهات مساعدة',
             'none' => 'لا شيء',
+            'deferred_binding_hint_label' => 'إنشاء النموذج قبل إرفاق هذه السجلات',
+            'deferred_binding_hint_content' => 'يجب عليك حفظ النموذج أولاً، ثم إعادة فتحه، ثم إضافة هذه العناصر',
         ],
         'server' => [
             'label' => 'الخادم',

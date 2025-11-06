@@ -5,3 +5,6 @@
     margin-top: 15px;
     font-weight: bold;
 }
+.widget-globalscopespreview .nav.nav-tabs {
+    display: none;
+}
