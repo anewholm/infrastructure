@@ -292,7 +292,7 @@ class GlobalChainScope implements Scope
         } else {
             // To make sure the sub-query is reset
             // as the test is for a where below
-            if ($model->globalScopeSubQuery) $model->globalScopeSubQuery->where(1, '=', 1);
+            if ($model->globalScopeSubQuery) $model->globalScopeSubQuery->whereRaw('1=1');
         }
 
         return (bool) $setting;

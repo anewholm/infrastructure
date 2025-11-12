@@ -32,6 +32,9 @@
 .theme-blue table.table.data > tbody > tr:first-child > td {
     border: none;
 }
+.theme-blue .control-filter {
+    background: linear-gradient(180deg, #e6effd, #d6dfed);
+}
 .theme-blue [multiple], 
 .theme-blue [type=date], 
 .theme-blue [type=datetime-local], 
