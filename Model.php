@@ -467,10 +467,12 @@ class Model extends BaseModel
         if ($this->afterFunctions) {
             foreach ($this->afterFunctions as $name => $definition) {
                 [$paramsMerged, $unsatisfiedParams] = $this->assembleParameters($name, $definition['parameters']);
-                self::bindAndRunFunction(
-                    $definition['fnDatabaseName'], 
-                    array_pluck($paramsMerged, 'value')
-                );
+                if (!$unsatisfiedParams) {
+                    self::bindAndRunFunction(
+                        $definition['fnDatabaseName'], 
+                        array_pluck($paramsMerged, 'value')
+                    );
+                }
             }
         }
     }
@@ -701,14 +703,16 @@ class Model extends BaseModel
     public function afterListEditableSaves()
     {
         // fn_acorn_university_student_ales(p_model_id)
-        foreach ($this->alesFunctions as $fnDatabaseName => $config) {
-            try {
-                self::bindAndRunFunction(
-                    $fnDatabaseName,
-                    array($this->id)
-                );
-            } catch (QueryException $qe) {
-                $this->throwNiceSqlError($qe);
+        if ($this->alesFunctions) {
+            foreach ($this->alesFunctions as $fnDatabaseName => $config) {
+                try {
+                    self::bindAndRunFunction(
+                        $fnDatabaseName,
+                        array($this->id)
+                    );
+                } catch (QueryException $qe) {
+                    $this->throwNiceSqlError($qe);
+                }
             }
         }
     }
