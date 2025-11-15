@@ -464,6 +464,7 @@ class Model extends BaseModel
     protected function afterCreate()
     {
         parent::afterCreate();
+        
         if ($this->afterFunctions) {
             foreach ($this->afterFunctions as $name => $definition) {
                 [$paramsMerged, $unsatisfiedParams] = $this->assembleParameters($name, $definition['parameters']);
