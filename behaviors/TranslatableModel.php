@@ -3,6 +3,7 @@
 use Exception;
 use Winter\Translate\Behaviors\TranslatableModel as WinterTranslatableModel;
 use Winter\Storm\Html\Helper as HtmlHelper;
+use Winter\Storm\Database\Model;
 
 class TranslatableModel extends WinterTranslatableModel
 {
@@ -31,16 +32,30 @@ class TranslatableModel extends WinterTranslatableModel
             // Traverse to the real model
             // by reference, so it is used in $modelsToSave
             foreach ($keyArray as $step) {
+                // Our Calendar Event Model does not really have a create_event_part relation
+                // despite using it in forms, because it is JSONable
                 if (!$model->$step) {
                     // This is stolen from FormModelSaver::setModelAttributes()
                     // which will do this as well, during building of $modelsToSave
                     // We do it pre-imtively here to have a model for our translatableAttributes
+                    if (!$model->hasRelation($step)) {
+                        // We simply break here because this is a system error
+                        // and we assume that there is custom handling
+                        // like Event::save() with create_new_event
+                        // The effect will be that the translatableAttributes will be placed
+                        // on the parent Model, e.g. Event, not EventPart
+                        // Use $this->getClassExtension('Acorn.Behaviors.TranslatableModel') to see them
+                        //
+                        // $modelClass = get_class($model);
+                        // throw new Exception("Model $modelClass uses $step but has no relation for it. Cannot store RLTranslation on the related model");
+                        continue;
+                    }
                     $model->$step = $model->$step()->getRelated();
                 }
                 $newModel = &$model->$step;
                 if (is_null($newModel)) {
                     $modelClass = get_class($model);
-                    throw new Exception("TranslatableModel: $step did not exist on $modelClass");
+                    throw new Exception("TranslatableModel: $step did not exist on $modelClass. Cannot store RLTranslation on the related model");
                 }
                 $model = &$newModel;
             }
@@ -163,5 +178,15 @@ class TranslatableModel extends WinterTranslatableModel
         }
 
         return $result;
+    }
+
+    public function adoptTranslatableData(Model $from, bool $clearOriginal = TRUE)
+    {
+        if ($fromTranslatableModel = $from->getClassExtension('Acorn.Behaviors.TranslatableModel')) {
+            $this->translatableAttributes = $fromTranslatableModel->translatableAttributes;
+            if ($clearOriginal) $fromTranslatableModel->translatableAttributes = array();
+        } else {
+            throw new Exception("Model $from is not Translatable");
+        }
     }
 }

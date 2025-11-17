@@ -525,9 +525,9 @@ HTML;
         return $result;
     }
 
-    public function update_onSave($context = NULL)
+    public function update_onSave($recordId = null, $context = null)
     {
-        $result = parent::update_onSave($context);
+        $result = parent::update_onSave($recordId, $context);
         // Support explicit custom redirects
         if ($redirect = post('redirect'))
             $result = Response::redirectTo($redirect);
