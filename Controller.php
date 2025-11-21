@@ -206,23 +206,26 @@ class Controller extends BackendController
         $empty  = e(trans('acorn::lang.models.general.empty'));
         $html  .= '<ul id="all-controllers">';
         foreach ($orderedFileList as $listName => $controller) {
-            $controllerUrl = $controller->controllerUrl();
-            $modelClass    = $controller->modelFullyQualifiedClass();
-            $count         = $modelClass::count();
-            $class         = ($count ? '' : 'empty');
-            $listHTML      = '<ul class="values">';
-            if ($count == 0) {
-                $listHTML .= "<li>$empty</li>";
-            } else {
-                $first10 = $modelClass::limit(10)->get();
-                foreach ($first10 as $model) {
-                    $modelUpdateUrl = $controller->controllerUrl('update', $model->id);
-                    $listHTML .= "<li><a href='$modelUpdateUrl'>$model->name</a></li>";
+            if ($controllerUrl = $controller->controllerUrl()) {
+                $modelClass = $controller->modelFullyQualifiedClass();
+                $count      = $modelClass::count();
+                $class      = ($count ? '' : 'empty');
+                $listHTML   = '<ul class="values">';
+                if ($count == 0) {
+                    $listHTML .= "<li>$empty</li>";
+                } else {
+                    $first10 = $modelClass::limit(10)->get();
+                    foreach ($first10 as $model) {
+                        $modelUpdateUrl = $controller->controllerUrl('update', $model->id);
+                        $listHTML .= "<li><a href='$modelUpdateUrl'>$model->name</a></li>";
+                    }
+                    if ($count > 10) $listHTML .= "<li><a href='$controllerUrl'>more...</a></li>";
                 }
-                if ($count > 10) $listHTML .= "<li><a href='$controllerUrl'>more...</a></li>";
+                $listHTML .= '</ul>';
+                $html .= "<li class='$class'><a href='$controllerUrl'>$listName <span class='counter'>$count</span></a>$listHTML</li>";
+            } else if (env('APP_DEBUG')) {
+                $html .= "<li><a href='#'>$listName controller missing</a></li>";
             }
-            $listHTML .= '</ul>';
-            $html .= "<li class='$class'><a href='$controllerUrl'>$listName <span class='counter'>$count</span></a>$listHTML</li>";
         }
         $html .= '</ul>';
         return $html;
