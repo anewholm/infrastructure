@@ -327,13 +327,15 @@ Trait PathsHelper {
         return "$author\\$plugin\\Controllers\\$name";
     }
 
-    public function controllerDirectoryPathRelative(Object $object = NULL): string
+    public function controllerDirectoryPathRelative(Object $object = NULL, bool $checkThrow = FALSE): string
     {
         $pluginPathRelative      = $this->pluginPathRelative();
         $controllerDirectoryName = $this->controllerDirectoryName();
         $path = "$pluginPathRelative/controllers/$controllerDirectoryName";
-        if (!is_dir($path)) 
-            throw new Exception("Path [$path] does not exist");
+        if (!is_dir($path)) { 
+            $path = NULL;
+            if ($checkThrow) throw new Exception("Path [$path] does not exist");
+        }
         return $path;
     }
 
@@ -342,22 +344,27 @@ Trait PathsHelper {
         return $this->pluralLowerCaseName();
     }
 
-    public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL, bool $withBackend = TRUE): string
+    public function controllerUrl(string $action = NULL, $id = NULL, ?Object $object = NULL, bool $withBackend = TRUE, bool $throwIfMissing = FALSE): string
     {
         // TODO: Use $controller->actionUrl($action, $path)
         $pluginPathPartAuthorPlugin  = $this->pluginPathPartAuthorPlugin();
         $controllerDirectoryName     = $this->controllerDirectoryName();
 
+        $url = NULL;
+        // controllerDirectoryPathRelative() will check the directory exists and return NULL if not
         $controllerDirectoryRelative = $this->controllerDirectoryPathRelative();
-        if (!is_dir($controllerDirectoryRelative)) throw new Exception("$controllerDirectoryRelative not found");
-
-        $url  = ($withBackend ? '/backend/' : '');
-        $url .= "$pluginPathPartAuthorPlugin/$controllerDirectoryName";
-        if ($action) {
-            $url .= "/$action";
-            if (is_null($id)) $id = $this->id;
-            if ($id) $url .= "/$id";
+        if ($controllerDirectoryRelative) {
+            $url  = ($withBackend ? '/backend/' : '');
+            $url .= "$pluginPathPartAuthorPlugin/$controllerDirectoryName";
+            if ($action) {
+                $url .= "/$action";
+                if (is_null($id)) $id = $this->id;
+                if ($id) $url .= "/$id";
+            }
+        } else if ($throwIfMissing) {
+            throw new Exception("$controllerDirectoryRelative not found");
         }
+
         return $url;
     }
 
