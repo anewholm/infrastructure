@@ -69,3 +69,14 @@
 .theme-blue .layout-topmenu .global-scope {
     background-color: #020277;
 }
+
+.theme-blue .relation-toolbar .btn-sm.wn-icon-file {
+    font-weight: bold;
+    border-color: rgb(32 110 227);
+}
+.theme-blue .relation-toolbar .btn-sm.control-disabled {
+    font-weight: normal;
+}
+.theme-blue .btn.btn-default.ml-btn {
+    background: linear-gradient(90deg, #0e1358, #5f6066);
+}
