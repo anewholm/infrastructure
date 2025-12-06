@@ -92,6 +92,9 @@
             'no_changes' => 'لم يتم العثور على تغييرات',
             'advanced' => 'متقدم',
             'simple' => 'بسيط',
+            'current' => 'المستخدم الحالي',
+            'current_user' => 'المستخدم الحالي',
+            'primary' => 'الأساسي',
             'all_controllers' => 'الكل',
             'dateformats' => [
                 'day' => 'اليوم',

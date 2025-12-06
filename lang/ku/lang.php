@@ -92,6 +92,9 @@
             'no_changes' => 'Tu guherînek nehat dîtin',
             'advanced' => 'Pêşketî',
             'simple' => 'Hêsan',
+            'current' => 'Niha',
+            'current_user' => 'Bikarhênerê niha',
+            'primary' => 'Sereke',
             'all_controllers' => 'Hemû',
             'dateformats' => [
                 'day' => 'Roj',
