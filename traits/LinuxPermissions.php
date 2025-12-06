@@ -1,7 +1,8 @@
 <?php namespace Acorn\Traits;
 
-use BackendAuth;
+use Backend\Facades\BackendAuth;
 use \Illuminate\Auth\Access\AuthorizationException;
+use Acorn\User\Models\User;
 
 trait LinuxPermissions
 {
@@ -15,14 +16,16 @@ trait LinuxPermissions
 
     protected function can(int $accessType)
     {
-        $user   = BackendAuth::user();
-        $groups = $user->groups->keyBy('id');
+        $user    = User::authUser();
+        $groups  = $user->groups->keyBy('id');
 
+        $noOwner = is_null($this->owner_user);
         $isOwner = ($user->id == $this->owner_user?->id);
         $inGroup = ($groups->get($this->owner_user_group?->id));
-        $isSuperUser = $user->is_superuser;
+        $isSuperUser = $user->is_superuser; // Redirected attribute to the backend user
 
         return $isSuperUser
+            || $noOwner
             || ($isOwner && $this->permissions & $accessType * self::$USER)
             || ($inGroup && $this->permissions & $accessType * self::$GROUP)
             ||              $this->permissions & $accessType * self::$OTHER;

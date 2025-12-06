@@ -19,6 +19,8 @@ use Acorn\User\Models\User;
 
 Trait MorphConfig
 {
+    use PathsHelper;
+
     protected function appendClass(array &$fieldConfig, string $newClass): void
     {
         $cssClass   = (isset($fieldConfig['cssClass']) ? $fieldConfig['cssClass'] : '');
@@ -145,16 +147,16 @@ Trait MorphConfig
                     // ------------------------------------------------- Comment Add-ins
                     // Actions: View all, Goto selected, Create new popup, Debug
                     if (isset($config->fields)) {
-                        foreach ($config->fields as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                        foreach ($config->fields as &$fieldConfig) self::adornFieldWithActions($fieldConfig, $controllerModel);
                     }
                     if (isset($config->tabs['fields'])) {
-                        foreach ($config->tabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                        foreach ($config->tabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig, $controllerModel);
                     }
                     if (isset($config->secondaryTabs['fields'])) {
-                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                        foreach ($config->secondaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig, $controllerModel);
                     }
                     if (isset($config->tertiaryTabs['fields'])) {
-                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig);
+                        foreach ($config->tertiaryTabs['fields'] as &$fieldConfig) self::adornFieldWithActions($fieldConfig, $controllerModel);
                     }
 
                     // ------------------------------------------------- Defaults for drop-downs
@@ -701,7 +703,7 @@ Trait MorphConfig
         }
     }
 
-    protected static function adornFieldWithActions(array &$fieldConfig): void
+    protected static function adornFieldWithActions(array &$fieldConfig, Model|NULL $controllerModel): void
     {
         if (isset($fieldConfig['actions']) && is_array($fieldConfig['actions'])) {
             $lis = '';
@@ -740,6 +742,12 @@ Trait MorphConfig
                         if (!isset($actionConfig['control'])) 
                             $actionConfig['control'] = 'newtab';
                         break;
+                    case 'goto-event':
+                        if (!isset($actionConfig['href'])) 
+                            $actionConfig['href'] = '/backend/acorn/calendar/months#!/event/:event';
+                        if (!isset($actionConfig['control'])) 
+                            $actionConfig['control'] = 'newtab';
+                        break;
                     case 'debug':
                         if (get('debug')) {
                             $actionConfig = array(
@@ -764,8 +772,12 @@ Trait MorphConfig
                     $content      = (isset($actionConfig['content']) ? $actionConfig['content'] : $labelEscaped);
                     $titleEscaped = (isset($actionConfig['title']) ? e($actionConfig['title']) : $labelEscaped);
                     if (isset($actionConfig['href'])) {
+                        $href    = ($controllerModel && $controllerModel->exists
+                            ? self::tokenizeStringFromModel($actionConfig['href'], $controllerModel)
+                            : $actionConfig['href']
+                        );
                         $target  = ((isset($actionConfig['control']) && $actionConfig['control'] == 'newtab') ? '_blank' : '');
-                        $content = "<a tabindex='-1' target='$target' href='$actionConfig[href]'>$content</a>";
+                        $content = "<a tabindex='-1' target='$target' href='$href'>$content</a>";
                     }
                     $lis .= "<li class='$name' title='$titleEscaped'>$content</li>";
                 }

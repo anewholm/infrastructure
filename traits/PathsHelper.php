@@ -25,6 +25,35 @@ Trait PathsHelper {
         );
     }
 
+    public static function tokenizeStringFromModel(string $str, Model $model): string
+    {
+        if (preg_match_all('/:([a-z0-9_]+)/', $str, $tokenMatches)) {
+            $tokens = array();
+            foreach ($tokenMatches[1] as $token) {
+                if ($model->hasAttribute($token)) {
+                    $tokens[$token] = $model->$token;
+                } else if (isset($model->belongsTo[$token]) && $model->$token) {
+                    $tokens[$token] = $model->$token->id;
+                }
+            }
+            $str = self::tokenizeString($str, $tokens);
+        }
+        return $str;
+    }
+
+    public static function tokenizeString(string $str, array $tokens): string
+    {
+        // what:this
+        // array('this' => 9)
+        // what9
+        $keyTokens = array();
+        foreach ($tokens as $name => $value) $keyTokens[":$name"] = $value;
+        $newStr = str_replace(array_keys($keyTokens), array_values($keyTokens), $str);
+        if (strstr($newStr, ':') !== FALSE)
+            throw new Exception("Failed to replace all tokens in [$newStr]");
+        return $newStr;
+    }
+
     // ----------------------------------------- Class & Plugin
     public function fullyQualifiedClassName(Object $object = NULL): string
     {

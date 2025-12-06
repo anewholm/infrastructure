@@ -764,8 +764,17 @@ nav.collapsible > ul > li:has(a > i.acorn-splitter) {
 .custom-switch > span > span {
     /* Fix wrapping options with different locales */
     white-space: nowrap;
-    max-width: 
 }
 .custom-switch > span {
     overflow: hidden;
+}
+
+.btn.btn-default.ml-btn {
+    background: linear-gradient(90deg, #444444, #b4b4b4);
+    color: #fff;
+    font-weight: bold;
+}
+.btn.btn-default.ml-btn:after {
+    content: '\25be';
+    margin-left: 2px;
 }

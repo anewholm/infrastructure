@@ -164,6 +164,7 @@
             'viewaddmodels' => 'View all',
             'gotoformgroupselection' => 'Goto selection',
             'debug'         => 'Debug',
+            'gotoevent'     => 'Goto event',
         ]
     ],
     'errors' => [
