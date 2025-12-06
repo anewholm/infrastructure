@@ -96,7 +96,8 @@
             'advanced' => 'Advanced',
             'simple' => 'Simple',
             'current' => 'Current',
-            'prinmary' => 'Primary',
+            'current_user' => 'Current user',
+            'primary' => 'Primary',
             'all_controllers' => 'All',
             'dateformats' => [
                 'day' => 'Day',

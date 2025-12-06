@@ -568,6 +568,56 @@ table.table.data tbody tr.rowlink td ul.action-functions > li:hover > a {
     border: 1px solid #000;
 }
 
+/* ------------------------------------- Content only hints 
+ * Copied from backend.css
+ * adjusted for .content
+ */
+.hint-field.callout-success > div > .content {
+    background-image: linear-gradient(rgba(46, 160, 67, .15), rgba(46, 160, 67, .15));
+    border-color: rgba(46, 160, 67, .4)
+}
+.hint-field.callout-success > div > .content > i {color: #6d915e;}
+
+.hint-field.callout-info > div > .content {
+    background-image: linear-gradient(rgba(56, 139, 253, .15), rgba(56, 139, 253, .15));
+    border-color: rgba(56, 139, 253, .4)
+}
+.hint-field.callout-info > div > .content > i {color: #597f97;}
+
+.hint-field.callout-warning > div > .content {
+    background-image: linear-gradient(rgba(187, 128, 9, .15), rgba(187, 128, 9, .15));
+    border-color: rgba(187, 128, 9, .4)
+}
+.hint-field.callout-warning > div > .content > i {color: #9f8e51;}
+
+.hint-field.callout-danger > div > .content {
+    background-image: linear-gradient(rgba(248, 81, 73, .15), rgba(248, 81, 73, .15));
+    border-color: rgba(248, 81, 73, .4)
+}
+.hint-field.callout-danger > div > .content > i {color: #9f5551;}
+
+.hint-field.callout-stop-circle > div > .content {
+    background-image: linear-gradient(rgba(248, 81, 73, .15), rgba(248, 81, 73, .15));
+    border-color: rgba(248, 81, 73, .4)
+}
+.hint-field.callout-stop-circle > div > .content > i {color: #9f5551;}
+
+
+.hint-field > div > .content > i {
+    font-size: 26px;
+    float: left;
+}
+.hint-field > div > .content > h3 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    margin: 0px 0px 0px 35px;
+}
+.hint-field > div > .content > p {
+    clear: both;
+}
+
+
 /* ------------------------------------- Popups */
 .modal-dialog .help-block.function-description {
     padding-bottom: 20px;
@@ -777,4 +827,52 @@ nav.collapsible > ul > li:has(a > i.acorn-splitter) {
 .btn.btn-default.ml-btn:after {
     content: '\25be';
     margin-left: 2px;
+}
+
+/* ------------------------------- LinuxPermissions
+ * permissions-field 
+ * Also appears in columns.yaml
+ */
+.permissions-field .permissions-number {
+    font-size:9px;
+    font-weight:bold;
+    border-radius:24px;
+    color:#fff;
+    background-color:#777;
+    padding:1px 4px;
+    vertical-align: middle;
+}
+/* High specificity to override the table.table.data directive */
+body div.permissions-field > table.permissions-table > tbody > tr > td, 
+body div.permissions-field > table.permissions-table > tbody > tr > th {
+    color:#000;
+    white-space: nowrap;
+    padding: 0px;
+}
+.permissions-field table label,
+.permissions-field table input {
+    display: inline-block;
+    font-size:16px;
+    cursor:pointer;
+    margin:0px 4px;
+    vertical-align: middle;
+}
+.permissions-field table input {
+    height: 17px;
+    width: 17px;
+}
+
+table.table.data tr.rowlink .permissions-field td,
+table.table.data tr.rowlink .permissions-field th {
+    background-color: Transparent;
+}
+tr.rowlink .permissions-field .permissions-number {
+    display: none;
+}
+tr.rowlink .permissions-field input {
+    border: 1px solid #ccc;
+    background-color: #eee;
+}
+tr.rowlink .permissions-field input:checked {
+    background-color: #888;
 }

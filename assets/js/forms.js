@@ -331,9 +331,12 @@ function acorn_popupComplete(context, textStatus, jqXHR) {
   });
 
   $(window).on('hide.oc.popup', function (event, $content, $popup) {
+    var validFormPopup = '.modal-content > div > form[data-request*=onRelationManage]';
+    var $popups    = $(`body > div.control-popup.modal:has(${validFormPopup})`);
     var popupDivs  = '.modal-content > div:has(> form[data-request*=onRelationManage])';
     var $popupDivs = $popup.find(popupDivs);
     var popup      = $popup.data('oc.popup');
+    $popups.removeClass('loading');
     
     if ($popupDivs.length > 1) {
       var $lastDiv = $popupDivs.last();
