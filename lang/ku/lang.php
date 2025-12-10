@@ -6,6 +6,11 @@
         'replication_debug' => 'Çewtgerandina dîkşandinê',
         'trigger_http_call_response' => 'Berdevkê li bangê HTTPê çalak bike'
     ],
+    'languages' => [
+        'english' => 'Îngilîzî',
+        'kurdish' => 'Kurdî',
+        'arabic' => 'Erebî',
+    ],
     'dashboard' => [
         'widget_tomcat_root_label' => 'TomCat root',
         'widget_tomcat_root_error' => 'The TomCat root is required.',

@@ -201,32 +201,38 @@ class RelationController extends RelationControllerBase
         parent::initRelation($model, $field); // Initializes widgets on controller
 
         // Point to the parent view path
-        if ($this->toolbarWidget) $this->toolbarWidget->addViewPath('~/modules/acorn/partials');
         $this->addViewPath('~/modules/backend/behaviors/relationcontroller/partials');
         $this->addViewPath('~/modules/acorn/partials');
+    }
+
+    protected function makeToolbarWidget()
+    {
+        // Point to the parent view path
+        if ($toolbarWidget = parent::makeToolbarWidget()) {
+            $toolbarWidget->addViewPath('~/modules/acorn/partials');
+        }
+        return $toolbarWidget;
+    }
+
+    protected function makeViewWidget()
+    {
+        $viewWidget = parent::makeViewWidget();
 
         // ------------------------------------ Hide the parent model column
         // TODO: Hide any 1-1 belongsTo off the parent model also
         // It will still show if it is selected in the cookies
         // TODO: Shouldn't this be in|is in MorphConfig?
-        if (property_exists($this, 'viewWidget')
-            && $this->viewWidget
-            && $this->viewWidget->model
-            && $this->model
-        ) {
-            $parentModel = $this->model;
-            $listModel   = $this->viewWidget->model; // Relation Manager models
-            foreach ($this->viewWidget->columns as $name => &$config) {
-                if (isset($config['relation'])) {
-                    $relationName = $config['relation'];
-                    if ($listModelRelation = $listModel->$relationName()) {
-                        if ($listModelRelation->getRelated() instanceof $parentModel) {
-                            $config['invisible'] = true;
-                        }
+        foreach ($viewWidget->columns as $name => &$config) {
+            if (isset($config['relation'])) {
+                $relationName = $config['relation'];
+                if ($listModelRelation = $viewWidget->model->$relationName()) {
+                    if ($listModelRelation->getRelated() instanceof $this->model) {
+                        $config['invisible'] = true;
                     }
                 }
             }
         }
+        return $viewWidget;
     }
 
     protected function loadModelRelationConfig(Model &$model, bool $makeWidgets = FALSE): void {

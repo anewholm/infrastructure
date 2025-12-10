@@ -6,6 +6,11 @@
         'replication_debug' => 'Replication Debug',
         'trigger_http_call_response' => 'Trigger HTTP call response'
     ],
+    'languages' => [
+        'english' => 'English',
+        'kurdish' => 'Kurdish',
+        'arabic' => 'Arabic',
+    ],
     'dashboard' => [
         'widget_tomcat_root_label' => 'TomCat root',
         'widget_tomcat_root_error' => 'The TomCat root is required.',
