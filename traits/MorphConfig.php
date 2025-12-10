@@ -301,12 +301,12 @@ Trait MorphConfig
                                 // Student->user has common with UserUserLanguage->user
                                 // when adding XfromXSemi languages
                                 // We need the actual controller object
+                                // Avoid early-stage hydration __get()
                                 else if ($controllerModel
                                     && $controllerModel->hasRelation($fieldName)
                                     && ($relation = $controllerModel->$fieldName())
                                     && ($relation instanceof BelongsTo)
-                                    && ($controllerFieldModel = $controllerModel->$fieldName)
-                                    && ($dropDownModel == get_class($controllerFieldModel))
+                                    && ($controllerFieldModel = $relation->first())
                                 ) {
                                     $this->appendClass($fieldConfig, 'hidden');
                                     $fieldConfig['type']      = 'text';

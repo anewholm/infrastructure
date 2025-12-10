@@ -55,6 +55,14 @@ class Controller extends BackendController
 
         $this->addViewPath('~/modules/acorn/partials');
 
+        Event::listen('backend.form.extendFields', function($widget) {
+            foreach ($widget->getFields() as $field) {
+                if (method_exists($field, 'addViewPath')) 
+                    $field->addViewPath('~/modules/acorn/partials');
+            }
+            $widget->addViewPath('~/modules/acorn/partials');
+        });
+
         Event::listen('backend.page.beforeDisplay', function($controller, $action, $params) {
             // Files commonly get loaded in popups, so we always include this widget
             // TODO: attach the FileUpload widget instead

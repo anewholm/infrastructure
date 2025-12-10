@@ -25,4 +25,9 @@ class FormController extends BackendFormController
 
         parent::initForm($model, $context = null);
     }
+
+    public function getViewPath(string $fileName, string|array $viewPaths = null): string
+    {
+        return parent::getViewPath($fileName, $viewPaths);
+    }
 }

@@ -28,6 +28,18 @@ class ListController extends BackendListController
         });
 
         Lists::extend(function($widget){
+            $widget->bindEvent('list.extendRecords', function (&$records) use($widget) {
+                if (!$records->isEmpty()) {
+                    if ($records->first()->getClassExtension('Acorn.Behaviors.TranslatableModel')) {
+                        // Set to view translation
+                        // for TranslateBackend
+                        foreach ($records as &$record) {
+                            $record->setViewMode();
+                        }
+                    }
+                }
+            });
+
             $widget->bindEvent('list.overrideColumnValue', function ($record, $column, $value) use($widget) {
                 static $firstColumn, $iColumn, $lastColumnRecord, $previousRecord, $iGroups;
                 // Remember start column so we can detect when the row starts again
@@ -41,7 +53,6 @@ class ListController extends BackendListController
                 // Column groups
                 if (is_null($iGroups)) $iGroups = array();
                 if (!isset($iGroups[$iColumn])) $iGroups[$iColumn] = 0;
-
                 $thisValue   = $widget->getColumnValueRaw($record, $column);
                 $lastValue   = ($previousRecord ? $widget->getColumnValueRaw($previousRecord, $column) : NULL);
                 $isDuplicate = ($thisValue && $thisValue == $lastValue);

@@ -21,11 +21,56 @@ function acorn_updateViewSelectionLink() {
   }
 }
 
+var observer;
 function acorn_dynamicElements(){
   // Callouts (hints) close button
   // NOTE: Not using data-dismiss="callout" because we want a cross and a slideUp effect
   $('.callout .close').on('click', function(){
     $(this).closest('.callout').slideUp();
+  });
+
+  // Translate and slide ML selectors
+  // We cannot override the partial because of makeMLPartial() hardcoded partial path
+  if (window.MutationObserver) {
+    observer = new MutationObserver(function(mutations){
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          // After receiving the notification that the child was removed,
+          // further modifications to the detached subtree no longer trigger the observer.
+          var jMutated = $(mutation.target);
+          var oldText  = jMutated.text();
+          var newText;
+          switch (jMutated.text()) {
+            case 'en': newText = 'English (English)'; break;
+            case 'ar': newText = 'العربية (Arabic)'; break;
+            case 'ku': newText = 'Kurdî (Kurdish)'; break;
+          } 
+          if (newText && newText != oldText) jMutated.text(newText);
+        }
+      });
+    });
+    var xMlBtns = document.querySelector('.ml-btn');
+    if (xMlBtns) observer.observe(xMlBtns, {characterData: true, subtree: true, childList: true});
+  }
+
+  // Translate to better language indicators
+  $('.ml-dropdown-menu > li > a').each(function(){
+    var locale = $(this).attr('data-switch-locale');
+    var text;
+    switch (locale) {
+      case 'en': text = 'English (English)'; break;
+      case 'ku': text = 'Kurdî (Kurdish)'; break;
+      case 'ar': text = 'العربية (Arabic)'; break;
+    }
+    if (text) $(this).text(text);
+  });
+
+  // Slide the ML indicator in and out
+  $('.field-multilingual').keyup(function(){
+    $(this).find('.ml-btn').css('max-width', '44px');
+  });
+  $('.field-multilingual input').blur(function(){
+    $(this).parent().find('.ml-btn').css('max-width', 'fit-content');
   });
 
   // Push ML fields to the current locale, not the default

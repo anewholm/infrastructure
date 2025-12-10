@@ -6,6 +6,11 @@
         'replication_debug' => 'تصحيح النسخ المتماثل',
         'trigger_http_call_response' => 'تشغيل استجابة نداء HTTP'
     ],
+    'languages' => [
+        'english' => 'الإنجليزية',
+        'kurdish' => 'الكردية',
+        'arabic' => 'العربية',
+    ],
     'dashboard' => [
         'widget_tomcat_root_label' => 'TomCat root',
         'widget_tomcat_root_error' => 'The TomCat root is required.',

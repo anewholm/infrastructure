@@ -1,5 +1,6 @@
 <?php namespace Acorn\Behaviors;
 
+use Request;
 use Exception;
 use Winter\Translate\Behaviors\TranslatableModel as WinterTranslatableModel;
 use Winter\Storm\Html\Helper as HtmlHelper;
@@ -7,6 +8,30 @@ use Winter\Storm\Database\Model;
 
 class TranslatableModel extends WinterTranslatableModel
 {
+    // --------------------------- Update / View explicit modes on the Model
+    // This will cause un-translated English results
+    // when requesting no-locale values
+    // Thus allowing Form update fields to get the English result
+    // and other explicitly translated results
+    // correctly
+    private $updateMode = NULL; // 3-state
+
+    public function isUpdateMode(): bool {
+        $explicitViewMode   = ($this->updateMode === FALSE);
+        $explicitUpdateMode = ($this->updateMode === TRUE);
+        return !$explicitViewMode
+            && (
+                   strstr(Request::url(), '/update/') 
+                || get('mode') == 'update'
+                || $explicitUpdateMode
+            );
+    }
+    public function isViewMode(): bool {return $this->updateMode === FALSE;}
+
+    public function setUpdateMode(): void {$this->updateMode = TRUE;}
+    public function setViewMode(): void {$this->updateMode = FALSE;}
+    public function copyUpdateModeFrom(TranslatableModel $model): void {$this->updateMode = $model->updateMode;}
+
     public function setAttributeTranslated($key, $value, $locale = null)
     {
         // Set the translatableAttributes on the model, not the saveData

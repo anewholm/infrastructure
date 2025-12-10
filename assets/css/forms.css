@@ -309,6 +309,9 @@ body.advanced .modal-body .control-simplelist li:has(.checkbox > input[name=visi
 .form-group:has(.select2-container--open) .field-actions {
     display: none;
 }
+.modal-content .field-actions > .goto-event {
+    display: none;
+}
 .field-actions > li {
     display: inline;
     white-space: nowrap;
@@ -827,6 +830,11 @@ nav.collapsible > ul > li:has(a > i.acorn-splitter) {
 .btn.btn-default.ml-btn:after {
     content: '\25be';
     margin-left: 2px;
+}
+body .field-multilingual .ml-btn {
+    max-width: fit-content;
+    text-transform: none;
+    overflow: hidden;
 }
 
 /* ------------------------------- LinuxPermissions
