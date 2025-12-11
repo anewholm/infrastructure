@@ -21,6 +21,17 @@ function acorn_updateViewSelectionLink() {
   }
 }
 
+function acorn_translate_locale(jMLBtn) {
+  var oldText  = jMLBtn.text();
+  var newText;
+  switch (oldText) {
+    case 'en': newText = 'English (English)'; break;
+    case 'ar': newText = 'العربية (Arabic)';     break;
+    case 'ku': newText = 'Kurdî (Kurdish)';   break;
+  } 
+  if (newText && newText != oldText) jMLBtn.text(newText);
+}
+
 var observer;
 function acorn_dynamicElements(){
   // Callouts (hints) close button
@@ -37,23 +48,16 @@ function acorn_dynamicElements(){
         if (mutation.type === "childList") {
           // After receiving the notification that the child was removed,
           // further modifications to the detached subtree no longer trigger the observer.
-          var jMutated = $(mutation.target);
-          var oldText  = jMutated.text();
-          var newText;
-          switch (jMutated.text()) {
-            case 'en': newText = 'English (English)'; break;
-            case 'ar': newText = 'العربية (Arabic)'; break;
-            case 'ku': newText = 'Kurdî (Kurdish)'; break;
-          } 
-          if (newText && newText != oldText) jMutated.text(newText);
+          acorn_translate_locale($(mutation.target));
         }
       });
     });
     var xMlBtns = document.querySelector('.ml-btn');
     if (xMlBtns) observer.observe(xMlBtns, {characterData: true, subtree: true, childList: true});
   }
+  $('.ml-btn').each(function(){acorn_translate_locale($(this));});
 
-  // Translate to better language indicators
+  // Translate dropdown list to better language indicators
   $('.ml-dropdown-menu > li > a').each(function(){
     var locale = $(this).attr('data-switch-locale');
     var text;
