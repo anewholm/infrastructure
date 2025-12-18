@@ -149,7 +149,8 @@ class RelationController extends RelationControllerBase
                     }
                 }
 
-                if ($this->popupModel) {
+                // Note that the popupModel might be a User
+                if ($this->popupModel && $this->popupModel instanceof Model) {
                     // Always pre-load the config_relation.yaml
                     // from the real popup model controller immediately
                     // onto $this (wrong) controller

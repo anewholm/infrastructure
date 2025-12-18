@@ -63,6 +63,7 @@ class Model extends BaseModel
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
     use \Acorn\Traits\NiceErrors;
+    use Traits\Leaf;
 
     public const LE_DELETE_ON_NULL = 2; // Row deletes
     public const LE_FALSE_ON_NULL = 3;  // Useful for missing boolean checkbox values
@@ -79,113 +80,6 @@ class Model extends BaseModel
     public $implement = ['Acorn.Behaviors.TranslatableModel'];
     public $implementReplaces = ['Winter.Translate.Behaviors.TranslatableModel'];
     public $translatable = [];
-
-    // --------------------------------------------- Star schema centre => leaf services
-    public function getLeafTypeAttribute(?bool $throwIfNull = FALSE)
-    {
-        return $this->getLeafTypeModel($throwIfNull)?->unqualifiedClassName();
-    }
-
-    public function getLeafTableAttribute($value): string|NULL
-    {
-        $ret = NULL;
-        if ($key = $this->getLeafTableTranslationKey($value)) {
-            $ret = trans($key);
-        } else {
-            // Maybe not translated, but we will offer
-            $ret = trans($this->getLeafTableCacheClass());
-        }
-        return $ret;
-    }
-
-    public function getLeafTableTranslationKey(string|NULL $value = NULL): string|NULL
-    {
-        $key = NULL;
-        
-        if (is_null($value) && isset($this->attributes['leaf_table']))
-            $value  = $this->attributes['leaf_table'];
-        
-        if ($value) {
-            $tableParts = explode('_', $value);
-            if (isset($tableParts[2])) {
-                $modelParts = array_slice($tableParts, 2);
-                $localKey   = strtolower(Str::singular(implode('', $modelParts)));
-                $key        = "$tableParts[0].$tableParts[1]::lang.models.$localKey.label";
-            }
-        }
-
-        return $key;
-    }
-
-    public function getLeafTableCacheClass(bool $fqn = FALSE): string|NULL
-    {
-        $class = NULL;
-        if (isset($this->attributes['leaf_table'])) {
-            // acorn_university_schools 
-            //   => Schools 
-            //   => Acorn\University\Models\School
-            $leafTable      = $this->attributes['leaf_table'];
-            $leafTableParts = explode('_', $leafTable);
-            array_shift($leafTableParts); // acorn
-            array_shift($leafTableParts); // university
-            $leafTableName = implode(' ', $leafTableParts); // schools
-            $class         = Str::singular($leafTableName);
-            $class         = Str::title($class);
-            if ($fqn) {
-                // Swap in last name for this FQN
-                $class        = str_replace(' ', '', $class);
-                $thisFQNParts = explode('\\', get_class($this));
-                array_pop($thisFQNParts);
-                array_push($thisFQNParts, $class);
-                $class  = implode('\\', $thisFQNParts);
-                if (!class_exists($class)) $class = NULL;
-            }
-        }
-        return $class;
-    }
-
-    public function getLeafTableCacheModel(): Model|NULL
-    {
-        $leafObject = NULL;
-        if ($leafModelFQN = $this->getLeafTableCacheClass(TRUE)) {
-            // Check hasOne relations for this leaf model
-            $relations = array_merge($this->hasOneThrough, $this->hasOne);
-            foreach ($relations as $name => &$definition) {
-                if (is_array($definition) && isset($definition[0]) && $definition[0] == $leafModelFQN) {
-                    $this->load($name);
-                    if ($leafObject = $this->$name) break;
-                }
-            }
-        }
-        return $leafObject;
-    }
-
-    public function getLeafTypeModel(?bool $throwIfNull = FALSE)
-    {
-        // For base tables that have multiple possible leaf detail tables in a star schema
-        // we search the hasOne relation to determine which leaf table has the 1-1
-        // Check for and use the leaf_table cache column
-        $leafObject = $this->getLeafTableCacheModel();
-        
-        if (!$leafObject) {
-            $relations  = array_merge($this->hasOneThrough, $this->hasOne);
-            foreach ($relations as $name => &$definition) {
-                // TODO: Need to check the reverse belongsTo relation(s), 
-                // because that will be the leaf relation
-                if (is_array($definition) && isset($definition['leaf']) && $definition['leaf']) {
-                    $this->load($name);
-                    if ($leafObject = $this->$name) break;
-                }
-            }
-        }
-
-        if ($throwIfNull && !$leafObject) {
-            $className = get_class($this);
-            throw new Exception("Leaf $className not found for id($this->id)");
-        }
-        
-        return $leafObject;
-    }
 
     protected static function boot()
     {
@@ -618,14 +512,23 @@ class Model extends BaseModel
 
     public function buildNameFromRelations(bool $html = FALSE, string $delimeter = '::'): string
     {
-        $nameModels = array();
+        $nameRelations = array();
+        $nameModels    = array();
         foreach ($this->belongsTo as $name => &$config) {
             if (isset($config['name']) && $config['name']) {
-                // Global Scopes would load many users 
-                // and hide names of restricted objects
-                // first() because this is a belongsTo
-                array_push($nameModels, $this->$name()->withoutGlobalScopes()->first());
+                array_push($nameRelations, $name);
             }
+        }
+        // TODO: Eager load name relations efficiently
+        // $this->load($nameRelations);
+        // $query = $this->newQueryWithoutRelationships()->with($nameRelations);
+        // $query->eagerLoadRelations([$this]);
+
+        foreach ($nameRelations as $name) {
+            // Global Scopes would load many users 
+            // and hide names of restricted objects
+            // first() because this is a belongsTo
+            array_push($nameModels, $this->$name()->withoutGlobalScopes()->first());
         }
         $name = $this->buildName($html, $delimeter, ...$nameModels);
 
@@ -1178,12 +1081,13 @@ SQL;
                 : NULL
             )
         );
-        $models = ($optionsModel ? $optionsModel::all() : static::all());
 
         $name = (isset($field->config['nameFrom'])
             ? $field->config['nameFrom']
             : 'name'
         );
+        // TODO: $models = ($optionsModel ? $optionsModel::select('id', $name) : static::select('id', $name));
+        $models = ($optionsModel ? $optionsModel::all() : static::all());
 
         // Hierarchies
         $hierarchical = (isset($field->config['hierarchical'])
@@ -1231,7 +1135,7 @@ SQL;
 
     public static function menuitemCountFor(string $class, bool $force = FALSE): int|NULL {
         $count = NULL;
-        if (get('count') || $force || TRUE) {
+        if (get('count') || $force) {
             try { // Materialized views can error on this
                 $count = $class::count();
             } catch (Exception $ex) {}
@@ -1243,14 +1147,20 @@ SQL;
         return $count;
     }
 
-    public function actionFunctions(string $typeLimit = NULL, string $fnName = NULL): array {
-        // Direct (this) model action functions
+    public function actionFunctions(string|NULL $typeLimit = NULL, string|NULL $fnName = NULL): array {
+        // Direct (this) & inherited model action functions
+        // $typeLimit: list only shows at the top of List screens. model_id is not relevant
+        // $typeLimit: row  shows in RM rows and at the top of full Model screens. model_id is relevant
+        // $typeLimit: row-only shows only in RM rows. model_id is relevant
+
+        // Direct (this)
         $actionFunctions = ($this->actionFunctions ?: array());
         foreach ($actionFunctions as $name => &$actionFunctionDefinition) {
             $type = $actionFunctionDefinition['type'] ?? NULL;
-            if (   is_null($typeLimit) 
-                || ( $type && $typeLimit == $type)
-                || (!$type && $typeLimit == 'row')
+
+            if (   is_null($typeLimit)       // No typeLimit: return all
+                || ( $type && $typeLimit == $type)  // typeLimit: return only explicit row or list types
+                || (!$type && $typeLimit == 'row')  // When typeLimit is explicitly row, also return actions without type
             ) {
                 // Populate the Model/Id for correct lookup later
                 $actionFunctionDefinition['model']    = get_class($this);

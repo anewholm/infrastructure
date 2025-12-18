@@ -12,6 +12,16 @@
     display: inline-block;
 }
 
+.list-cell-type-partial .leaf-type {
+    color: #888;
+}
+.list-cell-type-partial .leaf-type:before {
+    content: '(';
+}
+.list-cell-type-partial .leaf-type:after {
+    content: ')';
+}
+
 /* tr.rowlink */
 tr.rowlink .nowrap {
     white-space: nowrap;
