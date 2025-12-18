@@ -10,6 +10,7 @@ else if (isset($record))     $model = $record;
 else throw new \Exception("Cannot ascertain model for actions operation");
 
 $formMode        = (isset($formModel) && $model == $formModel);
+$rowMode         = !$formMode;
 $class           = get_class($model);
 $user            = BackendAuth::user();
 $canAdvanced     = $user->hasPermission('acorn.advanced');
@@ -67,8 +68,12 @@ if ($model->advanced && $canAdvanced && $formMode) {
 }
 
 // --------------------------------- Action Functions
+// Includes inherited 1to1 action functions
+// This partial is only used from fields|columns.yaml
+// Only _list_toolbar.php partial calls actionFunctions('list')
 if ($model->exists && method_exists($model, 'actionFunctions')) {
-    $actionFunctions = $model->actionFunctions('row'); // Includes inherited 1to1 action functions
+    $actionFunctions = $model->actionFunctions('row'); 
+    if ($rowMode) $actionFunctions = array_merge($actionFunctions, $model->actionFunctions('row-only')); 
     foreach ($actionFunctions as $fnName => &$definition) {
         // SECURITY: Action Function Premissions
         $hasPermission = TRUE;
