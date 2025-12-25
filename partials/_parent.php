@@ -25,7 +25,7 @@ if (isset($column->config['relation'])) {
                     // Global Scopes prevent the retrieval of the parent_id attribute
                     // so we make a manual request
                     if ($parent_id = $node->attributes['parent_id']) {
-                        $node = $node::where('id', '=', $parent_id)->first();
+                        $node = $node::where('id', '=', $parent_id)->withoutGlobalScopes()->first();
                     } else $node = NULL;
                 } else {
                     $node = $node->parent()->withoutGlobalScopes()->first();

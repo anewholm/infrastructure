@@ -38,6 +38,7 @@ use Acorn\Models\Server;
 use Acorn\Scopes\GlobalChainScope;
 use Acorn\Models\InterfaceSetting;
 use Acorn\User\Models\User;
+use Acorn\Traits\EagerLoadRelation;
 
 /*
 class Saving {
@@ -64,6 +65,9 @@ class Model extends BaseModel
     use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
     use \Acorn\Traits\NiceErrors;
     use Traits\Leaf;
+    use EagerLoadRelation {
+        booted as protected loadRelationBooted;
+    }
 
     public const LE_DELETE_ON_NULL = 2; // Row deletes
     public const LE_FALSE_ON_NULL = 3;  // Useful for missing boolean checkbox values
@@ -84,7 +88,7 @@ class Model extends BaseModel
     protected static function boot()
     {
         static::extend(function ($model) {
-            // NestedTree will overwrite out parent relation
+            // NestedTree will overwrite our parent relation
             // removing any custom attributes like name
             if (isset($model->belongsTo['parent']))
                 $model->belongsTo['parent_copy'] = $model->belongsTo['parent'];
@@ -94,6 +98,8 @@ class Model extends BaseModel
 
     protected static function booted()
     {
+        self::loadRelationBooted();
+
         // Use locally defined GlobalScope classes, e.g. YearScope
         if (static::$globalScope) static::addGlobalScope(new static::$globalScope());
         // Follow all global_scope=>TRUE relations
@@ -510,7 +516,7 @@ class Model extends BaseModel
         return $name;
     }
 
-    public function buildNameFromRelations(bool $html = FALSE, string $delimeter = '::'): string
+    public function buildNameFromRelations(bool $html = FALSE, string $delimeter = '::', bool $withLeafTable = TRUE): string
     {
         $nameRelations = array();
         $nameModels    = array();
@@ -534,6 +540,13 @@ class Model extends BaseModel
 
         if ($nameSuffix = $this->name_suffix)
             $name = "$name$nameSuffix";
+
+        if ($withLeafTable) {
+            if ($leafTable = $this->leaf_table) {
+                if (strstr($name, $leafTable) === FALSE)
+                    $name = "$leafTable-$name";
+            }
+        }
 
         return $name;
     }
@@ -1073,7 +1086,7 @@ SQL;
         return $model->qualifyColumns($columns);
     }
 
-    public static function dropdownOptions($form, $field, $optionsModel = NULL)
+    public static function dropdownOptions($form = NULL, $field = NULL, $optionsModel = NULL, bool|NULL $withoutGlobalScopes = FALSE)
     {
         $optionsModel = ($optionsModel ?:
             (isset($field->config['optionsModel'])
@@ -1087,7 +1100,10 @@ SQL;
             : 'name'
         );
         // TODO: $models = ($optionsModel ? $optionsModel::select('id', $name) : static::select('id', $name));
-        $models = ($optionsModel ? $optionsModel::all() : static::all());
+        if ($withoutGlobalScopes)
+            $models = ($optionsModel ? $optionsModel::withoutGlobalScopes()->get() : static::withoutGlobalScopes()->get());
+        else
+            $models = ($optionsModel ? $optionsModel::all() : static::all());
 
         // Hierarchies
         $hierarchical = (isset($field->config['hierarchical'])

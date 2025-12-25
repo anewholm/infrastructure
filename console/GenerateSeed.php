@@ -6,7 +6,7 @@ use Winter\Storm\Console\Command;
 use System\Models\PluginVersion;
 use System\Classes\PluginManager;
 use DB;
-use File;
+use Exception;
 use Illuminate\Database\QueryException;
 
 class GenerateSeed extends Command
@@ -33,6 +33,7 @@ class GenerateSeed extends Command
         {--c|condition=true : SQL where clause to limit records, Default: all records}
         {--x|onconflict= : on conflict on constraint do nothing clause. SQL format only}
         {--d|delete : SQL format only: Delete all records first, Default: false}
+        {--u|update : SQL format only: Update the records based on id. Implies id}
         {--i|id : Use the id field. Without the id, no existence check is possible. default: yes}
         {--w|white-space=normalize : Normalize in-array white-space, including replacing new-lines with a space. Options: normalize, no-new-lines}';
 
@@ -54,6 +55,7 @@ class GenerateSeed extends Command
         $whiteSpace  = $this->option( 'white-space');
         $useIdField  = $this->option( 'id');
         $deleteFirst = $this->option( 'delete');
+        $update      = $this->option( 'update');
 
         $results     = DB::select("select * from $table where $condition");
 
@@ -105,38 +107,74 @@ class GenerateSeed extends Command
                         )
                     );
                     if ($deleteFirst) print("  DELETE FROM $table;\n");
-                    $insert     = "INSERT INTO $table(";
-                    $first      = TRUE;
-                    foreach ($results[0] as $name => $value) {
-                        if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
-                            if (!$first) $insert .= ', ';
-                            $insert .= $name;
-                            $first = FALSE;
-                        }
-                    }
-                    $insert .= ") VALUES(";
-
-                    foreach ($results as $result) {
-                        $first = TRUE;
-                        print("  $insert");
-                        foreach ($result as $name => $value) {
-                            if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
-                                if (!$first) print(', ');
-                                $export = var_export($value, TRUE);
-                                switch ($whiteSpace) {
-                                    case 'normalize':
-                                        $export = preg_replace('/\s+/', ' ', $export);
-                                        break;
-                                    case 'no-new-lines':
-                                        $export = preg_replace('/[\n\r]+/', ' ', $export);
-                                        break;
+                    
+                    if ($update) {
+                        // ------------------------------- UPDATE
+                        $insert = "UPDATE $table set ";
+                        foreach ($results as $result) {
+                            print("  $insert");
+                            $id    = NULL;
+                            $first = TRUE;
+                            foreach ($result as $name => $value) {
+                                if ($name == 'id') $id = $value;
+                                if (!in_array($name, self::IGNORE_COLUMNS) && $name != 'id') {
+                                    $export = var_export($value, TRUE);
+                                    switch ($whiteSpace) {
+                                        case 'normalize':
+                                            $export = preg_replace('/\s+/', ' ', $export);
+                                            break;
+                                        case 'no-new-lines':
+                                            $export = preg_replace('/[\n\r]+/', ' ', $export);
+                                            break;
+                                    }
+                                    // var_export() uses \ escaping
+                                    // So we tell Postges to use C-style character escaping, including \n, \\
+                                    // https://www.postgresql.org/docs/8.3/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
+                                    if (!$first) print(', ');
+                                    print("\"$name\"=");
+                                    if (is_string($value)) print('E'); 
+                                    print($export);
+                                    $first = FALSE;
                                 }
-                                // var_export() uses \ escaping
-                                // So we tell Postges to use C-style character escaping, including \n, \\
-                                // https://www.postgresql.org/docs/8.3/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
-                                if (is_string($value)) print('E'); 
-                                print($export);
+                            }
+                            if (!$id) throw new Exception('Row does not have an id');
+                            print(" where \"id\" = '$id';\n");
+                        }
+                    } else {
+                        // ------------------------------- INSERT
+                        $insert = "INSERT INTO $table(";
+                        $first  = TRUE;
+                        foreach ($results[0] as $name => $value) {
+                            if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
+                                if (!$first) $insert .= ', ';
+                                $insert .= $name;
                                 $first = FALSE;
+                            }
+                        }
+                        $insert .= ") VALUES(";
+
+                        foreach ($results as $result) {
+                            $first = TRUE;
+                            print("  $insert");
+                            foreach ($result as $name => $value) {
+                                if (!in_array($name, self::IGNORE_COLUMNS) && ($useIdField || $name != 'id')) {
+                                    if (!$first) print(', ');
+                                    $export = var_export($value, TRUE);
+                                    switch ($whiteSpace) {
+                                        case 'normalize':
+                                            $export = preg_replace('/\s+/', ' ', $export);
+                                            break;
+                                        case 'no-new-lines':
+                                            $export = preg_replace('/[\n\r]+/', ' ', $export);
+                                            break;
+                                    }
+                                    // var_export() uses \ escaping
+                                    // So we tell Postges to use C-style character escaping, including \n, \\
+                                    // https://www.postgresql.org/docs/8.3/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
+                                    if (is_string($value)) print('E'); 
+                                    print($export);
+                                    $first = FALSE;
+                                }
                             }
                         }
                         print(") $onConflictClause;\n");

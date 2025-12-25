@@ -40,6 +40,7 @@ class HasManyDeep extends StaudenmeirHasManyDeep
     {
         // We save the last relation in the chain
         // this assumes that the rest of the chain already exists
+        // $this->getLastRelation()->attach($model->id)?
         $this->getLastRelation()->add($model, $sessionKey);
     }
     

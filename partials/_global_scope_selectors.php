@@ -46,9 +46,10 @@ if (isset($this->controller->widget->list->model) && !$isRelationManager) {
                                 <option value="0">$noneLabel</option>
 HTML
                 );
-                foreach ($classFQN::withoutGlobalScopes()->get() as $model) {
-                    $selected = ($setting == $model->id ? 'selected="1"' : '');
-                    print("<option value='$model->id' $selected>$model->name</option>");
+                // Was $classFQN::withoutGlobalScopes()->get()
+                foreach ($classFQN::dropdownOptions(NULL, NULL, NULL, TRUE) as $id => $name) {
+                    $selected = ($setting == $id ? 'selected="1"' : '');
+                    print("<option value='$id' $selected>$name</option>");
                 }
                 print("</select></div></form>");
             }

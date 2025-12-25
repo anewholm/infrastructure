@@ -1,0 +1,11 @@
+columns:
+  name:
+    label: acorn::lang.models.task.name
+    type: text
+    searchable: true
+    sortable: false
+  content:
+    label: acorn::lang.models.task.content
+    type: text
+    searchable: true
+    sortable: false

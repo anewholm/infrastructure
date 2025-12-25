@@ -474,3 +474,6 @@ body table.table.data tr.list-tree-level-5 td.list-cell-index-1 {padding-left: 1
 
 body table.table.data tr.list-tree-level-6 a.list-expand-collapse {left: 180px;}
 body table.table.data tr.list-tree-level-6 td.list-cell-index-1 {padding-left: 180px;}
+
+h1.tasks {font-size:40px;font-weight:bold;}
+ul.tasks {list-style:disc;padding-left:20px;margin-bottom: 20px}

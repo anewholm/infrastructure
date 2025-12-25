@@ -1,10 +1,6 @@
 <?php namespace Acorn;
 
 use Model;
-use BackendAuth;
-use \Backend\Models\User;
-use \Backend\Models\UserGroup;
-use ApplicationException;
 
 use Illuminate\Support\Str;
 // Illuminate\Database\Eloquent\Builder
@@ -14,14 +10,49 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Winter\Storm\Database\QueryBuilder;
 
+use Exception;
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\RelationNotFoundException;
 use InvalidArgumentException;
 
 class Builder extends BaseBuilder
 {
+    public function join($relationNames, ...$args) 
+    {
+        if (!$args && is_string($relationNames)) {
+            // This will add the _joins_ for all the $relationNames to this main query
+            // Nested relation join request 
+            //   e.g. academic_year_semester.event.first_event_part
+            //
+            // Pre-get: this model is dry
+            $model = $this->model;
+            foreach (explode('.', $relationNames) as $relationName) {
+                if (!$model->hasRelation($relationName))
+                    throw new Exception("Request for nested joining has no relation [$relationName]");
+                $relation     = $model->$relationName();
+                $relatedModel = $relation->getRelated();
+
+                // Manual join
+                // NOTE that HasManyDeep, BelongsToMany and HasManyThrough have a protected performJoin()
+                // that is run during addConstraints()
+                $reverse      = ($relation instanceof BelongsTo);
+                $key          = $relation->getForeignKeyName();
+                $columnFrom   = ($reverse ? $key : 'id');
+                $columnTo     = ($reverse ? 'id' : $key);
+                $fqTableFrom  = "$model->table.$columnFrom";
+                $fqTableTo    = "$relatedModel->table.$columnTo";
+                parent::join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
+                
+                $model = $relatedModel;
+            }
+        } else {
+            array_unshift($args, $relationNames);
+            parent::join(...$args);
+        }
+        return $this;
+    }
+
     /**
      * Add a "belongs to one|many" relationship(s) where clause to the query.
      * 

@@ -10,7 +10,7 @@ use Illuminate\Database\QueryException;
 
 use Winter\Storm\Html\Helper as HtmlHelper;
 
-use App;
+use BackendAuth;
 use DB;
 use File;
 use Form;
@@ -802,6 +802,7 @@ HTML;
         $fnName      = post('name');
         $postParams  = post('parameters') ?? array();
         $user        = User::authUser();
+        $backendUser = BackendAuth::user();
         $locale      = Lang::getLocale();
         $fnNameParts = explode('_', $fnName);
         $nameParts   = array_slice($fnNameParts, 5);
@@ -829,10 +830,11 @@ HTML;
 
         // SECURITY: Action Function Premissions
         $hasPermission = FALSE;
-        if (isset($actionFunctionDefinition['permissions'])) {
-            if ($user) {
-                foreach ($actionFunctionDefinition['permissions'] as $permission) {
-                    if ($user->hasPermission($permission)) $hasPermission = TRUE;
+        if (isset($actionFunctionDefinition['permissions']) && $backendUser) {
+            foreach ($actionFunctionDefinition['permissions'] as $permission) {
+                if ($backendUser->hasPermission($permission)) {
+                    $hasPermission = TRUE;
+                    break;
                 }
             }
         } else {

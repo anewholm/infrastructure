@@ -233,7 +233,9 @@ class GlobalChainScope implements Scope
         //       return self::applySession($builder, $model);
         //     }
         //   }
-        $setting = self::getSettingFor($model);
+        $setting   = self::getSettingFor($model);
+        $query     = $builder->getQuery();
+        $mainModel = $builder->getModel();
 
         if ($setting) {
             // Can be a direct where clause only
@@ -242,34 +244,64 @@ class GlobalChainScope implements Scope
             if ($model->globalScopeSubQuery) $globalScopeSubQuery = &$model->globalScopeSubQuery;
             
             // Finish off the sub-query|direct where clause
+            // We have LEFT joined all the way
             if (isset($model::$globalScope::$scopingFunction)) {
+                // ------------------ Boolean returning function() call
                 $scopingFunction = $model::$globalScope::$scopingFunction;
                 $settingEscaped  = str_replace("'", "\\'", $setting);
                 $globalScopeSubQuery->whereRaw("$scopingFunction($model->table.id, '$settingEscaped')");
+            } else if (isset($model::$globalScope::$scopingView)) {
+                // ------------------ Special inner join view with only
+                //   from_*_id
+                //   to_*_id
+                $scopingView     = $model::$globalScope::$scopingView;
+                // from_entity_id => to_entity_id
+                $modelParts = explode('\\', get_class($model));
+                $shortClass = end($modelParts);
+                $columnStub = Str::snake($shortClass);
+                $globalScopeSubQuery->join($scopingView, "$model->table.id", '=', "$scopingView.from_{$columnStub}_id");
+                $globalScopeSubQuery->where("$scopingView.to_{$columnStub}_id", '=', $setting);
             } else {
-                // orWhereNull() handles cases where 
-                // the parent model global-scope id is NULL:
+                // ------------------ Normal join to final table
+                // These 2 wheres need to be grouped together
+                // Or is NULL handles cases where the parent model global-scope id is NULL:
                 //   Calculation.academic_year_id is NULL
-                // as we have LEFT joined all the way
-                $globalScopeSubQuery->where("$model->table.id", '=', $setting)
-                    ->orWhereNull("$model->table.id");
+                $groupWheres = array(
+                    [
+                        'column'   => "$model->table.id", 
+                        'operator' => '=', 
+                        'value'    => $setting,
+                        'boolean'  => 'or'
+                    ],
+                    [
+                        'column'   => "$model->table.id", 
+                        'operator' => '=',
+                        'value'    => NULL,
+                        'boolean'  => 'or'
+                    ]
+                );
+                
+                // Users can always see the things they created
+                // We want this to be the last where in the sub-query
+                // We place it in every sub-query because there may be manu global-scopes AND'ed
+                // and we don't want an OR
+                if ($mainModel->hasRelation('created_by_user')) {
+                    if ($user = User::authUser()) {
+                        array_push($groupWheres, array(
+                            'column' => "$mainModel->table.created_by_user_id", 
+                            'value' => $user->id,
+                            'operator' => '='
+                        ));
+                    }
+                }
+
+                $globalScopeSubQuery->where($groupWheres);
             }
 
             if ($model->globalScopeSubQuery) {
                 // Apply the sub-query to the main builder
                 // This will translate the QueryBuilder in to a string Illuminate\Database\Query\Expression
-                $query     = $builder->getQuery();
-                $fromTable = $query->from;
-                $mainModel = $builder->getModel();
-
-                // Users can always see the things they created
-                // We want this to be the last where in the sub-query
-                if ($mainModel->hasRelation('created_by_user')) {
-                    if ($user = User::authUser())
-                        $model->globalScopeSubQuery->orWhere("$mainModel->table.created_by_user_id", $user->id);
-                }
-
-                $builder->whereIn("$fromTable.id", $model->globalScopeSubQuery, 'and');
+                $builder->whereIn("$query->from.id", $model->globalScopeSubQuery, 'and');
             }
 
             // TODO: Allow NULLs on the first join to show Models without an explicit setting
@@ -329,7 +361,10 @@ class GlobalChainScope implements Scope
             // Table references are local to the sub-query
             // It returns a valid id list only without reference to the external query
             $query = $builder->getQuery();
-            $model->globalScopeSubQuery = DB::table($query->from)->select("$query->from.id");
+            $model->globalScopeSubQuery = DB::table($query->from)
+                ->select("$query->from.id")
+                // This distinct makes a big difference. Not sure why...
+                ->distinct();
         }
 
         $globalScopeRelations = self::globalScopeRelationsOn($model);
