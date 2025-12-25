@@ -165,6 +165,13 @@
             'field' => 'Field',
             'content' => 'Content',
         ],
+        'task' => [
+            'label' => 'Task',
+            'label_plural' => 'Tasks',
+            'name' => 'Name',
+            'content' => 'content',
+            'settings_description' => 'Task ICS exported from Thunderbird',
+        ],
         'fieldactions' => [
             'createpopup'   => 'Create new',
             'viewaddmodels' => 'View all',

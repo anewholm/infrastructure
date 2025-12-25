@@ -890,3 +890,74 @@ tr.rowlink .permissions-field input {
 tr.rowlink .permissions-field input:checked {
     background-color: #888;
 }
+
+/* --------------------- Flow-chart */
+.flow-chart > .field-section {
+    border-bottom: none;
+}
+.flow-chart.count-2 ul > li {width: 40%;}
+.flow-chart.count-3 ul > li {width: 30%;}
+.flow-chart.count-4 ul > li {width: 22%;}
+.flow-chart.count-5 ul > li {width: 18%;}
+.flow-chart.count-6 ul > li {width: 14%;}
+.flow-chart.count-7 ul > li {width: 11%;}
+
+.flow-chart .callout.callout-info > .content > i.icon-info,
+.flow-chart .callout.callout-info > .content > p {
+    display: none;
+}
+.flow-chart .callout.callout-info > .content {
+    padding: 0px;
+    border: none;
+}
+.flow-chart ul > li {
+    position: relative;
+    float: left;
+    min-height: 80px;
+    min-width: 100px;
+
+    font-weight: bold;
+    background-color: #b3d5f1;
+    border: 1px solid #7f95d8;
+    border-radius: 6px;
+    padding: 10px;
+    margin-right: 20px;
+    margin-bottom: 20px;
+}
+.flow-chart ul > li > a {
+    color: #1a6cd8;
+    border-bottom: 1px dotted #888;
+}
+.flow-chart ul > li > b {
+    float: right;
+    margin-left: 6px;
+
+    font-size: 10px;
+    border-radius: 10px;
+    background-color: #3f559e;   
+    color: #fff;
+    padding: 1px 4px;
+}
+.flow-chart ul > li > i {
+    position: absolute;
+    top: 50%;
+    right: -24px;
+    margin-top: -20px;
+    z-index: 1;
+
+    font-size: 26px;
+    font-family: Font Awesome\ 6 Free;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: 900;
+    vertical-align: baseline;
+    width: auto;
+}
+.flow-chart ul > li > i:before {
+    content: "\f30b";
+}
+.flow-chart ul > li > span {
+    font-weight: normal;
+    color: #555;
+    display: block;
+}

@@ -113,16 +113,14 @@ $(window).on('ajaxUpdateComplete', acorn_tabbing);
 // ---------------------------------------------- Initial Focus
 function acorn_initialFocus(event, jFrom) {
   // Initial focusing
+  // Don't focus on callout buttons
   if (!jFrom || !jFrom.length) jFrom = $(document);
-  console.log(jFrom.find('form.layout :input:visible').first());
-  jFrom.find('form.layout :input:visible').first().focus();
-  jFrom.find('*[tabindex=1]').focus();
+  var jFirst = jFrom.find('form.layout :input:visible:not(button)').first()
+  console.log(jFirst);
+  jFirst.focus();
+  jFrom.find('*[tabindex=1]:not(button)').focus();
   jFrom.find('.initial-focus').focus();
   jFrom.find('.initial-focus .form-control').focus();
-
-  // Don't focus on callouts
-  var jFocus = $(':focus');
-  if (jFocus.closest('.callout').length) jFocus.blur();
 };
 $(document).ready(acorn_initialFocus);
 $(document).on('popup', function(event){

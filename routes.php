@@ -3,6 +3,7 @@ use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Http\Request;
 use Acorn\Controllers\DB;
 use Acorn\Controllers\Names;
+use Acorn\Controllers\Tasks;
 use BeyondCode\LaravelWebSockets\Dashboard\Http\Controllers\ShowDashboard;
 
 class AuthWrapper
@@ -33,6 +34,7 @@ Event::listen('system.route', function () {
 
     // -------------------------------- Views
     Route::get( '/backend/acorn/names', Names::class . '@index');
+    Route::get( '/backend/acorn/tasks', Tasks::class . '@index');
 
     Event::fire('acorn.route');
 }, PHP_INT_MIN);

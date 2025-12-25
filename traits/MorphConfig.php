@@ -63,46 +63,51 @@ Trait MorphConfig
 
             switch ($configRole) {
                 case 'config_filter':
-                    // RelationManager setup: 1 for 1 update screen
-                    // This is important because they are expensive
-                    if (   $isRelationManager 
-                        && property_exists($config, 'scopes') 
-                        && is_array($config->scopes)
-                    ) {
+                    if (property_exists($config, 'scopes') && is_array($config->scopes)) {
                         $removeRmUserFilters = InterfaceSetting::get('remove_rm_user_filters');
                         foreach ($config->scopes as $name => &$filterConfig) {
-                            // Remove filters that are equal to the parent screen
-                            if (isset($filterConfig['modelClass'])
-                                && trim($filterConfig['modelClass'], '\\') == $controllerModelClass
-                            ) {
-                                unset($config->scopes[$name]);
-                            }
-                            else if (isset($filterConfig['noRelationManager']) && $filterConfig['noRelationManager']) {
-                                unset($config->scopes[$name]);
-                            } else if ($removeRmUserFilters
-                                && class_exists(User::class) 
-                                && isset($filterConfig['modelClass'])
-                            ) {
-                                // Also expensive: all users
-                                // Will include created_by_user & updated_by_user
-                                $filterModel = new $filterConfig['modelClass'];
-                                if (is_a($filterModel, User::class)) {
-                                    unset($config->scopes[$name]);
-                                } else if (property_exists($filterModel, 'belongsTo') 
-                                    && is_array($filterModel->belongsTo)
+                            // ----------------------------- Remove filters that are equal to the parent screen
+                            // RelationManager setup: 1 for 1 update screen
+                            // This is important because they are expensive
+                            if ($isRelationManager) {
+                                if (isset($filterConfig['modelClass'])
+                                    && trim($filterConfig['modelClass'], '\\') == $controllerModelClass
                                 ) {
-                                    foreach ($filterModel->belongsTo as $relationConfig) {
-                                        if (isset($relationConfig[0]) 
-                                            && $relationConfig[0] == User::class
-                                            && isset($relationConfig['type'])
-                                            && in_array($relationConfig['type'], array('1to1', 'Leaf'))
-                                        ) {
-                                            unset($config->scopes[$name]);
-                                            break;
+                                    unset($config->scopes[$name]);
+                                }
+                                else if (isset($filterConfig['noRelationManager']) && $filterConfig['noRelationManager']) {
+                                    unset($config->scopes[$name]);
+                                } else if ($removeRmUserFilters
+                                    && class_exists(User::class) 
+                                    && isset($filterConfig['modelClass'])
+                                ) {
+                                    // Also expensive: all users
+                                    // Will include created_by_user & updated_by_user
+                                    $filterModel = new $filterConfig['modelClass'];
+                                    if (is_a($filterModel, User::class)) {
+                                        unset($config->scopes[$name]);
+                                    } else if (property_exists($filterModel, 'belongsTo') 
+                                        && is_array($filterModel->belongsTo)
+                                    ) {
+                                        foreach ($filterModel->belongsTo as $relationConfig) {
+                                            if (isset($relationConfig[0]) 
+                                                && $relationConfig[0] == User::class
+                                                && isset($relationConfig['type'])
+                                                && in_array($relationConfig['type'], array('1to1', 'Leaf'))
+                                            ) {
+                                                unset($config->scopes[$name]);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
                             }
+
+                            // ----------------------------- Settings / Env removal
+                            if (
+                                   self::settingRemove($filterConfig, $modelClass)
+                                || self::envRemove($filterConfig, $modelClass)
+                            ) unset($config->scopes[$name]);
                         }
                     }
 

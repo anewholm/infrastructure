@@ -195,10 +195,10 @@ class ServiceProvider extends ModuleServiceProvider
                 // Theme from Model
                 $class       = $details['modelClass'];
                 $modelId     = $details['setting'];
-                $model       = $class::find($modelId);
-                $cssClass    = str_replace('_', '--', preg_replace('/_id$/', '', $details['userField']));
-
-                print("<div class='global-scope $cssClass'>$model->name</div>");
+                if ($model = $class::withoutGlobalScopes()->find($modelId)) {
+                    $cssClass    = str_replace('_', '--', preg_replace('/_id$/', '', $details['userField']));
+                    print("<div class='global-scope $cssClass'>$model->name</div>");
+                }
             }
         });
 
@@ -302,6 +302,16 @@ class ServiceProvider extends ModuleServiceProvider
                     'permissions' => ['acorn.view_names'],
                     'order'       => 500,
                     'keywords'    => 'search names content'
+                ],
+                'tasks' => [
+                    'label'       => 'acorn::lang.models.task.label_plural',
+                    'description' => 'acorn::lang.models.task.settings_description',
+                    'category'    => 'Acorn',
+                    'url'         => '/backend/acorn/tasks',
+                    'icon'        => 'icon-screwdriver',
+                    'permissions' => ['acorn.view_tasks'],
+                    'order'       => 500,
+                    'keywords'    => 'tasks'
                 ],
             ]);
         });
