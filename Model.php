@@ -768,15 +768,25 @@ class Model extends BaseModel
 
                 // Translate strings to EMPTY Models or Pivot->setTable()s
                 // Pivot->setTable() is used when the intermediate table has no associated Model
-                $throughParents = [];
-                foreach ($through as $i => $throughEntry) {
+                $throughParents = array();
+                $tableConflicts = array();
+                foreach ($through as $throughEntry) {
                     // This just creates an new empty Model() or a Pivot($table)
                     $model = $this->newRelatedDeepThroughInstance($throughEntry);
                     // TODO: For now, we turn timestamps OFF for AA Pivot situations
                     if ($model instanceof Pivot) $model->timestamps = FALSE;
+                    
                     // Aliases to prevent repeating model table duplication in the SQL from clause
-                    if (method_exists($model, 'setAlias')) 
-                        $model->setAlias("{$model->table}_$i");
+                    // Note that these aliases will cause issues with certain services later
+                    // like ->withIntermediate(class) which cannot find its normal table
+                    $table = $model->table;
+                    if (isset($tableConflicts[$table]) && method_exists($model, 'setAlias')) {
+                        $t     = ++$tableConflicts[$table]; // Start with _2
+                        $table = "{$table}_$t";
+                        $model->setAlias($table);
+                    }
+                    $tableConflicts[$table] = 1;
+                    
                     array_push($throughParents, $model);
                 }
 

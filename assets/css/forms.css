@@ -19,6 +19,15 @@
     font-weight: bold;
 }
 
+.loading {
+    opacity: 0.8;
+}
+.loading a,
+.loading button {
+    opacity: 0.4;
+    cursor: not-allowed!important;
+}
+
 /* We are embedding other plugin callouts in our styled hints 
  * Maybe ours should have layout-rows as well although they take up +15px space
  */

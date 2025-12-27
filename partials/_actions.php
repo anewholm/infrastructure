@@ -60,10 +60,11 @@ if (!$isAdvanced && $formMode) {
 
 // --------------------------------- Advanced
 if ($model->advanced && $canAdvanced && $formMode) {
-    $toggle   = ($isAdvanced ? 0 : 1);
-    $advanced = e(trans('acorn::lang.models.general.advanced'));
-    $simple   = e(trans('acorn::lang.models.general.simple'));
-    $title    = ($toggle ? $advanced : $simple);
+    $toggle   = ($isAdvanced ? 'f' : '1'); // (bool) '0' == false
+    $title    = ($isAdvanced 
+        ? e(trans('acorn::lang.models.general.simple'))
+        : e(trans('acorn::lang.models.general.advanced'))
+    );
     print("<li><a id='advanced' href='?advanced=$toggle'>$title</a></li>");
 }
 
@@ -113,6 +114,13 @@ if ($model->exists && method_exists($model, 'actionFunctions')) {
             $cssClass    = $fnNameSpec;
             $cssClass   .= ($commentEscaped ? ' hover-indicator' : NULL);
             $cssClass   .= ($advancedFn     ? ' advanced'        : NULL);
+            $dataConfirm = '';
+            if (isset($definition['confirm']) && $definition['confirm']) {
+                // Translation of data-confirm
+                $confirm = $definition['confirm'];
+                if (is_bool($confirm)) $dataConfirm = "data-request-confirm='Are you sure?'";
+                else $dataConfirm = "data-request-confirm='$confirm'";
+            }
 
             print(<<<HTML
                 <li>
@@ -122,7 +130,8 @@ if ($model->exists && method_exists($model, 'actionFunctions')) {
                         data-control="popup"
                         data-request-data='$dataRequestData'
                         data-load-indicator='$commentEscaped...'
-                        data-request-loading="loading-indicator"
+                        data-request-loading='loading-indicator'
+                        $dataConfirm
                         data-request-success='acorn_popupComplete(context, textStatus, jqXHR);'
                         data-handler="onActionFunction"
                     >$labelEscaped</a>
