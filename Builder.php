@@ -18,32 +18,77 @@ use InvalidArgumentException;
 
 class Builder extends BaseBuilder
 {
+    public function orderBy($sort, $order = null)
+    {
+        if (is_array($sort)) {
+            foreach ($sort as $aSort) {
+                $sortX  = $aSort[0];
+                $orderX = (isset($aSort[1]) ? $aSort[1] : NULL);
+                parent::orderBy($sortX, $orderX);
+            }
+        } else {
+            parent::orderBy(...func_get_args());
+        }
+        return $this;
+    }
+
     public function join($relationNames, ...$args) 
     {
-        if (!$args && is_string($relationNames)) {
+        if (!$args) {
             // This will add the _joins_ for all the $relationNames to this main query
             // Nested relation join request 
-            //   e.g. academic_year_semester.event.first_event_part
+            //   e.g. academic_year_semester.semester|event.first_event_part
             //
             // Pre-get: this model is dry
+            if (is_string($relationNames)) $relationNames = explode('.', $relationNames);
             $model = $this->model;
-            foreach (explode('.', $relationNames) as $relationName) {
-                if (!$model->hasRelation($relationName))
-                    throw new Exception("Request for nested joining has no relation [$relationName]");
-                $relation     = $model->$relationName();
-                $relatedModel = $relation->getRelated();
+            foreach ($relationNames as $relationNameListString) {
+                // semester|event => gets both relation joins off academic_year_semester
+                $relationNameListParts = [$relationNameListString];
+                if (is_string($relationNameListString)) $relationNameListParts = explode('|', $relationNameListString);
+                foreach ($relationNameListParts as $relationName) {
+                    if (is_string($relationName)) {
+                        if (!$model->hasRelation($relationName))
+                            throw new Exception("Request for nested joining has no relation [$relationName]");
+                        $relation = $model->$relationName();
+                    } else {
+                        // Assume that the relation object was sent
+                        // leave to error below if not
+                        $relation = $relationName;
+                    }
+                    $relatedModel = $relation->getRelated();
 
-                // Manual join
-                // NOTE that HasManyDeep, BelongsToMany and HasManyThrough have a protected performJoin()
-                // that is run during addConstraints()
-                $reverse      = ($relation instanceof BelongsTo);
-                $key          = $relation->getForeignKeyName();
-                $columnFrom   = ($reverse ? $key : 'id');
-                $columnTo     = ($reverse ? 'id' : $key);
-                $fqTableFrom  = "$model->table.$columnFrom";
-                $fqTableTo    = "$relatedModel->table.$columnTo";
-                parent::join($relatedModel->table, $fqTableFrom, '=', $fqTableTo);
+                    // Manual join
+                    // TODO: Support HasManyDeep
+                    // Note that HasManyDeep, BelongsToMany and HasManyThrough have a _protected_ performJoin()
+                    // and adds its joins during addConstraints()
+                    // whereas other relations do not
+                    $modelTable   = $model->getTable();
+                    $relatedTable = $relatedModel->getTable();
+                    if (is_null($modelTable))
+                        throw new Exception("Failed to get model table for $relationName");
+                    if (is_null($relatedTable))
+                        throw new Exception("Failed to get related table for $relationName");
+
+                    if ($relation instanceof HasManyDeep) {
+                        throw new Exception('HasManyDeep not supported yet in relation string joining');
+                    } else if ($relation instanceof BelongsToMany) {
+                        $relatedTable = $relation->getTable();
+                        $fqTableFrom  = $relation->getQualifiedRelatedKeyName();
+                        $fqTableTo    = $relation->getQualifiedRelatedPivotKeyName();
+                        parent::join($relatedTable, $fqTableFrom, '=', $fqTableTo);
+                    }
+
+                    $reverse      = ($relation instanceof BelongsTo);
+                    $key          = $relation->getForeignKeyName();
+                    $columnFrom   = ($reverse ? $key : 'id');
+                    $columnTo     = ($reverse ? 'id' : $key);
+                    $fqTableFrom  = "$modelTable.$columnFrom";
+                    $fqTableTo    = "$relatedTable.$columnTo";
+                    parent::join($relatedTable, $fqTableFrom, '=', $fqTableTo);
+                }
                 
+                // Take last related model in this section
                 $model = $relatedModel;
             }
         } else {

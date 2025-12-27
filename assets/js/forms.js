@@ -40,6 +40,38 @@ function acorn_dynamicElements(){
     $(this).closest('.callout').slideUp();
   });
 
+  // Disable buttons after click
+  // especially important because of slow Internet connections
+  // TODO: Trap navigate back (hashPop) and removeClass('loading')
+  /*
+  $('button.btn, a.btn')
+    .add('.field-actions a')
+    .add('.action-functions a')
+    // External hrefs
+    .add('a[href!="javascript:;"][href!="#"]')
+
+    // Popup footer actions
+    .not('[data-control=popup],[data-dismiss=popup]')
+    // Confirmation popups
+    .not('[data-request-confirm],[data-confirm],[data-confirmation]')
+    // a@href to new windows
+    .not('[target=_blank]')
+    // sweet-alert is the confirm dialogs
+    .not($('.modal-dialog button[type=submit], .sweet-alert button'))
+
+    .click(function(event){
+      setTimeout(function(){
+        // Loading class is also added by WinterCMS
+        // for popups and AJAX
+        // This will cursor: not-allowed on buttons and links
+        $(document.body).addClass('loading');
+      }, 0);
+    });
+  $(document).on('ajaxDone', function(){
+    $(document.body).removeClass('loading');
+  });
+  */
+
   // Translate and slide ML selectors
   // We cannot override the partial because of makeMLPartial() hardcoded partial path
   if (window.MutationObserver) {
