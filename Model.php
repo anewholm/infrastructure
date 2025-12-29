@@ -59,6 +59,7 @@ class Model extends BaseModel
     use Traits\ObjectLocking;
     use Traits\PostGreSQLFieldTypeUtilities;
     use Traits\ImplementReplaces;
+    use Traits\Dropdowns;
     use \Illuminate\Database\Eloquent\Concerns\HasUuids; // Always distributed
     use TranslateBackend;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships; // hasOneOrManyDeep()
@@ -1096,69 +1097,6 @@ SQL;
         return $model->qualifyColumns($columns);
     }
 
-    public static function dropdownOptions($form = NULL, $field = NULL, $optionsModel = NULL, bool|NULL $withoutGlobalScopes = FALSE)
-    {
-        $optionsModel = ($optionsModel ?:
-            (isset($field->config['optionsModel'])
-                ? $field->config['optionsModel']
-                : NULL
-            )
-        );
-
-        $name = (isset($field->config['nameFrom'])
-            ? $field->config['nameFrom']
-            : 'name'
-        );
-        // TODO: $models = ($optionsModel ? $optionsModel::select('id', $name) : static::select('id', $name));
-        if ($withoutGlobalScopes)
-            $models = ($optionsModel ? $optionsModel::withoutGlobalScopes()->get() : static::withoutGlobalScopes()->get());
-        else
-            $models = ($optionsModel ? $optionsModel::all() : static::all());
-
-        // Hierarchies
-        $hierarchical = (isset($field->config['hierarchical'])
-            ? $field->config['hierarchical']
-            : isset($models->first()?->hasMany['children'])
-        );
-        $indentationString = (isset($field->config['indentation-string'])
-            ? $field->config['indentation-string']
-            : "--&nbsp;"
-        );
-        $ancestor = (isset($field->config['ancestor'])
-            ? $field->config['ancestor']
-            : NULL
-        );
-
-        // Simple where options
-        // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
-        //     where:
-        //       uses_quantity: false
-        if (isset($field->config['where'])) {
-            foreach ($field->config['where'] as $property => $value) {
-                // Simple fixed property
-                // array configs are dynamic, handled below in filterFields()
-                if (!is_array($value)) {
-                    $models = $models->where($property, $value);
-                }
-            }
-        }
-
-        // Hierarchies:
-        //   hierarchy: false|true|reverse
-        //   indentation_character: -
-        //   start-model: x
-        if ($hierarchical) {
-            if ($ancestor) $models = [$ancestor];
-            $treeCollection = new TreeCollection($models);
-            $nested = $treeCollection->toNested(FALSE);
-            $list   = $treeCollection->listsNested($name, 'id', $indentationString);
-        } else {
-            $list = $models->lists($name, 'id');
-        }
-
-        return $list;
-    }
-
     public static function menuitemCountFor(string $class, bool $force = FALSE): int|NULL {
         $count = NULL;
         if (get('count') || $force) {
@@ -1537,48 +1475,77 @@ SQL;
 
             // ----------------------------------- Extended config options where clause
             // options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
-            // where:
+            // optionsWhere:
             //   location: @source_location
+            // TODO: emptyOption?
             foreach ($fields as $name => &$field) {
                 if (   isset($field->config['options']) 
-                    && is_callable($field->config['options']) 
-                    && isset($field->config['optionsWhere'])
+                    && isset($field->config['dependsOn']) 
+                    && is_callable($field->config['options'])
+                    && (
+                           isset($field->config['withoutGlobalScopes'])
+                        || isset($field->config['optionsWith'])
+                        || isset($field->config['optionsWhere'])
+                    )
                 ) {
+                    $name = (isset($field->config['nameFrom'])
+                        ? $field->config['nameFrom']
+                        : 'name'
+                    );
                     $optionsCall     = $field->config['options'];
                     $optionClass     = explode('::', $optionsCall)[0];
                     $optionModel     = new $optionClass;
-                    $whereProperties = $field->config['optionsWhere'];
+                    $builder         = $optionModel::select();
+                    
+                    if (isset($field->config['withoutGlobalScopes']) && $field->config['withoutGlobalScopes']) 
+                        $builder->withoutGlobalScopes();
+                    if (isset($field->config['optionsWith'])) 
+                        $builder->with($field->config['optionsWith']);
 
-                    foreach ($whereProperties as $whereProperty => $whereClauses) {
-                        if (is_array($whereClauses)) {
-                            // location: 
-                            //   - @source_location
-                            //   - sumink
-                            // TODO: Relation Extended config options where clause
-                            $relationClass = $this->belongsTo[$whereProperty];
-                            foreach ($whereClauses as $whereField => $whereValue) {
+                    // optionsWhere:
+                    // Also implemented in filterFields() for during dependsOn refresh situations
+                    //   options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions
+                    //   optionsWhere:
+                    //     uses_quantity: false
+                    //     year_id: '@year_id' # Dynamic property
+                    //     ...
+                    if (isset($field->config['optionsWhere'])) {
+                        $whereProperties = $field->config['optionsWhere'];
+                        foreach ($whereProperties as $whereProperty => $whereClauses) {
+                            if (is_array($whereClauses)) {
+                                // location: 
+                                //   - @source_location
+                                //   - sumink
+                                // TODO: Relation Extended config options where clause
+                                $relationClass = $this->belongsTo[$whereProperty];
+                                foreach ($whereClauses as $whereField => $whereValue) {
+                                    if ($whereValue[0] == '@') {
+                                        $modelProperty = substr($whereValue, 1);
+                                        // We try to get the latest field, but failover to the existing if not model
+                                        // Include the field in fields.yaml if you want it to be dynamic here
+                                        if (property_exists($fields, $modelProperty)) $whereValue = $fields->$modelProperty->value;
+                                        else $whereValue = $this->$modelProperty;
+                                    }
+                                    if ($whereField == 'field') $whereField = $whereProperty;
+                                    if (!is_null($whereValue))
+                                        $builder->where($whereField, $whereValue);
+                                }
+                            } else {
+                                // location: @source_location
+                                $whereValue = $whereClauses;
                                 if ($whereValue[0] == '@') {
                                     $modelProperty = substr($whereValue, 1);
-                                    $whereValue    = $fields->$modelProperty->value;
+                                    // We try to get the latest field, but failover to the existing if not model
+                                    // Include the field in fields.yaml if you want it to be dynamic here
+                                    if (property_exists($fields, $modelProperty)) $whereValue = $fields->$modelProperty->value;
+                                    else $whereValue = $this->$modelProperty;
                                 }
-                                if ($whereField == 'field') {
-                                    $optionModel = $optionModel->where($whereField, $whereValue);
-                                } else {
-                                    $optionModel = $optionModel->where($whereField, $whereValue);
-                                }
+                                if (!is_null($whereValue))
+                                    $builder->where($whereProperty, $whereValue);
                             }
-                        } else {
-                            // location: @source_location
-                            $whereValue = $whereClauses;
-                            if (substr($whereValue, -1) == '@') {
-                                $modelProperty = substr($whereValue, 0, -1);
-                                $whereValue    = $fields->$modelProperty->value;
-                            }
-                            $optionModel = $optionModel->where($whereProperty, $whereValue);
                         }
                     }
-                    // TODO: emptyOption?
-                    $field->options = $optionModel->get()->lists();
+                    $field->options = $builder->lists($name, 'id');
                 }
             }
 
