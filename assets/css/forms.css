@@ -19,6 +19,10 @@
     font-weight: bold;
 }
 
+p.help-block:empty {
+    display: none;
+}
+
 .loading {
     opacity: 0.8;
 }

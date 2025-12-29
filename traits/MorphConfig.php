@@ -414,7 +414,25 @@ Trait MorphConfig
                         }
                         unset($config->tertiaryTabs);
                     }
+
+                    // ------------------------------------------------- Context sensitive settings
+                    // e.g. readOnly: true@update
+                    foreach ($config->fields as $fieldName => &$fieldConfig) {
+                        foreach ($fieldConfig as $name => &$value) {
+                            if (is_string($value)) {
+                                $valueParts = explode('@', $value);
+                                if (count($valueParts) == 2) {
+                                    $settingContext = $valueParts[1];
+                                    if (in_array($settingContext, array('create', 'update', 'preview'))) {
+                                        if ($settingContext == $context) $value = $valueParts[0];
+                                        else unset($fieldConfig[$name]);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
+                    // ------------------------------------------------- setting, env, conditions
                     // This allows fields to be conditionally shown
                     // in the same way as permissions
                     // setting: my_setting
@@ -792,7 +810,7 @@ Trait MorphConfig
             if ($lis) {
                 if (!isset($fieldConfig['comment'])) $fieldConfig['comment'] = '';
                 if (!isset($fieldConfig['commentHtml']) || !$fieldConfig['commentHtml']) $fieldConfig['commentHtml'] = TRUE;
-                $fieldConfig['comment'] = "<ul class='field-actions'>$lis</ul>$fieldConfig[comment]";
+                $fieldConfig['comment'] = "<ul class='field-actions'>$lis</ul><p class='help-block'>$fieldConfig[comment]</p>";
             }
         }
     }

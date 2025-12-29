@@ -27,7 +27,8 @@ class Builder extends BaseBuilder
                 parent::orderBy($sortX, $orderX);
             }
         } else {
-            parent::orderBy(...func_get_args());
+            $args = func_get_args();
+            parent::orderBy(...$args);
         }
         return $this;
     }

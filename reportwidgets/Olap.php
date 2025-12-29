@@ -1,10 +1,7 @@
 <?php namespace Acorn\ReportWidgets;
 
-use BackendAuth;
-use Backend\Models\AccessLog;
+use Lang;
 use Backend\Classes\ReportWidgetBase;
-use Backend\Models\BrandSetting;
-use System\Classes\MediaLibrary;
 use Exception;
 use Str;
 use DomDocument;
@@ -49,21 +46,21 @@ class Olap extends ReportWidgetBase
             ],
             'tomcat_root' => [
                 'title'             => 'acorn::lang.dashboard.widget_tomcat_root_label',
-                'default'           => 'acorn::lang.dashboard.olap.widget_tomcat_root_default',
+                'default'           => '/var/lib/tomcat9/webapps',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
                 'validationMessage' => 'acorn::lang.dashboard.widget_tomcat_root_error',
             ],
             'tomcat_port' => [
                 'title'             => 'acorn::lang.dashboard.widget_tomcat_port_label',
-                'default'           => 'acorn::lang.dashboard.olap.widget_tomcat_port_default',
+                'default'           => '80',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
                 'validationMessage' => 'acorn::lang.dashboard.widget_tomcat_port_error',
             ],
             'tomcat_domain' => [
                 'title'             => 'acorn::lang.dashboard.widget_tomcat_domain_label',
-                'default'           => 'acorn::lang.dashboard.olap.widget_tomcat_domain_default',
+                'default'           => '',
                 'type'              => 'string',
                 'validationPattern' => '^.+$',
                 'validationMessage' => 'acorn::lang.dashboard.widget_tomcat_domain_error',
@@ -87,11 +84,14 @@ class Olap extends ReportWidgetBase
         $tomcatDomain = $this->property('tomcat_domain', $_SERVER['HTTP_HOST']);
         if (!$tomcatRoot)   $tomcatRoot   = '/var/lib/tomcat9/webapps';
         if (!$tomcatDomain) $tomcatDomain = $_SERVER['HTTP_HOST'];
+        $locale = Lang::getLocale();
 
         $tomcatURI = "http://$tomcatDomain";
-        if ($tomcatPort) $tomcatURI .= ":$tomcatPort";
+        if ($tomcatPort && $tomcatPort != '80') $tomcatURI .= ":$tomcatPort";
         $standardSchemaPath = 'WEB-INF/schema/cubes.xml';
 
+        $tomcatRoot = trim($tomcatRoot, '/');
+        $tomcatRoot = "/$tomcatRoot/";
         if (file_exists($tomcatRoot)) {
             $this->vars['webapps'] = array();
             foreach (new \DirectoryIterator($tomcatRoot) as $item) {
@@ -105,16 +105,24 @@ class Olap extends ReportWidgetBase
                         $xCubes->load($schemaPath);
                         $xSchema = $xCubes->firstElementChild;
                         $cubes   = array();
+                        $localeCubeName    = NULL;
                         foreach ($xSchema->childNodes as $xCube) {
-                            if ($xCube->nodeType == 1)
-                                $cubes[$xCube->getAttribute('name')] = $xCube;
+                            if ($xCube->nodeType == 1) {
+                                $name       = $xCube->getAttribute('name');
+                                $cubeLocale = $xCube->getAttribute('locale');
+                                if (!$cubeLocale || $locale == $cubeLocale) {
+                                    $cubes[$name]   = $xCube;
+                                    $localeCubeName = $name;
+                                }
+                            }
                         }
 
                         $imagePath = "ROOT/images/$webapp.png";
                         if (!file_exists("$this->tomcatRoot/$imagePath")) $imagePath = NULL;
 
+                        $index = ($locale == 'en' ? 'index' : "index-$locale");
                         $this->vars['webapps'][$webapp] = array(
-                            'url'   => "$tomcatURI/$webapp/xavier/index.html?password=fryace4",
+                            'url'   => "$tomcatURI/$webapp/xavier/$index.html?password=fryace4&cube=$localeCubeName",
                             'title' => Str::title($webapp),
                             'image' => ($imagePath ? "$tomcatURI/$imagePath" : NULL),
                             'cubes' => $cubes,
