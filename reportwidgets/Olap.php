@@ -105,26 +105,26 @@ class Olap extends ReportWidgetBase
                         $xCubes->load($schemaPath);
                         $xSchema = $xCubes->firstElementChild;
                         $cubes   = array();
-                        $localeCubeName    = NULL;
                         foreach ($xSchema->childNodes as $xCube) {
                             if ($xCube->nodeType == 1) {
                                 $name       = $xCube->getAttribute('name');
                                 $cubeLocale = $xCube->getAttribute('locale');
-                                if (!$cubeLocale || $locale == $cubeLocale) {
-                                    $cubes[$name]   = $xCube;
-                                    $localeCubeName = $name;
-                                }
+                                if (!$cubeLocale || $locale == $cubeLocale) $cubes[$name]   = $xCube;
                             }
                         }
 
-                        $imagePath = "ROOT/images/$webapp.png";
-                        if (!file_exists("$this->tomcatRoot/$imagePath")) $imagePath = NULL;
+                        $imageFile = strtolower($webapp);
+                        $imagePath = "images/$imageFile.png";
+                        if (file_exists("$tomcatRoot/ROOT/$imagePath")) $imagePath = "$tomcatURI/$imagePath";
+                        else $imagePath = NULL;
 
-                        $index = ($locale == 'en' ? 'index' : "index-$locale");
+                        $password = 'fryace4';
+                        $index    = ($locale == 'en' ? 'index' : "index-$locale");
+                        $url      = "$tomcatURI/$webapp/xavier/$index.html?password=$password";
                         $this->vars['webapps'][$webapp] = array(
-                            'url'   => "$tomcatURI/$webapp/xavier/$index.html?password=fryace4&cube=$localeCubeName",
+                            'url'   => $url,
                             'title' => Str::title($webapp),
-                            'image' => ($imagePath ? "$tomcatURI/$imagePath" : NULL),
+                            'image' => $imagePath,
                             'cubes' => $cubes,
                         );
                     }

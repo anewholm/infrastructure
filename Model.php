@@ -602,6 +602,7 @@ class Model extends BaseModel
                                     if ($model->isDirty()) {
                                         // Validate
                                         $model->validate(); // Will throw
+                                        // TODO: This can throw up if the row is being saved twice without interface refresh
                                         $model->save(['list-editable' => FALSE]);
                                         $changes = TRUE;
                                     }

@@ -13,13 +13,20 @@ Trait Dropdowns
         );
 
         // ----------------------------------- Builder construction
-        // Cannot select('id', $name) because the name might be a 1-1 FK field
-        //   e.g. entity_id.name
         $builder = static::select();
+        if (!$builder->getModel()->belongsTo) {
+            // Cannot select('id', $name) because the name might be a 1-1 FK field
+            //   e.g. entity_id.name
+            // But we can, if there are no belongsTo
+            $builder->select('id', $name);
+        }
         if ($withoutGlobalScopes || (isset($field->config['withoutGlobalScopes']) && $field->config['withoutGlobalScopes'])) 
             $builder->withoutGlobalScopes();
         if (isset($field->config['optionsWith'])) 
             $builder->with($field->config['optionsWith']);
+        if ($builder->getModel()->hasRelation('translations'))
+            $builder->with('translations');
+        
         // optionsWhere:
         // Also implemented in filterFields() for during dependsOn refresh situations
         //   options: Acorn\Lojistiks\Models\ProductInstance::dropdownOptions

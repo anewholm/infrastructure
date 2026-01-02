@@ -2,16 +2,37 @@
     margin-top: 15px;
     font-weight: bold;
 }
-.webapps img {
-    display: inline;
-    margin-right: 6px;
+.webapps > li > img {
+    float:right;
+    max-width: 300px;
 }
-.webapps .cubes {
-    margin-left: 20px;
+ul.webapps > li {
+    display: block;
 }
+ul.webapps > li > h4 {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
 .webapps .cubes > li {
     display: inline;
 }
+.webapps > li > ul.cubes::after {
+    content: ' ';
+    display: block;
+    clear: both;
+}
+.webapps > li > ul.cubes img {
+    display: inline;
+    margin-right: 6px;
+}
+.webapps .cubes > li > a {
+    color: blue;
+    border-bottom: 1px dotted #a7a7a7;
+}
 .webapps .cubes > li::after {
     content: ', ';
+}
+.webapps .cubes > li:last-child:after {
+    content: '';
 }

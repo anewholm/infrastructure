@@ -12,15 +12,30 @@
                             $image = $webapp['image'];
                             $cubes = $webapp['cubes'];
 
-                            print("<li>");
-                            print('<img src="/modules/acorn/assets/images/cube.png"/>');
-                            print("<a target='_blank' href='$url'>$title");
-                            if ($image && false) print("<img src='$image'/>");
-                            print('<ul class="cubes">');
-                            foreach ($cubes as $name => $cube) {
-                                print("<li>$name</li>");
+                            if ($cubes) {
+                                $titleEscaped = htmlentities($title);
+                                print("<li><h4>$titleEscaped</h4>");
+                                if ($image) {
+                                    $imageEscaped = htmlentities($image);
+                                    print("<img src='$imageEscaped'></img>");
+                                }
+
+                                print('<ul class="cubes">');
+                                foreach ($cubes as $name => $xCube) {
+                                    $nameUrl     = urlencode($name);
+                                    $nameEscaped = htmlentities($name);
+                                    print('<li>');
+                                    print('<img src="/modules/acorn/assets/images/cube.png"/>');
+                                    print("<a target='_blank' href='$url&cube=$nameUrl'>$nameEscaped</a>");
+                                    if ($description = $xCube->getAttribute('description')) {
+                                        print("<p class='help-block'>$description</a>");
+                                    }
+                                    print('</li>');
+                                }
+                                print('</ul>');
+                                
+                                print('</li>');
                             }
-                            print('</ul></a></li>');
                         }
                     } ?>
                 </ul>

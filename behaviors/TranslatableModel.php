@@ -184,16 +184,28 @@ class TranslatableModel extends WinterTranslatableModel
         if ($this->model->exists) {
             // If running within a noConstraints() callback
             // like makeRenderFormField() for simple form fields like dropdowns
-            // then all translations will be loaded everytime
-            // addConstraints() will have no effect due to the static::$constraints == FALSE in RelationBase
+            // then the entire translation table will be loaded everytime
+            // because addConstraints() will have no effect due to the static::$constraints == FALSE in RelationBase
             //
             // So we manually addConstraints() of the winter attributes table request
             // Pre-load all locales for this model
-            $translationsRelation = $this->model->translations()
-                ->where('model_type', get_class($this->model))
-                ->where('model_id',   $this->model->id);
-                // ->where('locale',     $locale)
-            $translationsRelation->get()->each(function($attributesDetails) use($locale, &$result) {
+            //
+            // ::dropdownOptions() eager loads the translations relation
+            // ->with(translations)
+            // which might be an empty collection
+            $translationsRelationEagerLoaded = $this->model->relationLoaded('translations');
+            if ($translationsRelationEagerLoaded) {
+                $translationsColleciton = $this->model->translations;
+            } else {
+                $translationsRelation = $this->model->translations()
+                    ->where('model_type', get_class($this->model))
+                    ->where('model_id',   $this->model->id);
+                    // ->where('locale',     $locale)
+                $translationsColleciton = $translationsRelation->get();
+            }
+            
+            // Copy the translations into this TranslatableModel::translatableAttributes
+            $translationsColleciton->each(function($attributesDetails) use($locale, &$result) {
                 $thisLocale    = $attributesDetails->locale;
                 $attributeData = json_decode($attributesDetails->attribute_data, true);
                 $this->translatableOriginals[$thisLocale]  = $attributeData;
