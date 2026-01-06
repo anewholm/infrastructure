@@ -160,9 +160,9 @@ SQL
       $this->createExtension('hostname');
       $this->createFunction('fn_acorn_server_id', [], 'trigger', ['pid uuid'], <<<SQL
         if new.server_id is null then
-          select "id" into pid from acorn_servers where hostname = hostname();
+          select "id" into pid from public.acorn_servers where hostname = hostname();
           if pid is null then
-            insert into acorn_servers(hostname) values(hostname()) returning id into pid;
+            insert into public.acorn_servers(hostname) values(hostname()) returning id into pid;
           end if;
           new.server_id = pid;
         end if;
@@ -174,7 +174,9 @@ SQL
         -- On update of tables with updated_by_user_id
         -- DBAuth required
         -- Will return NULL if not regexp_like(CURRENT_USER, '^token_[0-9]+$')
-        select u.id into new.updated_by_user_id from acorn_dbauth_user u;
+        if new.updated_by_user_id is null then
+          select u.id into new.updated_by_user_id from public.acorn_dbauth_user u;
+        end if;
         return new;
 SQL
       );
@@ -183,7 +185,9 @@ SQL
         -- On update of tables with updated_by_user_id
         -- DBAuth required
         -- Will return NULL if not regexp_like(CURRENT_USER, '^token_[0-9]+$')
-        select u.id into new.created_by_user_id from acorn_dbauth_user u;
+        if new.created_by_user_id is null then
+          select u.id into new.created_by_user_id from acorn_dbauth_user u;
+        end if;
         return new;
 SQL
       );

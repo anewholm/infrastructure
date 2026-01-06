@@ -120,9 +120,10 @@ class IntlCarbon extends Carbon {
         } 
         // An assumption
         // That this format is for the database
-        else if ($format == 'Y-m-d') {
+        else if ($format == 'Y-m-d' || $format == 'Y-m-d H:i:s') {
             $str = parent::format($format);
         }
+        // Everything else is up for grabs!
         else {
             $format = self::convertStandardFormatToIntlDateFormatter($format);
             $fmt = new IntlDateFormatter(
