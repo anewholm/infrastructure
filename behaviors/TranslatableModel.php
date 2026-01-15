@@ -137,6 +137,8 @@ class TranslatableModel extends WinterTranslatableModel
         if ($model && $model->exists) {
             // Default locale
             if (is_null($translatableModel) || $locale == $translatableModel->translatableDefault) {
+                if (!in_array($key, array_keys($model->attributes)))
+                    throw new Exception("$model does not have a [$key] attribute");
                 $result = $model->attributes[$key];
             }
             // Other locale

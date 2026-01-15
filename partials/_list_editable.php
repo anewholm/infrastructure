@@ -40,6 +40,24 @@ if (isset($title)) {
     $titleEscaped = e($title);
 }
 
+$titleSuffixEscaped = NULL;
+if (isset($title_suffix)) {
+    $typeKey = "title_suffix_type";
+    if (!is_array($title_suffix) && is_array($values) && isset($values[$typeKey])) {
+        // TODO: Use $morphsTo = ['value'] comment on view
+        $titleSuffixType = $values[$typeKey];
+        $titleSuffixObj  = $titleSuffixType::find($title_suffix);
+        $titleSuffix     = $titleSuffixObj->getAttributeTranslated('name', $locale);
+    } else {
+        if (is_array($title_suffix)) {
+            if      (isset($title_suffix[$locale]))         $titleSuffix = $title_suffix[$locale];
+            else if (isset($title_suffix[$localeFallback])) $titleSuffix = $title_suffix[$localeFallback];
+            else $titleSuffix = '';
+        }
+    }
+    $titleSuffixEscaped = e($titleSuffix);
+}
+
 // Value can be a locale array
 $valueEscaped = NULL;
 if (isset($value)) {
@@ -96,14 +114,16 @@ switch ($type) {
         $inputType = 'text';
 }
 
-$readOnlyClass = ($readOnly ? 'read-only' : '');
-$disabled      = ($readOnly ? 'disabled'  : '');
-$isRequired    = ($required ? 'is-required' : '');
+$readOnlyClass = ($readOnly ? 'read-only'    : '');
+$disabled      = ($readOnly ? 'disabled'     : '');
+$isRequired    = ($required ? 'is-required'  : '');
+$requiredAtt   = ($required ? 'required="1"' : '');
 $isPassed      = (is_null($passed) ? '' : ($passed ? 'passed' : 'failed')); // 3-state
 
 print("<div class='list-editable-container $isRequired $isPassed'>");
+$titleSuffixEscapedString = ($titleSuffixEscaped ? "<span class='suffix'>$titleSuffixEscaped</span>" : NULL);
 if ($titleEscaped) print(<<<HTML
-    <label for="$idValue">$titleEscaped</label>
+    <label for="$idValue">$titleEscaped$titleSuffixEscapedString</label>
 HTML);
 
 switch ($inputType) {
@@ -132,7 +152,7 @@ HTML
         <input type="$inputType" step="any" name="{$nameStem}[$columnName]" 
             id="$idValue" value="$valueEscaped" original="$valueEscaped"
             placeholder="$placeholder" class="form-control list-editable list-editable-$type $readOnlyClass" autocomplete="off" 
-            pattern="$pattern" maxlength="$maxlength" required="$required" $disabled $checked>
+            pattern="$pattern" maxlength="$maxlength" $requiredAtt $disabled $checked>
         </input>
 HTML
         );

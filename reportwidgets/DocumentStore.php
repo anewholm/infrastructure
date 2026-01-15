@@ -65,7 +65,7 @@ class DocumentStore extends ReportWidgetBase
         // MediaLibraryItem s
         $ml     = MediaLibrary::instance();
         $locale = Lang::getLocale();
-        $dirs   = $ml->listAllDirectories(['/ActionTemplates']);
+        $dirs   = $ml->listAllDirectories(['/ActionTemplates', '/uploaded-files']);
         foreach ($dirs as $dir) {
             $mlis = $ml->listFolderContents($dir, 'title', NULL, TRUE);
             foreach ($mlis as $mli) {

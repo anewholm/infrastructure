@@ -383,6 +383,12 @@ td.list-cell-type-partial .list-editable-container > label {
     padding: 0px 0px 4px 0px;
     margin: 0px;
 }
+table.table.data tbody td.list-cell-type-partial .list-editable-container > label > .suffix {
+    color: #888;
+    margin-left: 4px;
+    font-size: 10px;
+    font-style: italic;
+}
 td.list-cell-type-partial .list-editable-container {
     float: left;
     margin-right: 6px;
