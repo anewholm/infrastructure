@@ -151,7 +151,7 @@ HTML
         print(<<<HTML
         <input type="$inputType" step="any" name="{$nameStem}[$columnName]" 
             id="$idValue" value="$valueEscaped" original="$valueEscaped"
-            placeholder="$placeholder" class="form-control list-editable list-editable-$type $readOnlyClass" autocomplete="off" 
+            placeholder="$placeholder" class="form-control list-editable list-editable-$inputType $readOnlyClass" autocomplete="off" 
             pattern="$pattern" maxlength="$maxlength" $requiredAtt $disabled $checked>
         </input>
 HTML
