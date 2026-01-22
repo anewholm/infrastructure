@@ -376,6 +376,9 @@ tr.dirty > td {
 td.list-cell-type-partial .list-editable-container > input {
     padding: 2px 2px 2px 5px;
 }
+td.list-cell-type-partial .list-editable-container > input.list-editable-number {
+    width: 80px;
+}
 td.list-cell-type-partial .list-editable-container > label {
     font-size: 13px;
     color: rgb(102, 102, 102); /* Storm field value */
