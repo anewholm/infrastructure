@@ -26,7 +26,6 @@ use Backend\Classes\FilterScope;
 
 use Winter\Storm\Support\ModuleServiceProvider;
 use BeyondCode\LaravelWebSockets\Console\StartWebSocketServer;
-use Acorn\Messaging\Console\RunCommand;
 use \System\Controllers\Updates;
 use Acorn\Models\InterfaceSetting;
 use Acorn\Console\SetConfig;
