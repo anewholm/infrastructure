@@ -61,32 +61,43 @@ SQL
 SQL
       );
 
-      $this->createExtension('http');
-      $this->createFunction('fn_acorn_new_replicated_row', [], 'trigger', [
-          'server_domain varchar(1024)',
-          'plugin_path varchar(1024)',
-          'action varchar(2048)',
-          'params varchar(2048)',
-          'url varchar(2048)',
-          'res public.http_response',
-        ], <<<SQL
-            -- https://www.postgresql.org/docs/current/plpgsql-trigger.html
-            select "domain" into server_domain from acorn_servers where hostname = hostname();
-            if server_domain is null then
-              new.response = 'No domain specified';
-            else
-                    plugin_path = '/api';
-                    action = '/datachange';
-                    params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
-                    url = concat('http://', server_domain, plugin_path, action, '?', params);
-        
-                    res = public.http_get(url);
-                    new.response = concat(res.status, ' ', res.content);
-            end if;
+      // http extension is optional — only needed for WebSocket row-replication triggers.
+      // Install postgresql-http (pgsql-http) to enable this feature.
+      // Savepoint isolates the failure so the outer transaction stays healthy.
+      DB::unprepared('SAVEPOINT sp_http');
+      try {
+          $this->createExtension('http');
+          $this->createFunction('fn_acorn_new_replicated_row', [], 'trigger', [
+              'server_domain varchar(1024)',
+              'plugin_path varchar(1024)',
+              'action varchar(2048)',
+              'params varchar(2048)',
+              'url varchar(2048)',
+              'res public.http_response',
+            ], <<<SQL
+                -- https://www.postgresql.org/docs/current/plpgsql-trigger.html
+                select "domain" into server_domain from acorn_servers where hostname = hostname();
+                if server_domain is null then
+                  new.response = 'No domain specified';
+                else
+                        plugin_path = '/api';
+                        action = '/datachange';
+                        params = concat('TG_NAME=', TG_NAME, '&TG_OP=', TG_OP, '&TG_TABLE_SCHEMA=', TG_TABLE_SCHEMA, '&TG_TABLE_NAME=', TG_TABLE_NAME, '&ID=', new.id);
+                        url = concat('http://', server_domain, plugin_path, action, '?', params);
 
-            return new;
+                        res = public.http_get(url);
+                        new.response = concat(res.status, ' ', res.content);
+                end if;
+
+                return new;
 SQL
-      );
+          );
+          DB::unprepared('RELEASE SAVEPOINT sp_http');
+      } catch (\Exception $e) {
+          // pgsql-http not installed; WebSocket replication triggers unavailable.
+          DB::unprepared('ROLLBACK TO SAVEPOINT sp_http');
+          DB::unprepared('RELEASE SAVEPOINT sp_http');
+      }
 
       $this->createFunction('fn_acorn_add_websockets_triggers', ['schema character varying', 'table_prefix character varying'], 'void', [], <<<SQL
         -- SELECT * FROM information_schema.tables;
