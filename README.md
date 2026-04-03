@@ -1,43 +1,61 @@
-# Acorn shared module
-This module is for shared code at Acorn. It includes generic code for:
+# Acorn — Shared base module for WinterCMS plugins
 
- * JavaScript Hashbang functions
- * WebSockets
- * Models with permissions and protection against dirty writes, etc.
- * Migrations with intelligent dropping, PostGreSQL aware column types, triggers and functions
+[![CI](https://github.com/anewholm/acorn/actions/workflows/ci.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/anewholm/acorn/actions/workflows/codeql.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/codeql.yml)
 
-Many of the Acorn plugins depend on this module.
+Acorn is a WinterCMS module that provides shared base classes and infrastructure for the Acorn plugin family. It extends Laravel/WinterCMS with PostgreSQL-aware migrations, permission-aware models, WebSocket support, and dirty-write protection.
+
+## What it provides
+
+- **`Acorn\Migration`** — extends WinterCMS migrations with PostgreSQL-specific DDL: `createFunction()`, `createExtension()`, `createTrigger()`, native column types (`integer[]`, `interval`, etc.), and intelligent drop-before-create helpers
+- **`Acorn\Model`** — base Eloquent model with built-in owner/group/other permissions (linux-style rwx), dirty-write protection via PostgreSQL advisory locks, and audit timestamps
+- **`Acorn\Collection`** — extended collection with additional query helpers
+- **`Acorn\Controller`** / **`Acorn\BackendRequestController`** — base controllers with permission enforcement
+- **JavaScript** — hashbang routing utilities and WebSocket client helpers shared across plugins
+- **Traits** — reusable mixins for lockable records, translatable fields, and more
+
+## Who uses it
+
+| Plugin | Repository |
+|--------|-----------|
+| Calendar | [anewholm/calendar](https://github.com/anewholm/calendar) |
+| DBAuth | [anewholm/dbauth](https://github.com/anewholm/dbauth) |
+| Location | [anewholm/location](https://github.com/anewholm/location) |
+| Messaging | [anewholm/messaging](https://github.com/anewholm/messaging) |
+| Reporting | [anewholm/reporting](https://github.com/anewholm/reporting) |
+
+## Compatibility
+
+| WinterCMS | Laravel | PHP  |
+|-----------|---------|------|
+| 1.2.0     | 9       | 8.1+ |
+| 1.2.x     | 10      | 8.1+ |
+| 1.2.x     | 11      | 8.2+ |
+
+## Prerequisites
+
+- WinterCMS 1.2+
+- PostgreSQL 12+ (the Migration extensions target PostgreSQL; standard Laravel migrations still work on other databases)
 
 ## Installation
-`git clone` this module in to Laravel `~/modules`.
-The `acorn-setup-new-winter` script should do these things with its patch system. Still trying to work out which of these is actually necessary...
 
-**Maybe** add this in to your `~/composer.json` in order to pre-load the module classes:
-```
-    "autoload": {
-        "psr-4": {
-            "Acorn\\": "modules/acorn/"
-        }
-    }
-```
+1. Clone this repository into `modules/acorn` inside your WinterCMS root:
+   ```bash
+   git clone https://github.com/anewholm/acorn modules/acorn
+   ```
 
-**Or try** adding **Acorn** in your `config/cms.php`:
-```
-    'loadModules' => [
-        'System',
-        'Backend',
-        'Cms',
-        'Acorn',
-    ],
-```
+2. Add `Acorn` to the module list in `config/cms.php` **after** `Cms`:
+   ```php
+   'loadModules' => ['System', 'Backend', 'Cms', 'Acorn'],
+   ```
 
-Also `Acorn\ServiceProvider` can be added _before_ `System\ServiceProvider` in `config/app.php`:
-```
-    'providers' => array_merge(include(base_path('modules/system/providers.php')), [
+3. Run migrations:
+   ```bash
+   php artisan winter:up
+   ```
 
-        // 'Illuminate\Html\HtmlServiceProvider', // Example
+That is all that is required. The PSR-4 autoloader resolves `Acorn\` from `modules/acorn/` automatically once the module is registered.
 
-        Acorn\ServiceProvider::class,
-        System\ServiceProvider::class,
-    ]),
-```
+## License
+
+MIT
