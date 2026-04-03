@@ -168,18 +168,29 @@ SQL
 SQL
       );
 
-      $this->createExtension('hostname');
-      $this->createFunction('fn_acorn_server_id', [], 'trigger', ['pid uuid'], <<<SQL
-        if new.server_id is null then
-          select "id" into pid from public.acorn_servers where hostname = hostname();
-          if pid is null then
-            insert into public.acorn_servers(hostname) values(hostname()) returning id into pid;
-          end if;
-          new.server_id = pid;
-        end if;
-        return new;
+      // hostname extension is optional — only needed for distributed systems.
+      // Provides hostname() to identify the current PostgreSQL server host.
+      // Savepoint isolates the failure so the outer transaction stays healthy.
+      DB::unprepared('SAVEPOINT sp_hostname');
+      try {
+          $this->createExtension('hostname');
+          $this->createFunction('fn_acorn_server_id', [], 'trigger', ['pid uuid'], <<<SQL
+            if new.server_id is null then
+              select "id" into pid from public.acorn_servers where hostname = hostname();
+              if pid is null then
+                insert into public.acorn_servers(hostname) values(hostname()) returning id into pid;
+              end if;
+              new.server_id = pid;
+            end if;
+            return new;
 SQL
-      );
+          );
+          DB::unprepared('RELEASE SAVEPOINT sp_hostname');
+      } catch (\Exception $e) {
+          // hostname extension not installed; distributed server-identification triggers unavailable.
+          DB::unprepared('ROLLBACK TO SAVEPOINT sp_hostname');
+          DB::unprepared('RELEASE SAVEPOINT sp_hostname');
+      }
 
       $this->createFunction('fn_acorn_updated_by_user_id', [], 'trigger', [], <<<SQL
         -- On update of tables with updated_by_user_id
