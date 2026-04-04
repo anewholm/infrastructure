@@ -1,7 +1,6 @@
 # Acorn — Shared base module for WinterCMS plugins
 
 [![CI](https://github.com/anewholm/acorn/actions/workflows/ci.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/anewholm/acorn/actions/workflows/codeql.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/codeql.yml)
 
 Acorn is a WinterCMS module that provides shared base classes and infrastructure for the Acorn plugin family. It extends Laravel/WinterCMS with PostgreSQL-aware migrations, permission-aware models, WebSocket support, and dirty-write protection.
 
