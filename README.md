@@ -1,5 +1,6 @@
 # Acorn — Shared base module for WinterCMS plugins
 
+![Human made content](human-made-content.png "Human made content")
 [![CI](https://github.com/anewholm/acorn/actions/workflows/ci.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/ci.yml)
 
 > **Note:** CodeQL security scanning is unfortunately not available for PHP on GitHub's free tier.
