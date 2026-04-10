@@ -262,6 +262,12 @@ class ServiceProvider extends ModuleServiceProvider
 
     public function register()
     {
+        // When the Winter Translate plugin is absent, alias its behavior base class so that
+        // Acorn\Behaviors\TranslatableModel (which extends it) can still be autoloaded.
+        if (!class_exists('Winter\Translate\Behaviors\TranslatableModel', false)) {
+            class_alias(\Winter\Storm\Extension\ExtensionBase::class, 'Winter\Translate\Behaviors\TranslatableModel');
+        }
+
         parent::register();
 
         $this->registerConsoleCommand('acorn.set-config', SetConfig::class);
