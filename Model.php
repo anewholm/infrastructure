@@ -705,7 +705,7 @@ class Model extends BaseModel
     //   1.2.6: protected function handleRelation($relationName)
     //   1.2.7: protected function handleRelation(string $relationName, bool $addConstraints = true): Relation
     // And passing through the $addConstraints in the parent call below
-    protected function handleRelation($relationName): Relation
+    protected function handleRelation(string $relationName, bool $addConstraints = true): Relation
     {
         $relationObj  = NULL;
         $relationType = $this->getRelationType($relationName);
@@ -814,8 +814,7 @@ class Model extends BaseModel
                 */
                 break;
             default:
-                // VERSION: Winter:1.2.6=>7: + $addConstraints
-                $relationObj = parent::handleRelation($relationName); 
+                $relationObj = parent::handleRelation($relationName, $addConstraints);
         }
 
         return $relationObj;
