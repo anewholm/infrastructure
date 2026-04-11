@@ -2,7 +2,6 @@
 
 use Backend\Facades\BackendAuth;
 use \Illuminate\Auth\Access\AuthorizationException;
-use Acorn\User\Models\User;
 
 trait LinuxPermissions
 {
@@ -16,7 +15,9 @@ trait LinuxPermissions
 
     protected function can(int $accessType)
     {
-        $user    = User::authUser();
+        // Acorn\User is an optional plugin; if absent, skip permission checks
+        if (!class_exists('Acorn\User\Models\User')) return true;
+        $user    = \Acorn\User\Models\User::authUser();
         $groups  = $user->groups->keyBy('id');
 
         $noOwner = is_null($this->owner_user);
