@@ -110,7 +110,10 @@ class GlobalChainScope implements Scope
     {
         // Fast function to get settings from Session
         $names = array();
-        if (!$user) $user = User::authUser();
+        if (!$user) {
+            if (!class_exists('Acorn\User\Models\User')) return $names;
+            $user = User::authUser();
+        }
         if ($user) {
             foreach ($user->attributes as $fieldName => $setting) {
                 if (preg_match('/^global_scope_/', $fieldName)) {
