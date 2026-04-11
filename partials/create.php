@@ -3,17 +3,18 @@
 $modelLabelKey     = (isset($formModel) ? $formModel->translateModelKey() : '');
 $modelsLabelKey    = (isset($formModel) ? $formModel->translateModelKey('label_plural') : '');
 $count             = (isset($formModel) ? $formModel::count() : NULL);
-$controllerListUri = new \GuzzleHttp\Psr7\Uri($this->actionUrl(''));
-$controllerListUrl = (string) $controllerListUri;
+$controllerListUrl    = $this->actionUrl('');
+$controllerListParsed = parse_url($controllerListUrl);
 
 // We want to go back to the correct place
 // if it was the same domain and the backend
 if ($backToReferrer = get('back-to-referrer')) {
-    $referrerUri             = new \GuzzleHttp\Psr7\Uri(request()->headers->get('referer'));
-    $referrerPathParts       = explode('/', trim($referrerUri->getPath(), '/'));
-    $controllerListPathParts = explode('/', trim($controllerListUri->getPath(), '/'));
-    if (   $referrerUri->getHost()   == $controllerListUri->getHost()
-        && $referrerUri->getScheme() == $controllerListUri->getScheme()
+    $referrerUrl    = request()->headers->get('referer');
+    $referrerParsed = parse_url($referrerUrl);
+    $referrerPathParts       = explode('/', trim($referrerParsed['path'] ?? '', '/'));
+    $controllerListPathParts = explode('/', trim($controllerListParsed['path'] ?? '', '/'));
+    if (   ($referrerParsed['host']   ?? '') == ($controllerListParsed['host']   ?? '')
+        && ($referrerParsed['scheme'] ?? '') == ($controllerListParsed['scheme'] ?? '')
         && isset($referrerPathParts[2])
         && isset($controllerListPathParts[2])
         && $referrerPathParts[0]       == 'backend'
@@ -22,7 +23,7 @@ if ($backToReferrer = get('back-to-referrer')) {
     ) {
         // This includes the query string also
         // Session will apply the same filters
-        $controllerListUrl = (string) $referrerUri;
+        $controllerListUrl = $referrerUrl;
         $modelsLabelKey    = trans($backToReferrer);
     }
 }
