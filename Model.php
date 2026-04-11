@@ -679,24 +679,23 @@ class Model extends BaseModel
     */
     public $hasManyDeep = [];
 
-    // VERSION: Winter 1.2.6=>7 changes the relationTypes format:
-    // https://stackoverflow.com/questions/39034442/preprocessing-like-if-defined-in-php
+    // Self-keyed format: key and value are both the type name.
+    // 1.2.6 iterates values directly; 1.2.7+ calls array_keys() — both get the type name.
     protected static $relationTypes = [
-        'hasOne',
-        'hasMany',
-        'belongsTo',
-        'belongsToMany',
-        'morphTo',
-        'morphOne',
-        'morphMany',
-        'morphToMany',
-        'morphedByMany',
-        'attachOne',
-        'attachMany',
-        'hasOneThrough',
-        'hasManyThrough',
-        // Ours added
-        'hasManyDeep',
+        'hasOne'         => 'hasOne',
+        'hasMany'        => 'hasMany',
+        'belongsTo'      => 'belongsTo',
+        'belongsToMany'  => 'belongsToMany',
+        'morphTo'        => 'morphTo',
+        'morphOne'       => 'morphOne',
+        'morphMany'      => 'morphMany',
+        'morphToMany'    => 'morphToMany',
+        'morphedByMany'  => 'morphedByMany',
+        'attachOne'      => 'attachOne',
+        'attachMany'     => 'attachMany',
+        'hasOneThrough'  => 'hasOneThrough',
+        'hasManyThrough' => 'hasManyThrough',
+        'hasManyDeep'    => 'hasManyDeep',
     ];
     
     // VERSION: Winter 1.2.6=>7 change of function signature: 
@@ -814,7 +813,8 @@ class Model extends BaseModel
                 */
                 break;
             default:
-                $relationObj = parent::handleRelation($relationName, $addConstraints);
+                // Pass only $relationName — 1.2.6 ignores extra args; 1.2.7+ uses $addConstraints=true default
+                $relationObj = parent::handleRelation($relationName);
         }
 
         return $relationObj;
