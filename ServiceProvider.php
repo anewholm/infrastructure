@@ -61,6 +61,11 @@ class ServiceProvider extends ModuleServiceProvider
         });
 
         Event::listen('backend.form.extendFields', function ($widget) {
+            // Ensure the Acorn module's partials directory is registered before any
+            // partial-type fields are created, so Partial widgets can resolve paths
+            // during their init() in WinterCMS dev-develop (which resolves eagerly).
+            $widget->addViewPath('~/modules/acorn/partials');
+
             if (property_exists($widget->config, 'tertiaryTabs')) {
                 $tabConfig      = &$widget->config->tertiaryTabs;
 
