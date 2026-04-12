@@ -150,7 +150,7 @@ class GlobalChainScope implements Scope
         // On User or Session
         $setting = NULL;
 
-        if ($user = User::authUser()) {
+        if (class_exists('Acorn\User\Models\User') && ($user = User::authUser())) {
             $setting = self::globalScopeUserSetting($user, $model);
         }
         
@@ -289,7 +289,7 @@ class GlobalChainScope implements Scope
                 // We place it in every sub-query because there may be manu global-scopes AND'ed
                 // and we don't want an OR
                 if ($mainModel->hasRelation('created_by_user')) {
-                    if ($user = User::authUser()) {
+                    if (class_exists('Acorn\User\Models\User') && ($user = User::authUser())) {
                         array_push($groupWheres, array(
                             'column' => "$mainModel->table.created_by_user_id", 
                             'value' => $user->id,
@@ -345,9 +345,10 @@ class GlobalChainScope implements Scope
 
         // Users can always see the things they created
         // We want this to be the last where
-        if (   $model->hasRelation('created_by_user') 
+        if (   $model->hasRelation('created_by_user')
             && $model->globalScopeSubQuery
             && $model->globalScopeSubQuery->wheres
+            && class_exists('Acorn\User\Models\User')
             && ($user = User::authUser())
         ) {
             $model->globalScopeSubQuery->orWhere("$model->table.created_by_user_id", $user->id);

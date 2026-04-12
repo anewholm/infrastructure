@@ -103,9 +103,18 @@ Trait MorphConfig
                                 }
                             }
 
+                            // ----------------------------- Class-exists removal
+                            // Auto-remove scopes whose modelClass plugin is not installed,
+                            // and explicit class-exists: directives in the scope config.
+                            if (isset($filterConfig['modelClass']) && !class_exists($filterConfig['modelClass'], false)) {
+                                unset($config->scopes[$name]);
+                                continue;
+                            }
+
                             // ----------------------------- Settings / Env removal
                             if (
-                                   self::settingRemove($filterConfig, $modelClass)
+                                   self::classExistsRemove($filterConfig)
+                                || self::settingRemove($filterConfig, $modelClass)
                                 || self::envRemove($filterConfig, $modelClass)
                             ) unset($config->scopes[$name]);
                         }
@@ -440,7 +449,8 @@ Trait MorphConfig
                     if ($modelClass) {
                         foreach ($config->fields as $fieldName => &$fieldConfig) {
                             if (
-                                   self::settingRemove($fieldConfig, $modelClass)
+                                   self::classExistsRemove($fieldConfig)
+                                || self::settingRemove($fieldConfig, $modelClass)
                                 || self::envRemove($fieldConfig, $modelClass)
                                 || self::conditionRemove($fieldConfig, $controllerModel)
                             ) unset($config->fields[$fieldName]);
@@ -448,7 +458,8 @@ Trait MorphConfig
                         if (isset($config->tabs['fields'])) {
                             foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::settingRemove($fieldConfig, $modelClass)
+                                        self::classExistsRemove($fieldConfig)
+                                     || self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->tabs['fields'][$fieldName]);
@@ -457,7 +468,8 @@ Trait MorphConfig
                         if (isset($config->secondaryTabs['fields'])) {
                             foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::settingRemove($fieldConfig, $modelClass)
+                                        self::classExistsRemove($fieldConfig)
+                                     || self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->secondaryTabs['fields'][$fieldName]);
@@ -466,7 +478,8 @@ Trait MorphConfig
                         if (isset($config->tertiaryTabs['fields'])) {
                             foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::settingRemove($fieldConfig, $modelClass)
+                                        self::classExistsRemove($fieldConfig)
+                                     || self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->tertiaryTabs['fields'][$fieldName]);
@@ -675,6 +688,16 @@ Trait MorphConfig
             $removeField = ($env != 1 && strtolower($env) != 'true' && strtolower($env) != 'yes');
         }
         return $removeField;
+    }
+
+    protected static function classExistsRemove(array $fieldConfig): bool
+    {
+        // class-exists: Acorn/User/Models/User  (slashes normalised to backslashes)
+        if (isset($fieldConfig['class-exists'])) {
+            $className = str_replace('/', '\\', $fieldConfig['class-exists']);
+            if (!class_exists($className, false)) return TRUE;
+        }
+        return FALSE;
     }
 
     protected static function conditionRemove(array &$fieldConfig, Model|NULL $model): bool
