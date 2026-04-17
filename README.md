@@ -19,13 +19,13 @@ Acorn is a WinterCMS module that provides shared base classes and infrastructure
 
 ## Who uses it
 
-| Plugin | Repository |
-|--------|-----------|
-| Calendar | [anewholm/calendar](https://github.com/anewholm/calendar) |
-| DBAuth | [anewholm/dbauth](https://github.com/anewholm/dbauth) |
-| Location | [anewholm/location](https://github.com/anewholm/location) |
-| Messaging | [anewholm/messaging](https://github.com/anewholm/messaging) |
-| Reporting | [anewholm/reporting](https://github.com/anewholm/reporting) |
+| Plugin | Repository | Status |
+|--------|-----------|---------|
+| Calendar | [anewholm/calendar](https://github.com/anewholm/calendar) | Production ready, Live, CI |
+| DBAuth | [anewholm/dbauth](https://github.com/anewholm/dbauth) | Production ready, Live, CI |
+| Location | [anewholm/location](https://github.com/anewholm/location) | In-development |
+| Messaging | [anewholm/messaging](https://github.com/anewholm/messaging) | In-development |
+| Reporting | [anewholm/reporting](https://github.com/anewholm/reporting) | In-development |
 
 ## Compatibility
 
@@ -38,7 +38,7 @@ Acorn is a WinterCMS module that provides shared base classes and infrastructure
 ## Prerequisites
 
 - WinterCMS 1.2+
-- PostgreSQL 12+ (the Migration extensions target PostgreSQL; standard Laravel migrations still work on other databases)
+- PostgreSQL 15+ (the Migration extensions target PostgreSQL; standard Laravel migrations still work on other databases)
 
 ## Installation
 
