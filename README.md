@@ -4,8 +4,6 @@
 [![CI](https://github.com/anewholm/acorn/actions/workflows/ci.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/ci.yml)
 [![Security Scan](https://github.com/anewholm/acorn/actions/workflows/semgrep.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/semgrep.yml)
 
-> **Note:** CodeQL security scanning is unfortunately not available for PHP on GitHub's free tier.
-
 Acorn is a WinterCMS module that provides shared base classes and infrastructure for the Acorn plugin family. It extends Laravel/WinterCMS with PostgreSQL-aware migrations, permission-aware models, WebSocket support, and dirty-write protection.
 
 ## What it provides
