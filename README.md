@@ -2,6 +2,7 @@
 
 ![Human made content](human-made-content.png "Human made content")
 [![CI](https://github.com/anewholm/acorn/actions/workflows/ci.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/anewholm/acorn/actions/workflows/semgrep.yml/badge.svg)](https://github.com/anewholm/acorn/actions/workflows/semgrep.yml)
 
 > **Note:** CodeQL security scanning is unfortunately not available for PHP on GitHub's free tier.
 
