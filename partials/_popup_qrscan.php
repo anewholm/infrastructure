@@ -29,7 +29,7 @@ if (!isset($listSelector)) {
 if (!isset($formFieldName)) {
     if (isset($formField)) {
         $arrayName     = $formField->arrayName;
-        $formFieldName = "${arrayName}[$formField->fieldName]";
+        $formFieldName = "{$arrayName}[$formField->fieldName]";
     } else $formFieldName = '_qrscan';
 }
 

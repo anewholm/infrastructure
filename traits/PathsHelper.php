@@ -294,7 +294,7 @@ Trait PathsHelper {
         if (count($aClass) == 2) {
             $authorDirName = strtolower($aClass[0]);
             $pluginDirName = strtolower($aClass[1]);
-            $tablePrefix   = "${authorDirName}_${pluginDirName}_";
+            $tablePrefix   = "{$authorDirName}_{$pluginDirName}_";
         }
         return $tablePrefix;
     }

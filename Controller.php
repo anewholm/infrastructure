@@ -761,7 +761,7 @@ HTML;
 
         $fullyQualifiedControllerClass  = $this->qualifyClassName($controllerClass);
         $controller = new $fullyQualifiedControllerClass;
-        $onSave     = "${action}_onSave";
+        $onSave     = "{$action}_onSave";
 
         return $controller->$onSave(...$popupParams);
     }
