@@ -441,6 +441,28 @@ Trait MorphConfig
                         }
                     }
                     
+                    // ------------------------------------------------- class-exists (unconditional — modelClass not needed)
+                    // Run before the modelClass guard so widgets without a modelClass (e.g. Calendars)
+                    // still have optional-plugin fields stripped before dropdown options are resolved.
+                    foreach ($config->fields as $fieldName => &$fieldConfig) {
+                        if (self::classExistsRemove($fieldConfig)) unset($config->fields[$fieldName]);
+                    }
+                    if (isset($config->tabs['fields'])) {
+                        foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
+                            if (self::classExistsRemove($fieldConfig)) unset($config->tabs['fields'][$fieldName]);
+                        }
+                    }
+                    if (isset($config->secondaryTabs['fields'])) {
+                        foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                            if (self::classExistsRemove($fieldConfig)) unset($config->secondaryTabs['fields'][$fieldName]);
+                        }
+                    }
+                    if (isset($config->tertiaryTabs['fields'])) {
+                        foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
+                            if (self::classExistsRemove($fieldConfig)) unset($config->tertiaryTabs['fields'][$fieldName]);
+                        }
+                    }
+
                     // ------------------------------------------------- setting, env, conditions
                     // This allows fields to be conditionally shown
                     // in the same way as permissions
@@ -449,8 +471,7 @@ Trait MorphConfig
                     if ($modelClass) {
                         foreach ($config->fields as $fieldName => &$fieldConfig) {
                             if (
-                                   self::classExistsRemove($fieldConfig)
-                                || self::settingRemove($fieldConfig, $modelClass)
+                                   self::settingRemove($fieldConfig, $modelClass)
                                 || self::envRemove($fieldConfig, $modelClass)
                                 || self::conditionRemove($fieldConfig, $controllerModel)
                             ) unset($config->fields[$fieldName]);
@@ -458,8 +479,7 @@ Trait MorphConfig
                         if (isset($config->tabs['fields'])) {
                             foreach ($config->tabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::classExistsRemove($fieldConfig)
-                                     || self::settingRemove($fieldConfig, $modelClass)
+                                        self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->tabs['fields'][$fieldName]);
@@ -468,8 +488,7 @@ Trait MorphConfig
                         if (isset($config->secondaryTabs['fields'])) {
                             foreach ($config->secondaryTabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::classExistsRemove($fieldConfig)
-                                     || self::settingRemove($fieldConfig, $modelClass)
+                                        self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->secondaryTabs['fields'][$fieldName]);
@@ -478,8 +497,7 @@ Trait MorphConfig
                         if (isset($config->tertiaryTabs['fields'])) {
                             foreach ($config->tertiaryTabs['fields'] as $fieldName => &$fieldConfig) {
                                 if (
-                                        self::classExistsRemove($fieldConfig)
-                                     || self::settingRemove($fieldConfig, $modelClass)
+                                        self::settingRemove($fieldConfig, $modelClass)
                                      || self::envRemove($fieldConfig, $modelClass)
                                      || self::conditionRemove($fieldConfig, $controllerModel)
                                 ) unset($config->tertiaryTabs['fields'][$fieldName]);
