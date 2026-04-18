@@ -126,6 +126,8 @@ Trait PathsHelper {
 
     protected function docRoot(): string
     {
+        // TODO: replace getcwd() with base_path() — getcwd() returns the document root (public/)
+        // under PHP-FPM, not the application root, breaking pluginPathAbsolute() lookups.
         return getcwd();
     }
 
